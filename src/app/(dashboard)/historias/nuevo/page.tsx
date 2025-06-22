@@ -1,0 +1,397 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createPatient } from '@/lib/actions/patients.actions';
+import { toast } from 'sonner';
+import { FaCamera, FaArrowLeft, FaSave } from 'react-icons/fa';
+import { BLOOD_TYPES, MARITAL_STATUS, NATIONALITIES } from '@/lib/constants';
+import { GENDER_OPTIONS } from '@/types/biophysics';
+import { calculateAge } from '@/utils/date';
+
+export default function NuevoPacientePage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    photo: '',
+    nationality: '',
+    identification: '',
+    historyDate: new Date().toISOString().split('T')[0],
+    lastName: '',
+    firstName: '',
+    birthDate: '',
+    gender: 'MASCULINO',
+    birthPlace: '',
+    phone: '',
+    maritalStatus: '',
+    profession: '',
+    country: 'Venezuela',
+    state: '',
+    city: '',
+    address: '',
+    bloodType: '',
+    email: '',
+    observations: '',
+  });
+
+  const [chronologicalAge, setChronologicalAge] = useState<number | null>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Calcular edad cuando se cambia la fecha de nacimiento
+    if (name === 'birthDate' && value) {
+      const age = calculateAge(value);
+      setChronologicalAge(age);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Aquí deberías obtener el userId real del usuario autenticado
+      const userId = 'temp-user-id'; // TODO: Obtener de la sesión
+
+      const result = await createPatient({ ...formData, userId });
+
+      if (result.success) {
+        toast.success('Paciente creado exitosamente');
+        router.push('/historias');
+      } else {
+        toast.error(result.error || 'Error al crear paciente');
+      }
+    } catch (error) {
+      toast.error('Error al crear paciente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Nueva Historia Clínica</h1>
+          <p className="text-gray-600 mt-1">Registra un nuevo paciente en el sistema</p>
+        </div>
+        <button
+          onClick={() => router.push('/historias')}
+          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+        >
+          <FaArrowLeft />
+          <span>Volver</span>
+        </button>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Información Personal */}
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Información Personal</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Foto */}
+            <div className="md:col-span-1">
+              <label className="label">Foto</label>
+              <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                <FaCamera className="text-2xl text-gray-400 mb-2" />
+                <span className="text-sm text-gray-500">Subir foto</span>
+              </div>
+            </div>
+
+            {/* Campos del formulario */}
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Nacionalidad *</label>
+                <select
+                  name="nationality"
+                  value={formData.nationality}
+                  onChange={handleInputChange}
+                  required
+                  className="input"
+                >
+                  <option value="">Seleccionar...</option>
+                  {NATIONALITIES.map(nat => (
+                    <option key={nat} value={nat}>{nat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="label">Identificación *</label>
+                <input
+                  type="text"
+                  name="identification"
+                  value={formData.identification}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Ej: 12345678"
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Fecha Historia *</label>
+                <input
+                  type="date"
+                  name="historyDate"
+                  value={formData.historyDate}
+                  onChange={handleInputChange}
+                  required
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Apellidos *</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Apellidos completos"
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Nombres *</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Nombres completos"
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Fecha Nacimiento *</label>
+                <input
+                  type="date"
+                  name="birthDate"
+                  value={formData.birthDate}
+                  onChange={handleInputChange}
+                  required
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Edad Cronológica</label>
+                <input
+                  type="text"
+                  value={chronologicalAge !== null ? `${chronologicalAge} años` : ''}
+                  readOnly
+                  className="input bg-gray-100"
+                />
+              </div>
+
+              <div>
+                <label className="label">Género *</label>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  required
+                  className="input"
+                >
+                  {GENDER_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="label">Lugar Nacimiento *</label>
+                <input
+                  type="text"
+                  name="birthPlace"
+                  value={formData.birthPlace}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Ciudad, País"
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Teléfono *</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="+58 414xxxxxxx"
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Estado Civil *</label>
+                <select
+                  name="maritalStatus"
+                  value={formData.maritalStatus}
+                  onChange={handleInputChange}
+                  required
+                  className="input"
+                >
+                  <option value="">Seleccionar...</option>
+                  {MARITAL_STATUS.map(status => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="label">Profesión *</label>
+                <input
+                  type="text"
+                  name="profession"
+                  value={formData.profession}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Ej: Ingeniero, Médico..."
+                  className="input"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Dirección */}
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Dirección</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="label">País *</label>
+              <input
+                type="text"
+                name="country"
+                value={formData.country}
+                onChange={handleInputChange}
+                required
+                className="input"
+              />
+            </div>
+
+            <div>
+              <label className="label">Estado *</label>
+              <input
+                type="text"
+                name="state"
+                value={formData.state}
+                onChange={handleInputChange}
+                required
+                placeholder="Estado/Provincia"
+                className="input"
+              />
+            </div>
+
+            <div>
+              <label className="label">Ciudad *</label>
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                required
+                placeholder="Ciudad"
+                className="input"
+              />
+            </div>
+
+            <div className="md:col-span-3">
+              <label className="label">Dirección *</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                required
+                placeholder="Dirección completa"
+                className="input"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Información Médica */}
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Información Médica</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Grupo Sanguíneo *</label>
+              <select
+                name="bloodType"
+                value={formData.bloodType}
+                onChange={handleInputChange}
+                required
+                className="input"
+              >
+                <option value="">Seleccionar...</option>
+                {BLOOD_TYPES.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="label">E-mail *</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                placeholder="ejemplo@dominio.com"
+                className="input"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="label">Observaciones Generales</label>
+              <textarea
+                name="observations"
+                value={formData.observations}
+                onChange={handleInputChange}
+                rows={4}
+                placeholder="Notas adicionales sobre el paciente..."
+                className="input resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={() => router.push('/historias')}
+            className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaSave />
+            <span>{loading ? 'Guardando...' : 'Guardar Historia'}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

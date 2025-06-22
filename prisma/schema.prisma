@@ -1,0 +1,135 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  name           String
+  role           Role      @default(MEDICO)
+  avatar         String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  patients       Patient[]
+}
+
+model Patient {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+
+  // Información Personal
+  photo             String?
+  nationality       String
+  identification    String    @unique
+  historyDate       DateTime
+  lastName          String
+  firstName         String
+  birthDate         DateTime
+  chronologicalAge  Int
+  gender            Gender
+  birthPlace        String
+  phone             String
+  maritalStatus     String
+  profession        String
+  country           String
+  state             String
+  city              String
+  address           String
+  bloodType         String
+  email             String
+  observations      String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  biophysicsTests   BiophysicsTest[]
+}
+
+model BiophysicsTest {
+  id                String    @id @default(cuid())
+  patientId         String
+  patient           Patient   @relation(fields: [patientId], references: [id])
+
+  chronologicalAge  Float
+  biologicalAge     Float
+  differentialAge   Float
+  gender            String
+  isAthlete         Boolean   @default(false)
+
+  // Resultados de las 8 métricas
+  fatPercentage     Float?
+  fatAge            Float?
+
+  bmi               Float?
+  bmiAge            Float?
+
+  digitalReflexes   Float?    // Promedio de las 3 mediciones
+  reflexesAge       Float?
+
+  visualAccommodation Float?
+  visualAge         Float?
+
+  staticBalance     Float?    // Promedio de las 3 mediciones
+  balanceAge        Float?
+
+  skinHydration     Float?
+  hydrationAge      Float?
+
+  systolicPressure  Float?
+  systolicAge       Float?
+
+  diastolicPressure Float?
+  diastolicAge      Float?
+
+  testDate          DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Board {
+  id        String   @id @default(cuid())
+  rangeId   Int
+  range     Range    @relation(fields: [rangeId], references: [id])
+  type      String   @default("FORM_BIOPHYSICS")
+  name      String
+  minValue  Float
+  maxValue  Float
+  inverse   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Range {
+  id        Int      @id @default(autoincrement())
+  minAge    Float
+  maxAge    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  boards    Board[]
+}
+
+enum Role {
+  MEDICO
+  ADMINISTRATIVO
+  PACIENTE
+}
+
+enum Gender {
+  MASCULINO
+  FEMENINO
+  MASCULINO_DEPORTIVO
+  FEMENINO_DEPORTIVO
+}
