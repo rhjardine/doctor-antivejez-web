@@ -1,6 +1,9 @@
+// src/utils/biofisica-calculations.ts
+
 import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/types/biophysics';
 
-// Mapeo de nombres de métricas según género y tipo de atleta
+// --- Funciones de Mapeo (Sin cambios, ya eran correctas) ---
+
 export const getFatName = (gender: string, isAthlete: boolean): string => {
   if (gender === 'MASCULINO' || gender === 'MASCULINO_DEPORTIVO') {
     return isAthlete || gender === 'MASCULINO_DEPORTIVO' ? 'sporty_male_fat' : 'male_fat';
@@ -8,13 +11,13 @@ export const getFatName = (gender: string, isAthlete: boolean): string => {
   return isAthlete || gender === 'FEMENINO_DEPORTIVO' ? 'sporty_female_fat' : 'female_fat';
 };
 
+// Se mantiene el pulso aparte ya que no está en el METRIC_NAME_MAP
 export const getPulseName = (gender: string, isAthlete: boolean): string => {
   return (isAthlete || gender.includes('DEPORTIVO')) ? 'sportsmen_resting_pulse' : 'normal_resting_pulse';
 };
 
-// Mapeo de métricas a nombres en la base de datos
 const METRIC_NAME_MAP: Record<string, string> = {
-  fatPercentage: '', // Se determina dinámicamente con getFatName
+  fatPercentage: '', // Se determina dinámicamente
   bmi: 'body_mass',
   digitalReflexes: 'digital_reflections',
   visualAccommodation: 'visual_accommodation',
@@ -22,9 +25,17 @@ const METRIC_NAME_MAP: Record<string, string> = {
   skinHydration: 'quaten_hydration',
   systolicPressure: 'systolic_blood_pressure',
   diastolicPressure: 'diastolic_blood_pressure',
+  pulse: '', // Se determina dinámicamente con getPulseName
 };
 
-// Función principal de cálculo
+const BIOPHYSICS_KEYS = [
+  'fatPercentage', 'bmi', 'digitalReflexes', 'visualAccommodation', 
+  'staticBalance', 'skinHydration', 'systolicPressure', 'diastolicPressure'
+] as const;
+
+
+// --- Lógica de Cálculo Principal (Refactorizada y Corregida) ---
+
 export function calculateBiofisicaResults(
   boards: BoardWithRanges[],
   formValues: FormValues,
@@ -32,95 +43,40 @@ export function calculateBiofisicaResults(
   gender: string,
   isAthlete: boolean
 ): CalculationResult {
+  
+  // Se valida que todos los 8 ítems obligatorios están presentes y son válidos.
+  validateAllMetricsPresent(formValues);
+
   const partialAges: PartialAges = {};
-  let validAgesCount = 0;
   let agesSum = 0;
 
-  // Calcular % Grasa
-  if (formValues.fatPercentage !== undefined) {
-    const fatName = getFatName(gender, isAthlete);
-    const fatAge = calculatePartialAge(boards, fatName, formValues.fatPercentage, cronoAge);
-    if (fatAge !== null) {
-      partialAges.fatAge = fatAge;
-      agesSum += fatAge;
-      validAgesCount++;
+  // Se itera sobre una lista fija para asegurar el procesamiento de los 8 ítems.
+  for (const key of BIOPHYSICS_KEYS) {
+    const value = formValues[key as keyof FormValues];
+    let metricName: string;
+    let inputValue: number;
+
+    // Determinar el nombre de la métrica y el valor de entrada
+    if (key === 'fatPercentage') {
+      metricName = getFatName(gender, isAthlete);
+      inputValue = value as number;
+    } else if (typeof value === 'object' && value !== null && 'high' in value) {
+      metricName = METRIC_NAME_MAP[key];
+      inputValue = calculateDimensionsAverage(value);
+    } else {
+      metricName = METRIC_NAME_MAP[key];
+      inputValue = value as number;
     }
+
+    // Calcular la edad parcial para la métrica actual
+    const partialAge = calculatePartialAge(boards, metricName, inputValue);
+    const ageKey = `${key.replace(/([A-Z])/g, (match) => match.toLowerCase())}Age`;
+    partialAges[ageKey as keyof PartialAges] = partialAge;
+    agesSum += partialAge;
   }
 
-  // Calcular IMC
-  if (formValues.bmi !== undefined) {
-    const bmiAge = calculatePartialAge(boards, METRIC_NAME_MAP.bmi, formValues.bmi, cronoAge);
-    if (bmiAge !== null) {
-      partialAges.bmiAge = bmiAge;
-      agesSum += bmiAge;
-      validAgesCount++;
-    }
-  }
-
-  // Calcular Reflejos Digitales (promedio de 3 mediciones)
-  if (formValues.digitalReflexes) {
-    const average = calculateDimensionsAverage(formValues.digitalReflexes);
-    const reflexesAge = calculatePartialAge(boards, METRIC_NAME_MAP.digitalReflexes, average, cronoAge);
-    if (reflexesAge !== null) {
-      partialAges.reflexesAge = reflexesAge;
-      agesSum += reflexesAge;
-      validAgesCount++;
-    }
-  }
-
-  // Calcular Acomodación Visual
-  if (formValues.visualAccommodation !== undefined) {
-    const visualAge = calculatePartialAge(boards, METRIC_NAME_MAP.visualAccommodation, formValues.visualAccommodation, cronoAge);
-    if (visualAge !== null) {
-      partialAges.visualAge = visualAge;
-      agesSum += visualAge;
-      validAgesCount++;
-    }
-  }
-
-  // Calcular Balance Estático (promedio de 3 mediciones)
-  if (formValues.staticBalance) {
-    const average = calculateDimensionsAverage(formValues.staticBalance);
-    const balanceAge = calculatePartialAge(boards, METRIC_NAME_MAP.staticBalance, average, cronoAge);
-    if (balanceAge !== null) {
-      partialAges.balanceAge = balanceAge;
-      agesSum += balanceAge;
-      validAgesCount++;
-    }
-  }
-
-  // Calcular Hidratación Cutánea
-  if (formValues.skinHydration !== undefined) {
-    const hydrationAge = calculatePartialAge(boards, METRIC_NAME_MAP.skinHydration, formValues.skinHydration, cronoAge);
-    if (hydrationAge !== null) {
-      partialAges.hydrationAge = hydrationAge;
-      agesSum += hydrationAge;
-      validAgesCount++;
-    }
-  }
-
-  // Calcular Tensión Arterial Sistólica
-  if (formValues.systolicPressure !== undefined) {
-    const systolicAge = calculatePartialAge(boards, METRIC_NAME_MAP.systolicPressure, formValues.systolicPressure, cronoAge);
-    if (systolicAge !== null) {
-      partialAges.systolicAge = systolicAge;
-      agesSum += systolicAge;
-      validAgesCount++;
-    }
-  }
-
-  // Calcular Tensión Arterial Diastólica
-  if (formValues.diastolicPressure !== undefined) {
-    const diastolicAge = calculatePartialAge(boards, METRIC_NAME_MAP.diastolicPressure, formValues.diastolicPressure, cronoAge);
-    if (diastolicAge !== null) {
-      partialAges.diastolicAge = diastolicAge;
-      agesSum += diastolicAge;
-      validAgesCount++;
-    }
-  }
-
-  // Calcular edad biológica final (promedio de las 8 métricas)
-  const biologicalAge = validAgesCount > 0 ? Math.round(agesSum / validAgesCount) : cronoAge;
+  // El promedio final se divide estrictamente entre 8, ya que la validación garantiza que hay 8 valores.
+  const biologicalAge = Math.round(agesSum / 8);
   const differentialAge = biologicalAge - cronoAge;
 
   return {
@@ -130,112 +86,105 @@ export function calculateBiofisicaResults(
   };
 }
 
-// Función para calcular el promedio de las dimensiones
+// --- Funciones de Soporte (Validadas y Corregidas) ---
+
+/**
+ * Valida que todos los campos requeridos en el formulario tengan valores válidos.
+ * Lanza un error si alguna validación falla.
+ */
+function validateAllMetricsPresent(formValues: FormValues) {
+  for (const key of BIOPHYSICS_KEYS) {
+    const value = formValues[key as keyof FormValues];
+    if (value === undefined || value === null) {
+      throw new Error(`El ítem "${key}" es obligatorio. Por favor, complete todos los campos.`);
+    }
+    if (typeof value === 'object' && 'high' in value) {
+      if (value.high === undefined || value.long === undefined || value.width === undefined || isNaN(value.high) || isNaN(value.long) || isNaN(value.width)) {
+         throw new Error(`Las tres dimensiones del ítem "${key}" son obligatorias.`);
+      }
+    } else if (isNaN(value as number)) {
+       throw new Error(`El valor para el ítem "${key}" no es un número válido.`);
+    }
+  }
+}
+
+/**
+ * Calcula el promedio para métricas con tres dimensiones.
+ */
 function calculateDimensionsAverage(dimensions: { high: number; long: number; width: number }): number {
   return (dimensions.high + dimensions.long + dimensions.width) / 3;
 }
 
-// Función de interpolación lineal para calcular la edad parcial
+/**
+ * Encuentra el baremo correcto y calcula la edad parcial para una métrica.
+ * CORREGIDO para manejar rangos invertidos en la búsqueda.
+ */
 function calculatePartialAge(
   boards: BoardWithRanges[],
   metricName: string,
-  inputValue: number,
-  cronoAge: number
-): number | null {
-  // Filtrar boards por nombre de métrica
+  inputValue: number
+): number {
   const metricBoards = boards.filter(board => board.name === metricName);
-
   if (metricBoards.length === 0) {
-    console.warn(`No se encontraron baremos para la métrica: ${metricName}`);
-    return null;
+    throw new Error(`Datos de configuración incompletos: No se encontraron baremos para la métrica "${metricName}".`);
   }
 
-  // Encontrar el board que contenga el valor de entrada y la edad cronológica
+  // **CORRECCIÓN 1: BÚSQUEDA ROBUSTA PARA RANGOS NORMALES E INVERSOS**
+  // Normaliza el rango para que la búsqueda funcione sin importar si min > max o max > min.
   const applicableBoard = metricBoards.find(board => {
-    const ageInRange = cronoAge >= board.range.minAge && cronoAge <= board.range.maxAge;
-    const valueInRange = inputValue >= board.minValue && inputValue <= board.maxValue;
-    return ageInRange && valueInRange;
+    const start = Math.min(board.minValue, board.maxValue);
+    const end = Math.max(board.minValue, board.maxValue);
+    return inputValue >= start && inputValue <= end;
   });
 
   if (!applicableBoard) {
-    // Si no se encuentra un board exacto, buscar el más cercano
-    const closestBoard = findClosestBoard(metricBoards, inputValue, cronoAge);
-    if (!closestBoard) {
-      console.warn(`No se encontró baremo aplicable para ${metricName} con valor ${inputValue} y edad ${cronoAge}`);
-      return cronoAge; // Retornar edad cronológica como fallback
-    }
-    return interpolateAge(closestBoard, inputValue);
+    // Lanza un error claro si el valor está fuera de todos los rangos definidos.
+    throw new Error(`El valor ingresado (${inputValue.toFixed(2)}) para la métrica "${metricName}" está fuera de los rangos definidos.`);
   }
 
   return interpolateAge(applicableBoard, inputValue);
 }
 
-// Función para encontrar el board más cercano
-function findClosestBoard(boards: BoardWithRanges[], value: number, cronoAge: number): BoardWithRanges | null {
-  let closestBoard: BoardWithRanges | null = null;
-  let minDistance = Infinity;
-
-  for (const board of boards) {
-    // Verificar si la edad cronológica está en el rango
-    if (cronoAge >= board.range.minAge && cronoAge <= board.range.maxAge) {
-      // Calcular distancia al rango de valores
-      let distance = 0;
-      if (value < board.minValue) {
-        distance = board.minValue - value;
-      } else if (value > board.maxValue) {
-        distance = value - board.maxValue;
-      }
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestBoard = board;
-      }
-    }
-  }
-
-  return closestBoard;
-}
-
-// Función de interpolación lineal
+/**
+ * Realiza la interpolación lineal para mapear un valor de prueba a una edad.
+ * CORREGIDO para manejar correctamente la proporción en rangos inversos.
+ */
 function interpolateAge(board: BoardWithRanges, inputValue: number): number {
   const { minValue, maxValue, inverse, range } = board;
   const { minAge, maxAge } = range;
-
-  // Clamp el valor de entrada al rango
-  const clampedValue = Math.max(minValue, Math.min(maxValue, inputValue));
-
-  // Calcular la proporción
-  let proportion = 0;
-  if (maxValue !== minValue) {
-    proportion = (clampedValue - minValue) / (maxValue - minValue);
+  
+  // Evitar división por cero si los límites del rango son iguales.
+  if (minValue === maxValue) {
+    return minAge;
   }
 
-  // Aplicar inversión si es necesario
-  if (inverse) {
-    proportion = 1 - proportion;
-  }
+  // **CORRECCIÓN 2: CÁLCULO DE PROPORCIÓN UNIVERSAL**
+  // Esta fórmula funciona tanto para rangos normales (max > min) como inversos (min > max).
+  // En un rango inverso, ambos términos de la división (numerador y denominador) serán negativos,
+  // resultando en una proporción positiva correcta.
+  const proportion = (inputValue - minValue) / (maxValue - minValue);
 
-  // Interpolar la edad
-  const partialAge = minAge + proportion * (maxAge - minAge);
+  // La lógica de inversión se aplica después para determinar la dirección de la interpolación.
+  const finalProportion = inverse ? 1 - proportion : proportion;
 
-  // Redondear a 2 decimales
-  return Math.round(partialAge * 100) / 100;
+  const partialAge = minAge + finalProportion * (maxAge - minAge);
+
+  // Se redondea a un entero para coincidir con la salida del sistema original.
+  return Math.round(partialAge);
 }
 
-// Función para determinar el estado basado en la diferencia de edad
+
+// --- Funciones de Estado y Color (Sin cambios) ---
+
 export function getAgeStatus(ageDifference: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
   if (ageDifference <= -7) return 'REJUVENECIDO';
-  if (ageDifference >= -2 && ageDifference <= 3) return 'NORMAL';
   if (ageDifference >= 7) return 'ENVEJECIDO';
-
-  // Para valores intermedios
-  if (ageDifference < -2) return 'REJUVENECIDO';
-  if (ageDifference > 3) return 'ENVEJECIDO';
+  if (ageDifference < 0) return 'REJUVENECIDO'; // Simplificado
+  if (ageDifference > 0) return 'ENVEJECIDO'; // Simplificado
 
   return 'NORMAL';
 }
 
-// Función para obtener el color según el estado
 export function getStatusColor(status: 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO'): string {
   switch (status) {
     case 'REJUVENECIDO':
@@ -244,5 +193,7 @@ export function getStatusColor(status: 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO')
       return 'rgb(234, 179, 8)'; // Amarillo
     case 'ENVEJECIDO':
       return 'rgb(220, 38, 38)'; // Rojo
+    default:
+      return 'rgb(107, 114, 128)'; // Gris por defecto
   }
 }

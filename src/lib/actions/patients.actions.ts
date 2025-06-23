@@ -10,13 +10,9 @@ export async function createPatient(formData: PatientFormData & { userId: string
   console.log('--- createPatient formData ---', formData);
   console.log('--- createPatient formData.userId ---', formData?.userId);
   try {
-    // Validar los datos
     const validatedData = patientSchema.parse(formData);
-
-    // Calcular edad cronológica
     const chronologicalAge = calculateAge(validatedData.birthDate);
 
-    // Crear el paciente en la base de datos
     const patient = await prisma.patient.create({
       data: {
         ...validatedData,
@@ -28,7 +24,6 @@ export async function createPatient(formData: PatientFormData & { userId: string
     });
 
     revalidatePath('/historias');
-
     return { success: true, patient };
   } catch (error) {
     console.error('Error creando paciente:', error);
@@ -38,14 +33,12 @@ export async function createPatient(formData: PatientFormData & { userId: string
 
 export async function updatePatient(id: string, formData: Partial<PatientFormData>) {
   try {
-    // Si se actualiza la fecha de nacimiento, recalcular la edad
     let updateData: any = { ...formData };
 
     if (formData.birthDate) {
       updateData.birthDate = new Date(formData.birthDate);
       updateData.chronologicalAge = calculateAge(formData.birthDate);
     }
-
     if (formData.historyDate) {
       updateData.historyDate = new Date(formData.historyDate);
     }
@@ -57,7 +50,6 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
 
     revalidatePath('/historias');
     revalidatePath(`/historias/${id}`);
-
     return { success: true, patient };
   } catch (error) {
     console.error('Error actualizando paciente:', error);
@@ -67,18 +59,13 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
 
 export async function deletePatient(id: string) {
   try {
-    // Eliminar primero los tests asociados
     await prisma.biophysicsTest.deleteMany({
       where: { patientId: id },
     });
-
-    // Luego eliminar el paciente
     await prisma.patient.delete({
       where: { id },
     });
-
     revalidatePath('/historias');
-
     return { success: true };
   } catch (error) {
     console.error('Error eliminando paciente:', error);
@@ -107,7 +94,6 @@ export async function getPatientWithTests(id: string) {
     if (!patient) {
       return { success: false, error: 'Paciente no encontrado' };
     }
-
     return { success: true, patient };
   } catch (error) {
     console.error('Error obteniendo paciente:', error);
@@ -118,7 +104,6 @@ export async function getPatientWithTests(id: string) {
 export async function getAllPatients(userId?: string) {
   try {
     const where = userId ? { userId } : {};
-
     const patients = await prisma.patient.findMany({
       where,
       include: {
@@ -141,7 +126,6 @@ export async function getAllPatients(userId?: string) {
       },
       orderBy: { createdAt: 'desc' },
     });
-
     return { success: true, patients };
   } catch (error) {
     console.error('Error obteniendo pacientes:', error);
@@ -171,7 +155,6 @@ export async function searchPatients(query: string) {
       },
       orderBy: { createdAt: 'desc' },
     });
-
     return { success: true, patients };
   } catch (error) {
     console.error('Error buscando pacientes:', error);
