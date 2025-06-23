@@ -1,4 +1,3 @@
-
 'use server';
 
 import { prisma } from '@/lib/db';
@@ -8,6 +7,8 @@ import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
+  console.log('--- createPatient formData ---', formData);
+  console.log('--- createPatient formData.userId ---', formData?.userId);
   try {
     // Validar los datos
     const validatedData = patientSchema.parse(formData);

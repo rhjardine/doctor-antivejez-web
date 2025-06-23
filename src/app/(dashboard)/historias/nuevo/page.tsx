@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -52,8 +53,9 @@ export default function NuevoPacientePage() {
     setLoading(true);
 
     try {
-      // Aquí deberías obtener el userId real del usuario autenticado
-      const userId = 'temp-user-id'; // TODO: Obtener de la sesión
+      // Usar uno de los usuarios existentes en tu base de datos
+      // Cambia este ID por uno de los que tienes en tu BD
+      const userId = 'cmc74nxtt000012v4qgzn195h'; // Usuario existente en tu BD
 
       const result = await createPatient({ ...formData, userId });
 
@@ -64,6 +66,7 @@ export default function NuevoPacientePage() {
         toast.error(result.error || 'Error al crear paciente');
       }
     } catch (error) {
+      console.error('Error en handleSubmit:', error);
       toast.error('Error al crear paciente');
     } finally {
       setLoading(false);
@@ -230,7 +233,7 @@ export default function NuevoPacientePage() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   required
-                  placeholder="+58 414xxxxxxx"
+                  placeholder="+58 414xxxx"
                   className="input"
                 />
               </div>
