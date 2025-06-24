@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,11 +8,37 @@ import { FaCamera, FaArrowLeft, FaSave } from 'react-icons/fa';
 import { BLOOD_TYPES, MARITAL_STATUS, NATIONALITIES } from '@/lib/constants';
 import { GENDER_OPTIONS } from '@/types/biophysics';
 import { calculateAge } from '@/utils/date';
+import { Gender } from '@prisma/client'; // CORRECCIÓN: Se importa el tipo 'Gender'
+
+// CORRECCIÓN: Se define un tipo para el estado del formulario para garantizar la seguridad de tipos
+type NewPatientFormData = {
+  photo: string;
+  nationality: string;
+  identification: string;
+  historyDate: string;
+  lastName: string;
+  firstName: string;
+  birthDate: string;
+  gender: Gender; // Se usa el tipo específico 'Gender'
+  birthPlace: string;
+  phone: string;
+  maritalStatus: string;
+  profession: string;
+  country: string;
+  state: string;
+  city: string;
+  address: string;
+  bloodType: string;
+  email: string;
+  observations: string;
+};
 
 export default function NuevoPacientePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  
+  // CORRECCIÓN: Se aplica el tipo 'NewPatientFormData' al estado del formulario
+  const [formData, setFormData] = useState<NewPatientFormData>({
     photo: '',
     nationality: '',
     identification: '',
@@ -21,7 +46,7 @@ export default function NuevoPacientePage() {
     lastName: '',
     firstName: '',
     birthDate: '',
-    gender: 'MASCULINO',
+    gender: 'MASCULINO', // TypeScript ahora entiende que este es un valor del tipo 'Gender'
     birthPlace: '',
     phone: '',
     maritalStatus: '',
@@ -39,7 +64,12 @@ export default function NuevoPacientePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    // CORRECCIÓN: Se hace una aserción de tipo para el campo 'gender' para mayor seguridad
+    if (name === 'gender') {
+        setFormData(prev => ({ ...prev, [name]: value as Gender }));
+    } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
 
     // Calcular edad cuando se cambia la fecha de nacimiento
     if (name === 'birthDate' && value) {
@@ -57,6 +87,7 @@ export default function NuevoPacientePage() {
       // Cambia este ID por uno de los que tienes en tu BD
       const userId = 'cmc74nxtt000012v4qgzn195h'; // Usuario existente en tu BD
 
+      // Ahora el objeto 'formData' tiene el tipo correcto y no causará un error de compilación
       const result = await createPatient({ ...formData, userId });
 
       if (result.success) {
