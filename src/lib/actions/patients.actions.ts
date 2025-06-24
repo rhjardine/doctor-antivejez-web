@@ -115,11 +115,6 @@ export async function getAllPatients(userId?: string) {
           },
         },
         biophysicsTests: {
-          select: {
-            id: true,
-            biologicalAge: true,
-            testDate: true,
-          },
           orderBy: { testDate: 'desc' },
           take: 1,
         },
