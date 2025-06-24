@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Patient } from '@/types';
-import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS } from '@/types/biophysics';
+// CORRECCIÓN: Se importan los tipos necesarios para el estado de los resultados
+import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult } from '@/types/biophysics';
 import { getBiophysicsBoardsAndRanges, saveBiophysicsTest } from '@/lib/actions/biophysics.actions';
 import { calculateBiofisicaResults, getAgeStatus, getStatusColor } from '@/utils/biofisica-calculations';
 import { toast } from 'sonner';
@@ -32,10 +33,12 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     diastolicPressure: undefined,
   });
 
-  const [results, setResults] = useState({
+  // CORRECCIÓN: Se aplica el tipo 'CalculationResult' al estado 'results'
+  // Esto le informa a TypeScript sobre la estructura completa del objeto, incluyendo 'partialAges'.
+  const [results, setResults] = useState<CalculationResult>({
     biologicalAge: 0,
     differentialAge: 0,
-    partialAges: {},
+    partialAges: {}, // TypeScript ahora sabe que este objeto contendrá propiedades como 'fatAge', 'bmiAge', etc.
   });
 
   useEffect(() => {
@@ -55,18 +58,20 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
   const handleInputChange = (key: string, value: number | undefined, dimension?: 'high' | 'long' | 'width') => {
     setFormValues(prev => {
-      if (dimension && (key === 'digitalReflexes' || key === 'staticBalance')) {
+      const formKey = key as keyof FormValues;
+      if (dimension && (formKey === 'digitalReflexes' || formKey === 'staticBalance')) {
+        const currentDimensions = prev[formKey] as { high: number, long: number, width: number };
         return {
           ...prev,
-          [key]: {
-            ...prev[key],
+          [formKey]: {
+            ...currentDimensions,
             [dimension]: value || 0,
           },
         };
       }
       return {
         ...prev,
-        [key]: value,
+        [formKey]: value,
       };
     });
     setCalculated(false); // Reset calculated state when values change
@@ -88,8 +93,8 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       setResults(calculationResult);
       setCalculated(true);
       toast.success('Cálculo completado');
-    } catch (error) {
-      toast.error('Error al calcular los resultados');
+    } catch (error: any) {
+      toast.error(error.message || 'Error al calcular los resultados');
     } finally {
       setCalculating(false);
     }
@@ -116,14 +121,14 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
         fatAge: results.partialAges.fatAge,
         bmi: formValues.bmi,
         bmiAge: results.partialAges.bmiAge,
-        digitalReflexes: formValues.digitalReflexes 
-          ? (formValues.digitalReflexes.high + formValues.digitalReflexes.long + formValues.digitalReflexes.width) / 3 
+        digitalReflexes: formValues.digitalReflexes
+          ? (formValues.digitalReflexes.high + formValues.digitalReflexes.long + formValues.digitalReflexes.width) / 3
           : undefined,
         reflexesAge: results.partialAges.reflexesAge,
         visualAccommodation: formValues.visualAccommodation,
         visualAge: results.partialAges.visualAge,
-        staticBalance: formValues.staticBalance 
-          ? (formValues.staticBalance.high + formValues.staticBalance.long + formValues.staticBalance.width) / 3 
+        staticBalance: formValues.staticBalance
+          ? (formValues.staticBalance.high + formValues.staticBalance.long + formValues.staticBalance.width) / 3
           : undefined,
         balanceAge: results.partialAges.balanceAge,
         skinHydration: formValues.skinHydration,
@@ -158,7 +163,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   }
 
   const getItemStatus = (partialAge: number | undefined) => {
-    if (!partialAge) return 'NORMAL';
+    if (partialAge === undefined) return 'NORMAL';
     const diff = partialAge - patient.chronologicalAge;
     return getAgeStatus(diff);
   };
@@ -178,7 +183,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
           <div className="text-right">
             <h2 className="text-xl font-bold">{patient.firstName} {patient.lastName}</h2>
             <p className="text-sm opacity-80">
-              Edad: {patient.chronologicalAge} años | {patient.gender.replace('_', ' ')}
+              Edad: {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}
             </p>
           </div>
         </div>
@@ -186,7 +191,10 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
         <h3 className="text-lg font-semibold mb-4">Test de Edad Biofísica</h3>
 
         <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-          {BIOPHYSICS_ITEMS.map((item) => (
+          {BIOPHYSICS_ITEMS.map((item) => {
+            const itemKey = item.key as keyof FormValues;
+            const partialAgeKey = `${item.key.replace(/([A-Z])/g, (match) => match.toLowerCase())}Age` as keyof typeof results.partialAges;
+            return(
             <div key={item.key} className="bg-white/10 rounded-lg p-4">
               <label className="block text-sm font-medium mb-2">
                 {item.label} {item.unit && `(${item.unit})`}
@@ -197,21 +205,21 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                   <input
                     type="number"
                     placeholder="Alto"
-                    value={formValues[item.key]?.high || ''}
+                    value={(formValues[itemKey] as any)?.high || ''}
                     onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value), 'high')}
                     className="px-2 py-1 bg-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
                   />
                   <input
                     type="number"
                     placeholder="Largo"
-                    value={formValues[item.key]?.long || ''}
+                    value={(formValues[itemKey] as any)?.long || ''}
                     onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value), 'long')}
                     className="px-2 py-1 bg-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
                   />
                   <input
                     type="number"
                     placeholder="Ancho"
-                    value={formValues[item.key]?.width || ''}
+                    value={(formValues[itemKey] as any)?.width || ''}
                     onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value), 'width')}
                     className="px-2 py-1 bg-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
                   />
@@ -219,7 +227,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
               ) : (
                 <input
                   type="number"
-                  value={formValues[item.key] || ''}
+                  value={(formValues[itemKey] as number) || ''}
                   onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value))}
                   className="w-full px-3 py-2 bg-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
                 />
@@ -229,12 +237,12 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                 <div className="mt-2 text-sm">
                   <span className="opacity-70">Edad Calculada: </span>
                   <span className="font-medium">
-                    {results.partialAges[`${item.key.replace(/([A-Z])/g, (match) => match.toLowerCase())}Age`]?.toFixed(1) || '--'} años
+                    {results.partialAges[partialAgeKey]?.toFixed(1) || '--'} años
                   </span>
                 </div>
               )}
             </div>
-          ))}
+          )})}
         </div>
 
         <div className="mt-6 flex space-x-3">
@@ -275,14 +283,12 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-1">Edad Diferencial</p>
               <p className={`text-3xl font-bold ${
-                calculated 
-                  ? results.differentialAge <= -7 ? 'text-status-green' 
-                  : results.differentialAge >= 7 ? 'text-status-red' 
-                  : 'text-status-yellow'
+                calculated
+                  ? getStatusColor(getAgeStatus(results.differentialAge))
                   : 'text-gray-900'
               }`}>
-                {calculated 
-                  ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge} años` 
+                {calculated
+                  ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge} años`
                   : '--'}
               </p>
             </div>
@@ -295,16 +301,16 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
           <div className="grid grid-cols-2 gap-4">
             {BIOPHYSICS_ITEMS.map((item) => {
-              const ageKey = `${item.key.replace(/([A-Z])/g, (match) => match.toLowerCase())}Age`;
+              const ageKey = `${item.key.replace(/([A-Z])/g, (match) => match.toLowerCase())}Age` as keyof typeof results.partialAges;
               const partialAge = results.partialAges[ageKey];
               const status = getItemStatus(partialAge);
-              const statusColor = status === 'REJUVENECIDO' ? 'bg-status-green' : 
-                               status === 'NORMAL' ? 'bg-status-yellow' : 
+              const statusColor = status === 'REJUVENECIDO' ? 'bg-status-green' :
+                               status === 'NORMAL' ? 'bg-status-yellow' :
                                'bg-status-red';
 
               return (
-                <div 
-                  key={item.key} 
+                <div
+                  key={item.key}
                   className={`rounded-lg p-4 text-white transition-all ${
                     calculated ? statusColor : 'bg-gray-300'
                   }`}
@@ -315,14 +321,14 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                     <div className="flex justify-between">
                       <span className="opacity-80">Edad Calculada:</span>
                       <span className="font-medium">
-                        {calculated && partialAge ? `${partialAge.toFixed(1)} años` : '--'}
+                        {calculated && partialAge !== undefined ? `${partialAge.toFixed(1)} años` : '--'}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
                       <span className="opacity-80">Diferencia:</span>
                       <span className="font-medium">
-                        {calculated && partialAge 
+                        {calculated && partialAge !== undefined
                           ? `${partialAge - patient.chronologicalAge > 0 ? '+' : ''}${(partialAge - patient.chronologicalAge).toFixed(1)} años`
                           : '--'}
                       </span>
@@ -330,7 +336,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
                     <div className="mt-2 pt-2 border-t border-white/20">
                       <span className="text-xs uppercase tracking-wide">
-                        {calculated ? status.replace('_', ' ') : 'SIN CALCULAR'}
+                        {calculated ? status.replace(/_/g, ' ') : 'SIN CALCULAR'}
                       </span>
                     </div>
                   </div>
