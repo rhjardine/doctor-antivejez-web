@@ -85,7 +85,7 @@ export default function NuevoPacientePage() {
     try {
       // Usar uno de los usuarios existentes en tu base de datos
       // Cambia este ID por uno de los que tienes en tu BD
-      const userId = 'clxjg98ab0000cdeffgh1234'; // Usuario existente en tu BD
+      const userId = 'cmcc1bh3q00001olakn07gil4'; // Usuario existente en tu BD
 
       // Ahora el objeto 'formData' tiene el tipo correcto y no causará un error de compilación
       const result = await createPatient({ ...formData, userId });
