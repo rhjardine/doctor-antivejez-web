@@ -31,7 +31,8 @@
     "tailwind-merge": "^2.1.0",
     "zod": "^3.22.4",
     "prisma": "^5.7.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3" 
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -42,8 +43,7 @@
     "eslint": "^8.55.0",
     "eslint-config-next": "14.0.4",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.3.3"
+    "tailwindcss": "^3.4.17"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
