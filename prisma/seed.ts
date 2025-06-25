@@ -19,7 +19,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Usuario admin creado');
+  console.log('✅ Usuario admin creado con ID:', adminUser.id);
 
   // Crear rangos de edad
   const ageRanges = [
