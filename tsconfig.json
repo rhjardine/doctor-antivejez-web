@@ -34,7 +34,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, "src/app/(auth)/register/page.tsx.disabled"  ],
   "exclude": [
     "node_modules"
   ]
