@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation'; // CAMBIO 1: Importar useRouter
 import { getPatientWithTests } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-import { FaUser, FaHeartbeat, FaBook, FaAppleAlt } from 'react-icons/fa';
+import { FaUser, FaHeartbeat, FaBook, FaAppleAlt, FaArrowLeft } from 'react-icons/fa'; // CAMBIO 2: Importar FaArrowLeft
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
 import type { Patient } from '@/types';
@@ -14,6 +14,7 @@ type TabType = 'historia' | 'biofisica' | 'guia' | 'alimentacion';
 export default function PatientDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter(); // CAMBIO 3: Inicializar useRouter
   const patientId = params.id as string;
 
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -22,7 +23,6 @@ export default function PatientDetailPage() {
   const [showBiofisicaTest, setShowBiofisicaTest] = useState(false);
 
   useEffect(() => {
-    // Verificar si viene el parámetro tab en la URL
     const tab = searchParams.get('tab');
     if (tab === 'biofisica') {
       setActiveTab('biofisica');
@@ -36,12 +36,14 @@ export default function PatientDetailPage() {
   }, [patientId]);
 
   const loadPatient = async () => {
+    setLoading(true); // Asegurarse de mostrar el loader al recargar
     try {
       const result = await getPatientWithTests(patientId);
       if (result.success && result.patient) {
         setPatient(result.patient as Patient);
       } else {
         toast.error('Paciente no encontrado');
+        router.push('/historias'); // Redirigir si el paciente no se encuentra
       }
     } catch (error) {
       toast.error('Error al cargar paciente');
@@ -61,7 +63,7 @@ export default function PatientDetailPage() {
   if (!patient) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Paciente no encontrado</p>
+        <p className="text-gray-500">Paciente no encontrado. Redirigiendo...</p>
       </div>
     );
   }
@@ -78,16 +80,27 @@ export default function PatientDetailPage() {
       {/* Patient Header */}
       <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
         <div className="flex items-center space-x-6">
-          <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center">
+          <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
             <span className="text-3xl font-bold text-primary">
               {patient.firstName[0]}{patient.lastName[0]}
             </span>
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {patient.firstName} {patient.lastName}
-            </h1>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+            {/* CAMBIO 4: Se añade un div contenedor para el título y el nuevo botón */}
+            <div className="flex justify-between items-start mb-3">
+              <h1 className="text-3xl font-bold text-gray-900">
+                {patient.firstName} {patient.lastName}
+              </h1>
+              <button
+                onClick={() => router.push('/historias')}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary transition-colors shadow-sm"
+              >
+                <FaArrowLeft />
+                <span>Volver a Pacientes</span>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-gray-500">ID</p>
                 <p className="font-medium">{patient.identification}</p>
@@ -102,7 +115,7 @@ export default function PatientDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">ID Único</p>
-                <p className="font-medium text-xs">{patient.id}</p>
+                <p className="font-medium text-xs break-all">{patient.id}</p>
               </div>
             </div>
           </div>
@@ -111,7 +124,7 @@ export default function PatientDetailPage() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
+        <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -123,14 +136,14 @@ export default function PatientDetailPage() {
                   setActiveTab(tab.id as TabType);
                   setShowBiofisicaTest(false);
                 }}
-                className={`flex items-center space-x-2 py-4 px-1 border-b-2 transition-colors ${
+                className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium transition-colors ${
                   isActive
                     ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <Icon className="text-lg" />
-                <span className="font-medium">{tab.label}</span>
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -141,77 +154,69 @@ export default function PatientDetailPage() {
       <div className="min-h-[400px]">
         {activeTab === 'historia' && (
           <div className="card">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Historia Médica</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* ... (el resto del contenido de la pestaña no cambia) ... */}
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Detalles de la Historia Médica</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div>
-                <h3 className="font-medium text-gray-700 mb-3">Información Personal</h3>
-                <dl className="space-y-2">
-                  <div>
+                <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Personal</h3>
+                <dl className="space-y-3">
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Identificación</dt>
-                    <dd className="font-medium">{patient.identification}</dd>
+                    <dd className="font-medium text-gray-700">{patient.identification}</dd>
                   </div>
-                  <div>
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Nacionalidad</dt>
-                    <dd className="font-medium">{patient.nationality}</dd>
+                    <dd className="font-medium text-gray-700">{patient.nationality}</dd>
                   </div>
-                  <div>
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Lugar de Nacimiento</dt>
-                    <dd className="font-medium">{patient.birthPlace}</dd>
+                    <dd className="font-medium text-gray-700">{patient.birthPlace}</dd>
                   </div>
-                  <div>
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Estado Civil</dt>
-                    <dd className="font-medium">{patient.maritalStatus}</dd>
+                    <dd className="font-medium text-gray-700">{patient.maritalStatus}</dd>
                   </div>
-                  <div>
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Profesión</dt>
-                    <dd className="font-medium">{patient.profession}</dd>
+                    <dd className="font-medium text-gray-700">{patient.profession}</dd>
                   </div>
                 </dl>
               </div>
 
               <div>
-                <h3 className="font-medium text-gray-700 mb-3">Información de Contacto</h3>
-                <dl className="space-y-2">
-                  <div>
+                <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información de Contacto</h3>
+                <dl className="space-y-3">
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Teléfono</dt>
-                    <dd className="font-medium">{patient.phone}</dd>
+                    <dd className="font-medium text-gray-700">{patient.phone}</dd>
                   </div>
-                  <div>
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Email</dt>
-                    <dd className="font-medium">{patient.email}</dd>
+                    <dd className="font-medium text-gray-700">{patient.email}</dd>
                   </div>
-                  <div>
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Dirección</dt>
-                    <dd className="font-medium">{patient.address}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-gray-500">Ciudad</dt>
-                    <dd className="font-medium">{patient.city}, {patient.state}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-gray-500">País</dt>
-                    <dd className="font-medium">{patient.country}</dd>
+                    <dd className="font-medium text-gray-700">{patient.address}, {patient.city}, {patient.state}, {patient.country}</dd>
                   </div>
                 </dl>
               </div>
 
-              <div className="md:col-span-2">
-                <h3 className="font-medium text-gray-700 mb-3">Información Médica</h3>
-                <dl className="grid grid-cols-2 gap-4">
-                  <div>
+              <div className="md:col-span-2 pt-4">
+                <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Médica</h3>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Grupo Sanguíneo</dt>
-                    <dd className="font-medium">{patient.bloodType}</dd>
+                    <dd className="font-medium text-gray-700">{patient.bloodType}</dd>
                   </div>
-                  <div>
+                  <div className="flex justify-between">
                     <dt className="text-sm text-gray-500">Edad Cronológica</dt>
-                    <dd className="font-medium">{patient.chronologicalAge} años</dd>
+                    <dd className="font-medium text-gray-700">{patient.chronologicalAge} años</dd>
                   </div>
                 </dl>
                 {patient.observations && (
                   <div className="mt-4">
                     <dt className="text-sm text-gray-500 mb-1">Observaciones</dt>
-                    <dd className="text-gray-700">{patient.observations}</dd>
+                    <dd className="text-gray-700 bg-gray-50 p-3 rounded-md border">{patient.observations}</dd>
                   </div>
                 )}
               </div>
@@ -224,10 +229,7 @@ export default function PatientDetailPage() {
             <EdadBiofisicaTestView
               patient={patient}
               onBack={() => setShowBiofisicaTest(false)}
-              onTestComplete={() => {
-                setShowBiofisicaTest(false);
-                loadPatient(); // Recargar para actualizar los datos
-              }}
+              onTestComplete={loadPatient} // Se llama a loadPatient para recargar los datos
             />
           ) : (
             <EdadBiologicaMain

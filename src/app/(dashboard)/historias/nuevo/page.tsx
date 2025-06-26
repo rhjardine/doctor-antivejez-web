@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { createPatient } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
 import { FaCamera, FaArrowLeft, FaSave } from 'react-icons/fa';
 import { BLOOD_TYPES, MARITAL_STATUS, NATIONALITIES } from '@/lib/constants';
 import { GENDER_OPTIONS } from '@/types/biophysics';
 import { calculateAge } from '@/utils/date';
-import { Gender } from '@prisma/client'; // CORRECCIÓN: Se importa el tipo 'Gender'
+import { Gender } from '@prisma/client';
 
-// CORRECCIÓN: Se define un tipo para el estado del formulario para garantizar la seguridad de tipos
 type NewPatientFormData = {
   photo: string;
   nationality: string;
@@ -19,7 +19,7 @@ type NewPatientFormData = {
   lastName: string;
   firstName: string;
   birthDate: string;
-  gender: Gender; // Se usa el tipo específico 'Gender'
+  gender: Gender;
   birthPlace: string;
   phone: string;
   maritalStatus: string;
@@ -35,9 +35,9 @@ type NewPatientFormData = {
 
 export default function NuevoPacientePage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const [loading, setLoading] = useState(false);
   
-  // CORRECCIÓN: Se aplica el tipo 'NewPatientFormData' al estado del formulario
   const [formData, setFormData] = useState<NewPatientFormData>({
     photo: '',
     nationality: '',
@@ -46,7 +46,7 @@ export default function NuevoPacientePage() {
     lastName: '',
     firstName: '',
     birthDate: '',
-    gender: 'MASCULINO', // TypeScript ahora entiende que este es un valor del tipo 'Gender'
+    gender: 'MASCULINO',
     birthPlace: '',
     phone: '',
     maritalStatus: '',
@@ -64,14 +64,12 @@ export default function NuevoPacientePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    // CORRECCIÓN: Se hace una aserción de tipo para el campo 'gender' para mayor seguridad
     if (name === 'gender') {
         setFormData(prev => ({ ...prev, [name]: value as Gender }));
     } else {
         setFormData(prev => ({ ...prev, [name]: value }));
     }
 
-    // Calcular edad cuando se cambia la fecha de nacimiento
     if (name === 'birthDate' && value) {
       const age = calculateAge(value);
       setChronologicalAge(age);
@@ -82,20 +80,29 @@ export default function NuevoPacientePage() {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      // Usar uno de los usuarios existentes en tu base de datos
-      // Cambia este ID por uno de los que tienes en tu BD
-      const userId = 'cmcc1bh3q00001olakn07gil4'; // Usuario existente en tu BD
+    if (!session?.user?.id) {
+      toast.error('Error de autenticación. No se pudo identificar al usuario.');
+      setLoading(false);
+      return;
+    }
 
-      // Ahora el objeto 'formData' tiene el tipo correcto y no causará un error de compilación
+    try {
+      const userId = session.user.id;
       const result = await createPatient({ ...formData, userId });
 
-      if (result.success) {
-        toast.success('Paciente creado exitosamente');
-        router.push('/historias');
+      // --- INICIO DE CAMBIOS ---
+      if (result.success && result.patient) {
+        // 1. Muestra la notificación de éxito personalizada
+        toast.success("Se ha guardado la Historia");
+
+        // 2. Redirige al perfil del nuevo paciente, a la pestaña "biofisica"
+        router.push(`/historias/${result.patient.id}?tab=biofisica`);
+
       } else {
         toast.error(result.error || 'Error al crear paciente');
       }
+      // --- FIN DE CAMBIOS ---
+
     } catch (error) {
       console.error('Error en handleSubmit:', error);
       toast.error('Error al crear paciente');
@@ -103,6 +110,14 @@ export default function NuevoPacientePage() {
       setLoading(false);
     }
   };
+
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="loader"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
@@ -123,6 +138,7 @@ export default function NuevoPacientePage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* ... (el resto de tu formulario no necesita cambios) ... */}
         {/* Información Personal */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Información Personal</h2>
@@ -304,57 +320,22 @@ export default function NuevoPacientePage() {
         {/* Dirección */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Dirección</h2>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="label">País *</label>
-              <input
-                type="text"
-                name="country"
-                value={formData.country}
-                onChange={handleInputChange}
-                required
-                className="input"
-              />
+              <input type="text" name="country" value={formData.country} onChange={handleInputChange} required className="input" />
             </div>
-
             <div>
               <label className="label">Estado *</label>
-              <input
-                type="text"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                required
-                placeholder="Estado/Provincia"
-                className="input"
-              />
+              <input type="text" name="state" value={formData.state} onChange={handleInputChange} required placeholder="Estado/Provincia" className="input" />
             </div>
-
             <div>
               <label className="label">Ciudad *</label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                required
-                placeholder="Ciudad"
-                className="input"
-              />
+              <input type="text" name="city" value={formData.city} onChange={handleInputChange} required placeholder="Ciudad" className="input" />
             </div>
-
             <div className="md:col-span-3">
               <label className="label">Dirección *</label>
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                required
-                placeholder="Dirección completa"
-                className="input"
-              />
+              <input type="text" name="address" value={formData.address} onChange={handleInputChange} required placeholder="Dirección completa" className="input" />
             </div>
           </div>
         </div>
@@ -362,65 +343,31 @@ export default function NuevoPacientePage() {
         {/* Información Médica */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Información Médica</h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Grupo Sanguíneo *</label>
-              <select
-                name="bloodType"
-                value={formData.bloodType}
-                onChange={handleInputChange}
-                required
-                className="input"
-              >
+              <select name="bloodType" value={formData.bloodType} onChange={handleInputChange} required className="input" >
                 <option value="">Seleccionar...</option>
-                {BLOOD_TYPES.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
+                {BLOOD_TYPES.map(type => ( <option key={type} value={type}>{type}</option> ))}
               </select>
             </div>
-
             <div>
               <label className="label">E-mail *</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-                placeholder="ejemplo@dominio.com"
-                className="input"
-              />
+              <input type="email" name="email" value={formData.email} onChange={handleInputChange} required placeholder="ejemplo@dominio.com" className="input" />
             </div>
-
             <div className="md:col-span-2">
               <label className="label">Observaciones Generales</label>
-              <textarea
-                name="observations"
-                value={formData.observations}
-                onChange={handleInputChange}
-                rows={4}
-                placeholder="Notas adicionales sobre el paciente..."
-                className="input resize-none"
-              />
+              <textarea name="observations" value={formData.observations} onChange={handleInputChange} rows={4} placeholder="Notas adicionales sobre el paciente..." className="input resize-none" />
             </div>
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => router.push('/historias')}
-            className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
+          <button type="button" onClick={() => router.push('/historias')} className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" >
             Cancelar
           </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <button type="submit" disabled={loading || sessionStatus === 'loading'} className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed" >
             <FaSave />
             <span>{loading ? 'Guardando...' : 'Guardar Historia'}</span>
           </button>

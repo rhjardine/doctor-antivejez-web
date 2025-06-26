@@ -29,15 +29,15 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
     },
     {
       id: 'orthomolecular',
-      title: 'EDAD ORTOMOLECULAR',
+      title: 'EDAD ORTHOMOLECULAR',
       icon: FaAtom,
       value: '--',
       isClickable: false,
       color: 'bg-gray-400',
     },
     {
-      id: 'genomica',
-      title: 'EDAD GENÓMICA',
+      id: 'genetica',
+      title: 'EDAD GENÉTICA',
       icon: FaDna,
       value: '--',
       isClickable: false,

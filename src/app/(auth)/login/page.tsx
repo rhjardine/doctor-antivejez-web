@@ -1,17 +1,21 @@
+// src/app/(auth)/login/page.tsx
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { signIn } from '@/lib/actions/auth.actions';
+import { signIn } from 'next-auth/react'; // Importar de 'next-auth/react'
 import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'admin@doctorantivejez.com', // Pre-llenado para facilidad de prueba
+    password: 'admin123',             // Pre-llenado para facilidad de prueba
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,13 +23,17 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const result = await signIn(formData);
+      const result = await signIn('credentials', {
+        redirect: false, // Importante: manejamos la redirección manualmente
+        email: formData.email,
+        password: formData.password,
+      });
 
-      if (result.success) {
+      if (result?.ok) {
         toast.success('Inicio de sesión exitoso');
-        router.push('/dashboard');
+        router.push(callbackUrl); // Redirige a la URL original o al dashboard
       } else {
-        toast.error(result.error || 'Error al iniciar sesión');
+        toast.error(result?.error || 'Credenciales inválidas');
       }
     } catch (error) {
       toast.error('Error al conectar con el servidor');
@@ -37,21 +45,15 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-primary-dark/10 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary-dark mb-2">Doctor AntiVejez</h1>
           <p className="text-gray-600">Sistema de Gestión Médica Antienvejecimiento</p>
         </div>
-
-        {/* Login Form */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Iniciar Sesión</h2>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="label">
-                Correo Electrónico
-              </label>
+              <label htmlFor="email" className="label">Correo Electrónico</label>
               <input
                 id="email"
                 type="email"
@@ -63,11 +65,8 @@ export default function LoginPage() {
                 disabled={loading}
               />
             </div>
-
             <div>
-              <label htmlFor="password" className="label">
-                Contraseña
-              </label>
+              <label htmlFor="password" className="label">Contraseña</label>
               <input
                 id="password"
                 type="password"
@@ -79,7 +78,6 @@ export default function LoginPage() {
                 disabled={loading}
               />
             </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -88,7 +86,6 @@ export default function LoginPage() {
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </button>
           </form>
-
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               ¿No tienes una cuenta?{' '}
@@ -96,13 +93,6 @@ export default function LoginPage() {
                 Regístrate aquí
               </Link>
             </p>
-          </div>
-
-          {/* Demo credentials */}
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
-            <p className="font-medium mb-1">Credenciales de prueba:</p>
-            <p>Email: admin@doctorantivejez.com</p>
-            <p>Contraseña: admin123</p>
           </div>
         </div>
       </div>
