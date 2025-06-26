@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
-    
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.10.0",
     "@prisma/client": "^5.7.0",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-select": "^2.0.0",
@@ -20,16 +20,16 @@
     "lucide-react": "^0.522.0",
     "next": "14.0.4",
     "next-auth": "^4.24.5",
+    "prisma": "^5.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
     "recharts": "^2.10.0",
     "sonner": "^1.2.4",
     "tailwind-merge": "^2.1.0",
-    "zod": "^3.22.4",
-    "prisma": "^5.7.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3" 
+    "typescript": "^5.3.3",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
