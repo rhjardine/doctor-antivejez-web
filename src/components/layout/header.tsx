@@ -22,7 +22,6 @@ export function Header() {
             />
           </div>
         </div>
-
         {/* Actions */}
         <div className="flex items-center space-x-4 ml-6">
           <button className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors">
