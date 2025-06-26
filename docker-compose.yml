@@ -1,14 +1,21 @@
 # docker-compose.yml
+version: '3.8'
 services:
-  db:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: doctor_antivejez_local
+  app:
+    build: .
     ports:
-      - "5433:5432" # Mapeamos al puerto 5433 para no chocar con tu otra instalación
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/myapp
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=myapp
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
