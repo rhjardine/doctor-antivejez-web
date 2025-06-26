@@ -1,7 +1,7 @@
 # Dockerfile
 
 # 1. Etapa Base con todas las dependencias
-FROM node:18-alpine AS base
+FROM node:18-slim AS base
 WORKDIR /app
 COPY package.json package-lock.json ./
 # Usamos npm install para instalar todo, incluyendo devDependencies
@@ -18,7 +18,7 @@ ENV DATABASE_URL="postgresql://user:password@localhost:5432/db"
 RUN npm run build
 
 # 3. Etapa Final de Producción
-FROM node:18-alpine AS runner
+FROM node:18-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
