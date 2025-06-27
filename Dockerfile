@@ -1,48 +1,41 @@
-# Stage 1: Dependencies (instala todas las dependencias)
-# Usamos node:18-slim para evitar problemas de glibc que puedan afectar a Prisma en Alpine
-FROM node:18-slim AS deps
+# Dockerfile (ubicación raíz del proyecto)
+FROM node:20-slim AS builder
+
+# 1. Configura entorno
 WORKDIR /app
-# Instala openssl y gcompat (para compatibilidad con glibc si fuera necesario para otros binarios)
-# Aunque 'slim' ya viene con glibc, openssl puede ser útil si Prisma lo busca
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production
+
+# 2. Copia dependencias e instala
 COPY package.json package-lock.json ./
-RUN npm install
+COPY prisma ./prisma/
+RUN npm ci --include=dev
 
-# Stage 2: Builder (construye la aplicación)
-FROM node:18-slim AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-# Genera el cliente Prisma (necesita acceso a la DATABASE_URL si es durante el build)
-# Asegúrate que DATABASE_URL esté disponible como variable de entorno en esta etapa si npx prisma generate lo necesita para validar.
+# 3. Genera cliente Prisma y construye
 RUN npx prisma generate
-# Ejecuta el build de Next.js (que incluye prisma migrate deploy)
-# La DATABASE_URL debe estar disponible aquí para prisma migrate deploy
-RUN npm run build
+COPY . .
+RUN npm run build # Este comando debe correr `prisma generate && next build` (ver package.json)
 
-# Stage 3: Runner (la imagen final para producción)
-FROM node:18-slim AS runner
+# 4. Prepara imagen de producción (Runner Stage)
+FROM node:20-slim AS runner
 WORKDIR /app
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
-# Configura un usuario no-root para mayor seguridad
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-USER nextjs
-
-# Copia los archivos de la aplicación construidos en la etapa 'builder'
-# Esto es específico para 'output: standalone'
+# Copia los archivos de la aplicación construidos para el modo 'standalone'
+# Esto incluye el servidor, las páginas y las dependencias de producción.
 COPY --from=builder /app/.next/standalone ./
+
+# Copia explícitamente los binarios de Prisma y su cliente que no siempre se empaquetan en standalone
+# Esto es vital para que Prisma funcione en runtime.
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+
+# Copia la carpeta 'public' para assets estáticos
 COPY --from=builder /app/public ./public
-# Si tienes un prisma/schema.prisma en la raiz, tambien copialo si es necesario para runtime queries
-# COPY --from=builder /app/prisma/schema.prisma ./prisma/schema.prisma
 
-# Asegura que el usuario 'nextjs' sea el propietario de los archivos
-RUN chown -R nextjs:nodejs ./.next
+# Opcional: Limpia la caché de npm para reducir el tamaño de la imagen final (si se ejecuta npm install en runner stage)
+# RUN npm cache clean --force # No es necesario si no se ejecuta `npm install` en esta etapa
 
+# 5. Expone puerto y ejecuta
 EXPOSE 3000
-
-# Comando de inicio para la aplicación Next.js standalone
+# El comando para ejecutar una aplicación Next.js standalone es 'node server.js'
 CMD ["node", "server.js"]

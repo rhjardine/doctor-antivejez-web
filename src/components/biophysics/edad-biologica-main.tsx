@@ -1,13 +1,17 @@
-import { Patient } from '@/types';
+import { PatientWithDetails } from '@/types'; // Se formaliza la importación del tipo correcto
 import { FaHeartbeat, FaFlask, FaDna, FaAtom } from 'react-icons/fa';
 
+// Definición de las propiedades que espera el componente.
 interface EdadBiologicaMainProps {
-  patient: Patient;
+  // Se especifica que la prop 'patient' debe cumplir con el contrato 'PatientWithDetails',
+  // que incluye la relación con los tests biofísicos.
+  patient: PatientWithDetails;
   onTestClick: () => void;
 }
 
 export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologicaMainProps) {
-  // Obtener el último test biofísico si existe
+  // Ahora TypeScript sabe que 'patient.biophysicsTests' es una propiedad válida.
+  // El encadenamiento opcional (?.) sigue siendo una buena práctica por si el array está vacío.
   const lastBiophysicsTest = patient.biophysicsTests?.[0];
 
   const testCards = [
@@ -15,7 +19,7 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
       id: 'biofisica',
       title: 'EDAD BIOFÍSICA',
       icon: FaHeartbeat,
-      value: lastBiophysicsTest?.biologicalAge || '--',
+      value: lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge) : '--',
       isClickable: true,
       color: 'bg-primary',
     },
@@ -96,8 +100,8 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
                 key={card.id}
                 onClick={card.isClickable ? onTestClick : undefined}
                 className={`${card.color} rounded-xl p-6 text-white transition-all ${
-                  card.isClickable 
-                    ? 'cursor-pointer hover:shadow-lg hover:scale-105' 
+                  card.isClickable
+                    ? 'cursor-pointer hover:shadow-lg hover:scale-105'
                     : 'cursor-not-allowed opacity-80'
                 }`}
               >
@@ -116,7 +120,7 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
 
                 {card.isClickable && lastBiophysicsTest && (
                   <p className="text-sm mt-2 opacity-80">
-                    Diferencia: {lastBiophysicsTest.differentialAge > 0 ? '+' : ''}{lastBiophysicsTest.differentialAge} años
+                    Diferencia: {lastBiophysicsTest.differentialAge > 0 ? '+' : ''}{Math.round(lastBiophysicsTest.differentialAge)} años
                   </p>
                 )}
               </div>
@@ -150,14 +154,14 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
 
                 {/* Visual Gauge */}
                 <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className={`absolute left-0 top-0 h-full rounded-full transition-all ${
                       difference <= -7 ? 'bg-status-green' :
                       difference >= -2 && difference <= 3 ? 'bg-status-yellow' :
                       'bg-status-red'
                     }`}
-                    style={{ 
-                      width: `${Math.min(100, Math.max(0, 50 + (difference * 2)))}%` 
+                    style={{
+                      width: `${Math.min(100, Math.max(0, 50 + (difference * 2)))}%`
                     }}
                   />
                 </div>
