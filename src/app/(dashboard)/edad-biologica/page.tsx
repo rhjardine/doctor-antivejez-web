@@ -16,15 +16,13 @@ import {
 } from 'react-icons/fa';
 import { formatDate } from '@/utils/date';
 
-// Importa la interfaz Patient desde '@/types' si está definida globalmente
-// Si no, asegúrate de que la interfaz aquí es completa con todos los campos necesarios.
-// Dado que 'biophysicsTests' es parte de la interfaz Patient en '@/types/index.ts',
-// deberíamos importar Patient desde allí para consistencia.
-import type { Patient } from '@/types'; //
+// Importar Patient y PatientWithDetails desde '@/types'
+import type { Patient, PatientWithDetails } from '@/types'; // CAMBIO AQUI: Importar PatientWithDetails
 
 export default function EdadBiologicaPage() {
-  const router = useRouter();
-  const [patients, setPatients] = useState<Patient[]>([]);
+  // CAMBIO AQUI: useState debe usar PatientWithDetails para pacientes que vienen con relaciones
+  const [patients, setPatients] = useState<PatientWithDetails[]>([]); // CAMBIO: Usar PatientWithDetails
+
   const [loading, setLoading] = useState(true);
 
   // Cargar pacientes
@@ -34,9 +32,9 @@ export default function EdadBiologicaPage() {
         const result = await getAllPatients();
         if (result.success) {
           // Filtrar solo pacientes con tests biofísicos
-          // CORRECCIÓN: Añadir el tipo 'patient: Patient'
+          // CAMBIO AQUI: Usar PatientWithDetails para el tipo del parámetro 'patient'
           const patientsWithTests = (result.patients || []).filter(
-            (patient: Patient) => patient.biophysicsTests && patient.biophysicsTests.length > 0
+            (patient: PatientWithDetails) => patient.biophysicsTests && patient.biophysicsTests.length > 0
           );
           setPatients(patientsWithTests);
         } else {
