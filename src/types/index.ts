@@ -1,91 +1,28 @@
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'MEDICO' | 'ADMINISTRATIVO' | 'PACIENTE';
-  avatar?: string;
-}
+// src/types/index.ts
 
-export interface Patient {
-  id: string;
-  userId: string;
-  // **Asegúrate de que esta propiedad 'user' esté presente y con esta forma**
-  user?: { // Hacerla opcional por si getAllPatients no siempre la incluye (aunque en tu caso sí)
-    id: string;
-    name: string;
-    email: string;
-  };
-  // **Asegúrate de que 'photo' permita 'string | null' o 'string | null | undefined'**
-  photo?: string | null; // Correcto: puede ser string, null o undefined
-  nationality: string;
-  identification: string;
-  historyDate: Date;
-  lastName: string;
-  firstName: string;
-  birthDate: Date;
-  chronologicalAge: number;
-  gender: Gender;
-  birthPlace: string;
-  phone: string;
-  maritalStatus: string;
-  profession: string;
-  country: string;
-  state: string;
-  city: string;
-  address: string;
-  bloodType: string;
-  email: string;
-  // **Asegúrate de que 'observations' permita 'string | null' o 'string | null | undefined'**
-  observations?: string | null; // Correcto: puede ser string, null o undefined
-  createdAt: Date;
-  updatedAt: Date;
-  biophysicsTests?: BiophysicsTest[];
-}
+// 1. Importar los tipos base directamente desde el cliente de Prisma
+// Esto asegura que nuestros tipos siempre estarán sincronizados con el esquema de la base de datos.
+import type { 
+  User as PrismaUser, 
+  Patient as PrismaPatient, 
+  BiophysicsTest as PrismaBiophysicsTest,
+  Board as PrismaBoard,
+  Range as PrismaRange
+} from '@prisma/client';
 
+// 2. Re-exportar los tipos base de Prisma para usarlos en toda la aplicación
+export type User = PrismaUser;
+export type Patient = PrismaPatient;
+export type BiophysicsTest = PrismaBiophysicsTest;
+export type Board = PrismaBoard;
+export type Range = PrismaRange;
+
+// 3. Crear un tipo específico para cuando un paciente se obtiene con sus relaciones
+// Esto soluciona el error de "tipado" que bloquea el despliegue en Vercel.
+export type PatientWithDetails = Patient & {
+  user: Pick<User, 'id' | 'name' | 'email'>;
+  biophysicsTests: BiophysicsTest[];
+};
+
+// 4. Mantener la definición de Gender, ya que es un tipo de unión personalizado
 export type Gender = 'MASCULINO' | 'FEMENINO' | 'MASCULINO_DEPORTIVO' | 'FEMENINO_DEPORTIVO';
-
-export interface BiophysicsTest {
-  id: string;
-  patientId: string;
-  chronologicalAge: number;
-  biologicalAge: number;
-  differentialAge: number;
-  gender: string;
-  isAthlete: boolean;
-  testDate: Date;
-
-  // Métricas y sus edades calculadas
-  fatPercentage?: number;
-  fatAge?: number;
-  bmi?: number;
-  bmiAge?: number;
-  digitalReflexes?: number;
-  reflexesAge?: number;
-  visualAccommodation?: number;
-  visualAge?: number;
-  staticBalance?: number;
-  balanceAge?: number;
-  skinHydration?: number;
-  hydrationAge?: number;
-  systolicPressure?: number;
-  systolicAge?: number;
-  diastolicPressure?: number;
-  diastolicAge?: number;
-}
-
-export interface Board {
-  id: string;
-  rangeId: number;
-  type: string;
-  name: string;
-  minValue: number;
-  maxValue: number;
-  inverse: boolean;
-  range?: Range;
-}
-
-export interface Range {
-  id: number;
-  minAge: number;
-  maxAge: number;
-}
