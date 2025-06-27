@@ -9,7 +9,7 @@ export interface User {
 export interface Patient {
   id: string;
   userId: string;
-  photo?: string;
+  photo?: null;
   nationality: string;
   identification: string;
   historyDate: Date;
@@ -28,7 +28,7 @@ export interface Patient {
   address: string;
   bloodType: string;
   email: string;
-  observations?: string;
+  observations?: null;
   createdAt: Date;
   updatedAt: Date;
   biophysicsTests?: BiophysicsTest[];

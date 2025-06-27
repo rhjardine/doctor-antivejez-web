@@ -1,50 +1,41 @@
 // src/middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+// import { getToken } from 'next-auth/jwt'; // Comentar esta línea
 
 export async function middleware(req: NextRequest) {
-  const secret = process.env.NEXTAUTH_SECRET;
+  // const secret = process.env.NEXTAUTH_SECRET; // Comentar esta línea
 
-  if (!secret) {
-    console.error('Error: La variable de entorno NEXTAUTH_SECRET no está definida.');
-    // En un entorno de producción, podrías redirigir a una página de error.
-    // Por ahora, permitimos el acceso en desarrollo si no hay secret, pero con una advertencia.
-    return NextResponse.next();
-  }
+  // if (!secret) {
+  //   console.error('Error: La variable de entorno NEXTAUTH_SECRET no está definida.');
+  //   return NextResponse.next();
+  // }
 
-  const token = await getToken({ req, secret });
+  // const token = await getToken({ req, secret }); // Comentar esta línea
 
-  const { pathname } = req.nextUrl;
+  // const { pathname } = req.nextUrl; // Comentar esta línea
 
-  // Si el usuario no está autenticado (no hay token) E intenta acceder a una ruta protegida
-  if (!token && pathname.startsWith('/dashboard')) {
-    // Redirige a la página de login
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('callbackUrl', req.nextUrl.pathname); // Opcional: para redirigir de vuelta después del login
-    return NextResponse.redirect(loginUrl);
-  }
+  // // Si el usuario no está autenticado (no hay token) E intenta acceder a una ruta protegida
+  // if (!token && pathname.startsWith('/dashboard')) {
+  //   const loginUrl = new URL('/login', req.url);
+  //   loginUrl.searchParams.set('callbackUrl', req.nextUrl.pathname);
+  //   return NextResponse.redirect(loginUrl);
+  // }
 
-  // Si el usuario está autenticado (hay token) E intenta acceder a la página de login o registro
-  if (token && (pathname === '/login' || pathname === '/register')) {
-    // Redirige al dashboard
-    return NextResponse.redirect(new URL('/dashboard', req.url));
-  }
+  // // Si el usuario está autenticado (hay token) E intenta acceder a la página de login o registro
+  // if (token && (pathname === '/login' || pathname === '/register')) {
+  //   return NextResponse.redirect(new URL('/dashboard', req.url));
+  // }
 
-  // Si no se cumple ninguna de las condiciones anteriores, permite que la solicitud continúe.
+  // Permite que la solicitud continúe siempre (temporalmente)
   return NextResponse.next();
 }
 
 // Configuración del Matcher: Especifica qué rutas serán interceptadas por el middleware.
 export const config = {
   matcher: [
-    /*
-     * Coincide con todas las rutas de solicitud excepto las que comienzan con:
-     * - api (rutas de API)
-     * - _next/static (archivos estáticos)
-     * - _next/image (optimización de imágenes)
-     * - favicon.ico (archivo de favicon)
-     */
+    // El matcher sigue siendo importante para que Next.js sepa que existe un middleware,
+    // aunque su lógica interna esté deshabilitada temporalmente.
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

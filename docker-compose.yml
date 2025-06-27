@@ -1,23 +1,23 @@
-# docker-compose.yml
-version: '3.8'
 services:
-  app:
+  web:
     build: .
     ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/myapp
+      - "3001:3000"
     depends_on:
       - db
-
-  db:
-    image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=myapp
+      DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
+      NEXTAUTH_URL: "http://localhost:3001"
+      NEXTAUTH_SECRET: "n5bQGpiu3t03I8NOA3RfClMcQAfYvx6Hyo7yOTWEO1M="
+      NODE_ENV: "development"
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: doctor_antivejez_local
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
 volumes:
   postgres_data:

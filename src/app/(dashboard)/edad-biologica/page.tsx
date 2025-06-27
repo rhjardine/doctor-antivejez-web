@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAllPatients } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-import { 
-  FaArrowLeft, 
-  FaEye, 
-  FaPlus, 
+import {
+  FaArrowLeft,
+  FaEye,
+  FaPlus,
   FaChartLine,
   FaUser,
   FaClock,
@@ -17,22 +16,11 @@ import {
 } from 'react-icons/fa';
 import { formatDate } from '@/utils/date';
 
-interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  identification: string;
-  chronologicalAge: number;
-  email: string;
-  gender: string;
-  createdAt: Date;
-  biophysicsTests: Array<{
-    id: string;
-    biologicalAge: number;
-    differentialAge: number;
-    testDate: Date;
-  }>;
-}
+// Importa la interfaz Patient desde '@/types' si está definida globalmente
+// Si no, asegúrate de que la interfaz aquí es completa con todos los campos necesarios.
+// Dado que 'biophysicsTests' es parte de la interfaz Patient en '@/types/index.ts',
+// deberíamos importar Patient desde allí para consistencia.
+import type { Patient } from '@/types'; //
 
 export default function EdadBiologicaPage() {
   const router = useRouter();
@@ -46,8 +34,9 @@ export default function EdadBiologicaPage() {
         const result = await getAllPatients();
         if (result.success) {
           // Filtrar solo pacientes con tests biofísicos
+          // CORRECCIÓN: Añadir el tipo 'patient: Patient'
           const patientsWithTests = (result.patients || []).filter(
-            patient => patient.biophysicsTests && patient.biophysicsTests.length > 0
+            (patient: Patient) => patient.biophysicsTests && patient.biophysicsTests.length > 0
           );
           setPatients(patientsWithTests);
         } else {
@@ -133,9 +122,9 @@ export default function EdadBiologicaPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Edad Promedio Bio.</p>
               <p className="text-2xl font-bold text-gray-900">
-                {patients.length > 0 
+                {patients.length > 0
                   ? Math.round(
-                      patients.reduce((acc, p) => acc + p.biophysicsTests[0].biologicalAge, 0) 
+                      patients.reduce((acc, p) => acc + (p.biophysicsTests?.[0]?.biologicalAge || 0), 0)
                       / patients.length
                     )
                   : 0} años
@@ -152,9 +141,9 @@ export default function EdadBiologicaPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Edad Promedio Cron.</p>
               <p className="text-2xl font-bold text-gray-900">
-                {patients.length > 0 
+                {patients.length > 0
                   ? Math.round(
-                      patients.reduce((acc, p) => acc + p.chronologicalAge, 0) 
+                      patients.reduce((acc, p) => acc + p.chronologicalAge, 0)
                       / patients.length
                     )
                   : 0} años
@@ -171,7 +160,7 @@ export default function EdadBiologicaPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Tests Realizados</p>
               <p className="text-2xl font-bold text-gray-900">
-                {patients.reduce((acc, p) => acc + p.biophysicsTests.length, 0)}
+                {patients.reduce((acc, p) => acc + (p.biophysicsTests?.length || 0), 0)}
               </p>
             </div>
           </div>
@@ -206,15 +195,16 @@ export default function EdadBiologicaPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {patients.map((patient) => {
-              const latestTest = patient.biophysicsTests[0];
-              const status = getBiologicalAgeStatus(
-                patient.chronologicalAge, 
+              const latestTest = patient.biophysicsTests?.[0]; // Usar optional chaining aquí
+              // Asegurarse de que latestTest exista antes de acceder a sus propiedades
+              const status = latestTest ? getBiologicalAgeStatus(
+                patient.chronologicalAge,
                 latestTest.biologicalAge
-              );
+              ) : { status: 'unknown', color: 'gray', text: 'N/A' }; // Manejar caso sin test
 
               return (
-                <div 
-                  key={patient.id} 
+                <div
+                  key={patient.id}
                   className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all duration-200"
                 >
                   {/* Información del paciente */}
@@ -246,15 +236,14 @@ export default function EdadBiologicaPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Edad Biológica:</span>
                       <span className="font-semibold text-primary">
-                        {Math.round(latestTest.biologicalAge)} años
+                        {latestTest ? `${Math.round(latestTest.biologicalAge)} años` : '--'}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Diferencia:</span>
                       <span className={`font-semibold text-${status.color}-600`}>
-                        {latestTest.differentialAge > 0 ? '+' : ''}
-                        {Math.round(latestTest.differentialAge)} años
+                        {latestTest ? `${latestTest.differentialAge > 0 ? '+' : ''}${Math.round(latestTest.differentialAge)} años` : '--'}
                       </span>
                     </div>
 
@@ -268,7 +257,7 @@ export default function EdadBiologicaPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Último Test:</span>
                       <span className="text-sm text-gray-500">
-                        {formatDate(latestTest.testDate)}
+                        {latestTest ? formatDate(latestTest.testDate) : '--'}
                       </span>
                     </div>
                   </div>

@@ -1,18 +1,7 @@
-# .dockerignore
-node_modules
-npm-debug.log
-Dockerfile
-.dockerignore
-.git
-.gitignore
-README.md
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+node_modules
 .next
-.vercel
-coverage
-.nyc_output
-*.log
+.git
+Dockerfile
+docker-compose.yml
