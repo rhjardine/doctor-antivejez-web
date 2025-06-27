@@ -1,3 +1,4 @@
+// src/app/(dashboard)/historias/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,7 +8,11 @@ import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList } from '
 import { getAllPatients, deletePatient, searchPatients } from '@/lib/actions/patients.actions';
 import { formatDate } from '@/utils/date';
 import { toast } from 'sonner';
-import type { Patient } from '@/types';
+// CAMBIO 1: Importar el tipo correcto que incluye las relaciones
+import type { PatientWithDetails } from '@/types';
+
+// Usaremos PatientWithDetails como nuestro tipo principal en este componente
+type Patient = PatientWithDetails;
 
 export default function HistoriasPage() {
   const router = useRouter();
@@ -25,7 +30,8 @@ export default function HistoriasPage() {
   const loadPatients = async () => {
     try {
       const result = await getAllPatients();
-      if (result.success) {
+      if (result.success && result.patients) {
+        // CAMBIO 2: Asegurarle a TypeScript que los datos que llegan tienen la forma correcta
         setPatients(result.patients as Patient[]);
       }
     } catch (error) {
@@ -44,7 +50,7 @@ export default function HistoriasPage() {
     setLoading(true);
     try {
       const result = await searchPatients(searchQuery);
-      if (result.success) {
+      if (result.success && result.patients) {
         setPatients(result.patients as Patient[]);
       }
     } catch (error) {
@@ -81,6 +87,7 @@ export default function HistoriasPage() {
     );
   }
 
+  // ... (El resto del return no necesita cambios, puedes pegar aquí la parte visual que ya tenías)
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
@@ -164,7 +171,9 @@ export default function HistoriasPage() {
                   <span>Registrado: {formatDate(patient.createdAt)}</span>
                   {patient.biophysicsTests && patient.biophysicsTests.length > 0 && (
                     <span className="text-green-600">
-                      Edad Bio: {Math.round(patient.biophysicsTests[0].biologicalAge)} años
+                      Edad Bio: {patient.biophysicsTests[0].biologicalAge !== null && patient.biophysicsTests[0].biologicalAge !== undefined
+                        ? `${Math.round(patient.biophysicsTests[0].biologicalAge)} años`
+                        : '--'}
                     </span>
                   )}
                 </div>
