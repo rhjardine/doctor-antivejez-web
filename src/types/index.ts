@@ -9,7 +9,14 @@ export interface User {
 export interface Patient {
   id: string;
   userId: string;
-  photo?: null;
+  // **Asegúrate de que esta propiedad 'user' esté presente y con esta forma**
+  user?: { // Hacerla opcional por si getAllPatients no siempre la incluye (aunque en tu caso sí)
+    id: string;
+    name: string;
+    email: string;
+  };
+  // **Asegúrate de que 'photo' permita 'string | null' o 'string | null | undefined'**
+  photo?: string | null; // Correcto: puede ser string, null o undefined
   nationality: string;
   identification: string;
   historyDate: Date;
@@ -28,7 +35,8 @@ export interface Patient {
   address: string;
   bloodType: string;
   email: string;
-  observations?: null;
+  // **Asegúrate de que 'observations' permita 'string | null' o 'string | null | undefined'**
+  observations?: string | null; // Correcto: puede ser string, null o undefined
   createdAt: Date;
   updatedAt: Date;
   biophysicsTests?: BiophysicsTest[];
