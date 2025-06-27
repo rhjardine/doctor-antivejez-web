@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // CAMBIO AQUI: Importar useRouter
 import Link from 'next/link';
 import { getAllPatients } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
@@ -16,13 +16,11 @@ import {
 } from 'react-icons/fa';
 import { formatDate } from '@/utils/date';
 
-// Importar Patient y PatientWithDetails desde '@/types'
-import type { Patient, PatientWithDetails } from '@/types'; // CAMBIO AQUI: Importar PatientWithDetails
+import type { Patient, PatientWithDetails } from '@/types';
 
 export default function EdadBiologicaPage() {
-  // CAMBIO AQUI: useState debe usar PatientWithDetails para pacientes que vienen con relaciones
-  const [patients, setPatients] = useState<PatientWithDetails[]>([]); // CAMBIO: Usar PatientWithDetails
-
+  const router = useRouter(); // CAMBIO AQUI: Inicializar el hook useRouter
+  const [patients, setPatients] = useState<PatientWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Cargar pacientes
@@ -31,8 +29,6 @@ export default function EdadBiologicaPage() {
       try {
         const result = await getAllPatients();
         if (result.success) {
-          // Filtrar solo pacientes con tests biofísicos
-          // CAMBIO AQUI: Usar PatientWithDetails para el tipo del parámetro 'patient'
           const patientsWithTests = (result.patients || []).filter(
             (patient: PatientWithDetails) => patient.biophysicsTests && patient.biophysicsTests.length > 0
           );
@@ -193,12 +189,11 @@ export default function EdadBiologicaPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {patients.map((patient) => {
-              const latestTest = patient.biophysicsTests?.[0]; // Usar optional chaining aquí
-              // Asegurarse de que latestTest exista antes de acceder a sus propiedades
+              const latestTest = patient.biophysicsTests?.[0];
               const status = latestTest ? getBiologicalAgeStatus(
                 patient.chronologicalAge,
                 latestTest.biologicalAge
-              ) : { status: 'unknown', color: 'gray', text: 'N/A' }; // Manejar caso sin test
+              ) : { status: 'unknown', color: 'gray', text: 'N/A' };
 
               return (
                 <div
