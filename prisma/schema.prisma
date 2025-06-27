@@ -11,30 +11,31 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  password       String
-  name           String
-  role           Role      @default(MEDICO)
-  avatar         String?
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id              String          @id @default(cuid())
+  email           String          @unique
+  password        String
+  name            String
+  role            Role            @default(MEDICO)
+  image           String?         // CAMBIO: Renombrado de 'avatar' a 'image' para compatibilidad con NextAuth
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  emailVerified   DateTime?       // CAMBIO: Añadido para compatibilidad con NextAuth (verificación de correo)
 
-  patients       Patient[]
+  patients        Patient[]
 
   @@map("users")
 }
 
 model Patient {
-  id                String    @id @default(cuid())
+  id                String            @id @default(cuid())
   userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Información Personal
   photo             String?
   nationality       String
-  identification    String    @unique
+  identification    String            @unique
   historyDate       DateTime
   lastName          String
   firstName         String
@@ -53,8 +54,8 @@ model Patient {
   email             String
   observations      String?
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   // Relación con tests biofísicos
   biophysicsTests   BiophysicsTest[]
@@ -63,44 +64,44 @@ model Patient {
 }
 
 model BiophysicsTest {
-  id                String    @id @default(cuid())
-  patientId         String
-  patient           Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  id                  String      @id @default(cuid())
+  patientId           String
+  patient             Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
-  chronologicalAge  Float
-  biologicalAge     Float
-  differentialAge   Float
-  gender            String
-  isAthlete         Boolean   @default(false)
+  chronologicalAge    Float
+  biologicalAge       Float
+  differentialAge     Float
+  gender              String
+  isAthlete           Boolean     @default(false)
 
   // Resultados de las 8 métricas
-  fatPercentage     Float?
-  fatAge            Float?
+  fatPercentage       Float?
+  fatAge              Float?
 
-  bmi               Float?
-  bmiAge            Float?
+  bmi                 Float?
+  bmiAge              Float?
 
-  digitalReflexes   Float?    // Promedio de las 3 mediciones
-  reflexesAge       Float?
+  digitalReflexes     Float?      // Promedio de las 3 mediciones
+  reflexesAge         Float?
 
   visualAccommodation Float?
-  visualAge         Float?
+  visualAge           Float?
 
-  staticBalance     Float?    // Promedio de las 3 mediciones
-  balanceAge        Float?
+  staticBalance       Float?      // Promedio de las 3 mediciones
+  balanceAge          Float?
 
-  skinHydration     Float?
-  hydrationAge      Float?
+  skinHydration       Float?
+  hydrationAge        Float?
 
-  systolicPressure  Float?
-  systolicAge       Float?
+  systolicPressure    Float?
+  systolicAge         Float?
 
-  diastolicPressure Float?
-  diastolicAge      Float?
+  diastolicPressure   Float?
+  diastolicAge        Float?
 
-  testDate          DateTime  @default(now())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  testDate            DateTime    @default(now())
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   @@map("biophysics_tests")
 }
