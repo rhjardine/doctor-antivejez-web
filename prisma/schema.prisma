@@ -22,12 +22,14 @@ model User {
   updatedAt      DateTime  @updatedAt
 
   patients       Patient[]
+
+  @@map("users")
 }
 
 model Patient {
   id                String    @id @default(cuid())
   userId            String
-  user              User      @relation(fields: [userId], references: [id])
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Información Personal
   photo             String?
@@ -54,13 +56,16 @@ model Patient {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  // Relación con tests biofísicos
   biophysicsTests   BiophysicsTest[]
+
+  @@map("patients")
 }
 
 model BiophysicsTest {
   id                String    @id @default(cuid())
   patientId         String
-  patient           Patient   @relation(fields: [patientId], references: [id])
+  patient           Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   chronologicalAge  Float
   biologicalAge     Float
@@ -96,12 +101,14 @@ model BiophysicsTest {
   testDate          DateTime  @default(now())
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  @@map("biophysics_tests")
 }
 
 model Board {
   id        String   @id @default(cuid())
   rangeId   Int
-  range     Range    @relation(fields: [rangeId], references: [id])
+  range     Range    @relation(fields: [rangeId], references: [id], onDelete: Cascade)
   type      String   @default("FORM_BIOPHYSICS")
   name      String
   minValue  Float
@@ -109,6 +116,8 @@ model Board {
   inverse   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("boards")
 }
 
 model Range {
@@ -119,6 +128,8 @@ model Range {
   updatedAt DateTime @updatedAt
 
   boards    Board[]
+
+  @@map("ranges")
 }
 
 enum Role {
