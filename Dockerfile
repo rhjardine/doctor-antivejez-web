@@ -1,33 +1,18 @@
-# Dockerfile (Versión Final para output: 'standalone')
+# Dockerfile (Versión Final para Desarrollo Local)
+FROM node:18-alpine
 
-# 1. Etapa de Instalación
-FROM node:18-alpine AS deps
+# Instalar dependencias necesarias para Prisma en Alpine Linux
+RUN apk add --no-cache openssl
+
+# Establecer el directorio de trabajo
 WORKDIR /app
-COPY package.json package-lock.json ./
+
+# Copiar archivos de dependencias e instalar TODAS las dependencias
+COPY package*.json ./
 RUN npm install
 
-# 2. Etapa de Construcción
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copiar el resto del código del proyecto
 COPY . .
-# Se necesita una URL falsa para que prisma generate no falle
-ENV DATABASE_URL="postgresql://placeholder"
-# El script de build ya incluye "prisma generate"
-RUN npm run build
 
-# 3. Etapa Final de Producción
-FROM node:18-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-
-# Copia la salida optimizada 'standalone'
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-# ⭐ ESTA ES LA LÍNEA QUE FALTABA ⭐
-COPY --from=builder /app/prisma ./prisma
-
-EXPOSE 3000
-# El comando final ahora apunta al server.js dentro de la carpeta 'standalone'
-CMD ["node", "server.js"]
+# El comando por defecto será el de desarrollo, pero lo controlaremos desde docker-compose
+CMD ["npm", "run", "dev"]
