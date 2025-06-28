@@ -16,6 +16,7 @@ model User {
   password        String
   name            String
   role            Role            @default(MEDICO)
+  avatar          String?
   image           String?         // CAMBIO: Renombrado de 'avatar' a 'image' para compatibilidad con NextAuth
   isActive        Boolean         @default(true)
   createdAt       DateTime        @default(now())

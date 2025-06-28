@@ -2,19 +2,12 @@
   "name": "doctor-antivejez-webapp",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
-    "migrate": "prisma migrate deploy",
-    "migrate:reset": "prisma migrate reset --force",
-    "build-full": "prisma generate && prisma migrate deploy && next build",
-    "start": "next start",
-    "lint": "next lint",
-    "prisma:generate": "dotenv -e .env -- prisma generate",
-    "prisma:migrate": "dotenv -e .env -- prisma migrate dev",
-    "prisma:studio": "dotenv -e .env -- prisma studio",
-    "prisma:seed": "dotenv -e .env -- prisma db seed"
-  },
+"scripts": {
+  "dev": "next dev",
+  "build": "prisma generate && next build",
+  "start": "next start",
+  "lint": "next lint"
+},
   "dependencies": {
     "@auth/prisma-adapter": "^2.4.1",
     "@prisma/client": "^5.7.0",

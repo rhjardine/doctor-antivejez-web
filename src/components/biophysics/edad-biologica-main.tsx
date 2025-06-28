@@ -55,7 +55,6 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
     if (diff >= -2 && diff <= 3) return 'text-status-yellow';
     return 'text-status-red';
   };
-
   // Datos para los medidores del perfil multidimensional
   const profileData = [
     {

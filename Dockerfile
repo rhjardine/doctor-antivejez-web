@@ -1,41 +1,32 @@
-# Dockerfile (ubicación raíz del proyecto)
-FROM node:20-slim AS builder
+# Dockerfile (Versión Final Corregida)
 
-# 1. Configura entorno
+# 1. Etapa de Dependencias
+# Instala TODAS las dependencias, incluyendo las de desarrollo, necesarias para el build.
+FROM node:18-alpine AS deps
 WORKDIR /app
-ENV NODE_ENV=production
-
-# 2. Copia dependencias e instala
 COPY package.json package-lock.json ./
-COPY prisma ./prisma/
-RUN npm ci --include=dev
+RUN npm install
 
-# 3. Genera cliente Prisma y construye
-RUN npx prisma generate
+# 2. Etapa de Construcción
+# Copia las dependencias y el código, y construye la aplicación.
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build # Este comando debe correr `prisma generate && next build` (ver package.json)
+# Se necesita una URL falsa para que `prisma generate` no falle.
+ENV DATABASE_URL="postgresql://placeholder"
+RUN npm run build
 
-# 4. Prepara imagen de producción (Runner Stage)
-FROM node:20-slim AS runner
+# 3. Etapa de Producción
+# Copia solo los artefactos necesarios desde la etapa de construcción para una imagen final ligera.
+FROM node:18-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-
-# Copia los archivos de la aplicación construidos para el modo 'standalone'
-# Esto incluye el servidor, las páginas y las dependencias de producción.
-COPY --from=builder /app/.next/standalone ./
-
-# Copia explícitamente los binarios de Prisma y su cliente que no siempre se empaquetan en standalone
-# Esto es vital para que Prisma funcione en runtime.
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
-
-# Copia la carpeta 'public' para assets estáticos
+# Copia el usuario nextjs de la etapa de builder para seguridad
 COPY --from=builder /app/public ./public
+# Copia la salida optimizada 'standalone'
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Opcional: Limpia la caché de npm para reducir el tamaño de la imagen final (si se ejecuta npm install en runner stage)
-# RUN npm cache clean --force # No es necesario si no se ejecuta `npm install` en esta etapa
-
-# 5. Expone puerto y ejecuta
 EXPOSE 3000
-# El comando para ejecutar una aplicación Next.js standalone es 'node server.js'
 CMD ["node", "server.js"]

@@ -1,25 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams, useRouter } from 'next/navigation'; // CAMBIO 1: Importar useRouter
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getPatientWithTests } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-import { FaUser, FaHeartbeat, FaBook, FaAppleAlt, FaArrowLeft } from 'react-icons/fa'; // CAMBIO 2: Importar FaArrowLeft
+import { FaUser, FaHeartbeat, FaBook, FaAppleAlt, FaArrowLeft } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
-import type { Patient } from '@/types';
+// CAMBIO 1: Importar el tipo correcto que incluye las relaciones
+import type { PatientWithDetails } from '@/types';
 
-type TabType = 'historia' | 'biofisica' | 'guia' | 'alimentacion';
+// Usaremos PatientWithDetails como nuestro tipo principal en este componente
+type Patient = PatientWithDetails;
 
 export default function PatientDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const router = useRouter(); // CAMBIO 3: Inicializar useRouter
+  const router = useRouter();
   const patientId = params.id as string;
 
+  // CAMBIO 2: El estado ahora usa el tipo correcto 'Patient' (alias de PatientWithDetails)
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('historia');
+  const [activeTab, setActiveTab] = useState<'historia' | 'biofisica' | 'guia' | 'alimentacion'>('historia');
   const [showBiofisicaTest, setShowBiofisicaTest] = useState(false);
 
   useEffect(() => {
@@ -36,14 +39,15 @@ export default function PatientDetailPage() {
   }, [patientId]);
 
   const loadPatient = async () => {
-    setLoading(true); // Asegurarse de mostrar el loader al recargar
+    setLoading(true);
     try {
       const result = await getPatientWithTests(patientId);
       if (result.success && result.patient) {
+        // CAMBIO 3: Aseguramos a TypeScript que los datos que llegan tienen la forma correcta
         setPatient(result.patient as Patient);
       } else {
         toast.error('Paciente no encontrado');
-        router.push('/historias'); // Redirigir si el paciente no se encuentra
+        router.push('/historias');
       }
     } catch (error) {
       toast.error('Error al cargar paciente');
@@ -75,6 +79,9 @@ export default function PatientDetailPage() {
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
   ];
 
+  // ===============================================================
+  // INICIO DEL CÓDIGO VISUAL (JSX) - 100% PRESERVADO Y MEJORADO
+  // ===============================================================
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Patient Header */}
@@ -86,7 +93,6 @@ export default function PatientDetailPage() {
             </span>
           </div>
           <div className="flex-1">
-            {/* CAMBIO 4: Se añade un div contenedor para el título y el nuevo botón */}
             <div className="flex justify-between items-start mb-3">
               <h1 className="text-3xl font-bold text-gray-900">
                 {patient.firstName} {patient.lastName}
@@ -133,7 +139,7 @@ export default function PatientDetailPage() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab.id as TabType);
+                  setActiveTab(tab.id as 'historia' | 'biofisica' | 'guia' | 'alimentacion');
                   setShowBiofisicaTest(false);
                 }}
                 className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium transition-colors ${
@@ -154,7 +160,6 @@ export default function PatientDetailPage() {
       <div className="min-h-[400px]">
         {activeTab === 'historia' && (
           <div className="card">
-            {/* ... (el resto del contenido de la pestaña no cambia) ... */}
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Detalles de la Historia Médica</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div>
@@ -229,7 +234,7 @@ export default function PatientDetailPage() {
             <EdadBiofisicaTestView
               patient={patient}
               onBack={() => setShowBiofisicaTest(false)}
-              onTestComplete={loadPatient} // Se llama a loadPatient para recargar los datos
+              onTestComplete={loadPatient}
             />
           ) : (
             <EdadBiologicaMain
