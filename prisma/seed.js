@@ -39,7 +39,7 @@ async function main() {
   }
   console.log('✅ Rangos de edad creados o actualizados.');
 
-  / Datos de baremos biofísicos
+  // Datos de baremos biofísicos
   const biophysicsBoards = [
     // % Grasa Masculino
     { rangeId: 1, name: 'male_fat', minValue: 10, maxValue: 14 },
