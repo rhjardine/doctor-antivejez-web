@@ -1,3 +1,4 @@
+# docker-compose.yml (Versión Final con Mapeo de Volumen para Desarrollo)
 services:
   web:
     build: .
@@ -6,11 +7,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # ESTA ES LA SECCIÓN CLAVE AÑADIDA:
+    # Mapea tu código local al contenedor para desarrollo
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
     environment:
       DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
       NEXTAUTH_URL: "http://localhost:3001"
       NEXTAUTH_SECRET: "n5bQGpiu3t03I8NOA3RfClMcQAfYvx6Hyo7yOTWEO1M="
       NODE_ENV: "development"
+
   db:
     image: postgres:15
     restart: always
@@ -25,5 +33,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
 volumes:
   postgres_data:
