@@ -1,16 +1,23 @@
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm install
-COPY . .
-ENV DATABASE_URL="postgresql://placeholder"
-RUN npm run build
+# Dockerfile (Versión Final para Desarrollo Local)
+FROM node:18-alpine
 
-FROM node:18-alpine AS runner
+# Instalar dependencias del sistema operativo para Prisma
+RUN apk add --no-cache openssl
+
+# Establecer el directorio de trabajo dentro del contenedor
 WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+
+# Copiar solo los archivos de dependencias
+COPY package*.json ./
+
+# Instalar TODAS las dependencias (incluyendo las de desarrollo)
+RUN npm install
+
+# Copiar el resto del código (aunque será sobreescrito por el volumen, es una buena práctica tenerlo)
+COPY . .
+
+# Exponer el puerto del servidor de desarrollo de Next.js
 EXPOSE 3000
-CMD ["node", "server.js"]
+
+# El comando por defecto para iniciar el servidor de desarrollo
+CMD ["npm", "run", "dev"]

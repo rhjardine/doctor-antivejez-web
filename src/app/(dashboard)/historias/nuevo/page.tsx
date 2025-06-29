@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react'; // Se importa el hook para la sesión
 import { createPatient } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
 import { FaCamera, FaArrowLeft, FaSave } from 'react-icons/fa';
@@ -35,12 +35,12 @@ type NewPatientFormData = {
 
 export default function NuevoPacientePage() {
   const router = useRouter();
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession(); // Se obtiene la sesión del usuario
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState<NewPatientFormData>({
     photo: '',
-    nationality: 'Venezolano', // Valor por defecto
+    nationality: 'Venezolano',
     identification: '',
     historyDate: new Date().toISOString().split('T')[0],
     lastName: '',
@@ -51,7 +51,7 @@ export default function NuevoPacientePage() {
     phone: '',
     maritalStatus: '',
     profession: '',
-    country: 'Venezuela', // Valor por defecto
+    country: 'Venezuela',
     state: '',
     city: '',
     address: '',
@@ -80,18 +80,21 @@ export default function NuevoPacientePage() {
     e.preventDefault();
     setLoading(true);
 
+    // Se verifica que la sesión esté activa y se obtiene el ID del usuario
     if (sessionStatus !== 'authenticated' || !session?.user?.id) {
-      toast.error('Error de autenticación. Por favor, inicie sesión de nuevo.');
+      toast.error('Error de autenticación. No se pudo identificar al usuario.');
       setLoading(false);
       return;
     }
 
     try {
+      // Se usa el ID de la sesión para la creación del paciente
       const userId = session.user.id;
       const result = await createPatient({ ...formData, userId });
 
       if (result.success && result.patient) {
         toast.success("Se ha guardado la Historia");
+        // Se redirige al perfil del nuevo paciente
         router.push(`/historias/${result.patient.id}?tab=biofisica`);
       } else {
         toast.error(result.error || 'Error al crear paciente');
@@ -104,6 +107,7 @@ export default function NuevoPacientePage() {
     }
   };
 
+  // Se muestra un loader mientras se valida la sesión
   if (sessionStatus === 'loading') {
     return (
       <div className="flex items-center justify-center h-96">
@@ -112,6 +116,9 @@ export default function NuevoPacientePage() {
     );
   }
 
+  // ===============================================================
+  // INICIO DEL CÓDIGO VISUAL (JSX) - 100% PRESERVADO
+  // ===============================================================
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between">
@@ -204,7 +211,7 @@ export default function NuevoPacientePage() {
             </div>
           </div>
         </div>
-
+        
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Dirección</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -232,11 +239,9 @@ export default function NuevoPacientePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Grupo Sanguíneo *</label>
-              <select name="bloodType" value={formData.bloodType} onChange={handleInputChange} required className="input">
+              <select name="bloodType" value={formData.bloodType} onChange={handleInputChange} required className="input" >
                 <option value="">Seleccionar...</option>
-                {BLOOD_TYPES.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
+                {BLOOD_TYPES.map(type => ( <option key={type} value={type}>{type}</option>))}
               </select>
             </div>
             <div>
@@ -251,11 +256,7 @@ export default function NuevoPacientePage() {
         </div>
 
         <div className="flex justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => router.push('/historias')}
-            className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
+          <button type="button" onClick={() => router.push('/historias')} className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
             Cancelar
           </button>
           <button

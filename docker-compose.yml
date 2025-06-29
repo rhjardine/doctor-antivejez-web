@@ -1,23 +1,26 @@
-# docker-compose.yml (Versión Final con Mapeo de Volumen para Desarrollo)
+# docker-compose.yml (Versión Final y Definitiva para Desarrollo)
 services:
   web:
     build: .
+    # El comando que se ejecutará al iniciar: el servidor de desarrollo
+    command: npm run dev
+    # ESTA ES LA CLAVE DEL ÉXITO:
+    # Mapea tu código local a la carpeta /app del contenedor.
+    # Cualquier cambio en tu PC se refleja al instante.
+    volumes:
+      - .:/app
+      # Excepción: no mapear node_modules para usar los del contenedor.
+      - /app/node_modules
     ports:
       - "3001:3000"
+    environment:
+      DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
+      # Agrega las demás variables de entorno aquí
+      NEXTAUTH_URL: "http://localhost:3001"
+      NEXTAUTH_SECRET: "n5bQGpiu3t03I8NOA3RfClMcQAfYvx6Hyo7yOTWEO1M="
     depends_on:
       db:
         condition: service_healthy
-    # ESTA ES LA SECCIÓN CLAVE AÑADIDA:
-    # Mapea tu código local al contenedor para desarrollo
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-    environment:
-      DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
-      NEXTAUTH_URL: "http://localhost:3001"
-      NEXTAUTH_SECRET: "n5bQGpiu3t03I8NOA3RfClMcQAfYvx6Hyo7yOTWEO1M="
-      NODE_ENV: "development"
 
   db:
     image: postgres:15
