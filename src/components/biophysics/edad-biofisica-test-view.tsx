@@ -87,7 +87,12 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       setCalculated(true);
       toast.success('Cálculo completado');
     } catch (error: any) {
+      // ===== INICIO DEL ÚNICO CAMBIO =====
+      // Ahora, además de la notificación, imprimimos el error en la consola F12
+      // para poder ver exactamente qué validación está fallando.
+      console.error("Error al ejecutar el cálculo:", error.message);
       toast.error(error.message || 'Error al calcular los resultados');
+      // ===== FIN DEL ÚNICO CAMBIO =====
     } finally {
       setCalculating(false);
     }
@@ -179,7 +184,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                   {item.label} {item.unit && `(${item.unit})`}
                 </label>
 
-                {/* CAMBIO FINAL: Se cambian los estilos de los inputs a fondo blanco y texto negro */}
                 {item.hasDimensions ? (
                   <div className="grid grid-cols-3 gap-2">
                     <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high || ''} onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value), 'high')}
