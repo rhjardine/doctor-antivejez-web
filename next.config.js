@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone', // <-- Esta línea es crucial para Docker
+  output: 'standalone',
   images: {
     domains: ['localhost', 'placehold.co'],
   },

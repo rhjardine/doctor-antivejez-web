@@ -1,18 +1,16 @@
-# Dockerfile (Versión Final para Desarrollo Local)
-FROM node:18-alpine
-
-# Instalar dependencias necesarias para Prisma en Alpine Linux
-RUN apk add --no-cache openssl
-
-# Establecer el directorio de trabajo
+FROM node:18-alpine AS builder
 WORKDIR /app
-
-# Copiar archivos de dependencias e instalar TODAS las dependencias
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm install
-
-# Copiar el resto del código del proyecto
 COPY . .
+ENV DATABASE_URL="postgresql://placeholder"
+RUN npm run build
 
-# El comando por defecto será el de desarrollo, pero lo controlaremos desde docker-compose
-CMD ["npm", "run", "dev"]
+FROM node:18-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+EXPOSE 3000
+CMD ["node", "server.js"]

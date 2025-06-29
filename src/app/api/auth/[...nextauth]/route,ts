@@ -1,5 +1,5 @@
-// src/app/api/auth/[...nextauth]/route.ts
-/*import NextAuth, { NextAuthOptions } from 'next-auth';
+// En: src/app/api/auth/[...nextauth]/route.ts
+import NextAuth, { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/db';
@@ -19,24 +19,19 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials.password) {
           throw new Error('Por favor, ingrese sus credenciales');
         }
-
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
-
         if (!user || !user.password) {
           throw new Error('No se encontró un usuario con ese correo electrónico');
         }
-
         const isPasswordCorrect = await bcrypt.compare(
           credentials.password,
           user.password
         );
-
         if (!isPasswordCorrect) {
           throw new Error('La contraseña es incorrecta');
         }
-
         return user;
       },
     }),
@@ -52,7 +47,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as User).role; // Casteo para asegurar que el tipo es correcto
+        token.role = (user as User).role;
       }
       return token;
     },
@@ -69,4 +64,4 @@ export const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 
-export { handler as GET, handler as POST };*/
+export { handler as GET, handler as POST };

@@ -1,11 +1,6 @@
-# docker-compose.yml (Versión Final para Desarrollo Local)
 services:
   web:
     build: .
-    command: npm run dev
-    volumes:
-      - .:/app
-      - /app/node_modules
     ports:
       - "3001:3000"
     depends_on:
@@ -15,7 +10,7 @@ services:
       DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
       NEXTAUTH_URL: "http://localhost:3001"
       NEXTAUTH_SECRET: "n5bQGpiu3t03I8NOA3RfClMcQAfYvx6Hyo7yOTWEO1M="
-
+      NODE_ENV: "development"
   db:
     image: postgres:15
     restart: always
@@ -30,6 +25,5 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
 volumes:
   postgres_data:
