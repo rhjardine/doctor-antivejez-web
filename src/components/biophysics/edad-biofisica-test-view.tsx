@@ -78,25 +78,49 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     setCalculated(false);
   };
 
+  // ===== INICIO DE LA ÚNICA MODIFICACIÓN =====
   const handleCalculate = () => {
+    // 1. Validación del lado del cliente ANTES de llamar al cálculo
+    const invalidFields = [];
+    for (const item of BIOPHYSICS_ITEMS) {
+      const value = formValues[item.key];
+      if (item.hasDimensions) {
+        // Para campos con dimensiones, verificar que todos los sub-campos sean números válidos
+        if (value?.high === undefined || isNaN(value.high) || value?.long === undefined || isNaN(value.long) || value?.width === undefined || isNaN(value.width)) {
+          invalidFields.push(item.label);
+        }
+      } else {
+        // Para campos simples, verificar que sea un número válido
+        if (value === undefined || isNaN(value)) {
+          invalidFields.push(item.label);
+        }
+      }
+    }
+
+    // Si se encontraron campos inválidos, mostrar un único error y detenerse
+    if (invalidFields.length > 0) {
+      toast.error(`Por favor, complete y/o corrija los siguientes campos: ${invalidFields.join(', ')}`);
+      return; 
+    }
+
+    // 2. Si la validación pasa, proceder con el cálculo como antes
     setCalculating(true);
     try {
       const isAthlete = patient.gender.includes('DEPORTIVO');
-      const calculationResult = calculateBiofisicaResults(boards, formValues, patient.chronologicalAge, patient.gender, isAthlete);
+      // La lógica de cálculo no cambia. Solo se llama si la validación del cliente es exitosa.
+      const calculationResult = calculateBiofisicaResults(boards, formValues as any, patient.chronologicalAge, patient.gender, isAthlete);
       setResults(calculationResult);
       setCalculated(true);
-      toast.success('Cálculo completado');
+      toast.success('Cálculo completado exitosamente');
     } catch (error: any) {
-      // ===== INICIO DEL ÚNICO CAMBIO =====
-      // Ahora, además de la notificación, imprimimos el error en la consola F12
-      // para poder ver exactamente qué validación está fallando.
-      console.error("Error al ejecutar el cálculo:", error.message);
-      toast.error(error.message || 'Error al calcular los resultados');
-      // ===== FIN DEL ÚNICO CAMBIO =====
+      // Este catch ahora solo atrapará errores del servidor (ej. baremos faltantes)
+      console.error("Error del servidor al calcular:", error.message);
+      toast.error(`Error del servidor: ${error.message}`);
     } finally {
       setCalculating(false);
     }
   };
+  // ===== FIN DE LA ÚNICA MODIFICACIÓN =====
 
   const handleSave = async () => {
     if (!calculated) {
@@ -186,15 +210,15 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
                 {item.hasDimensions ? (
                   <div className="grid grid-cols-3 gap-2">
-                    <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high || ''} onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value), 'high')}
+                    <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={(e) => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')}
                       className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
-                    <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long || ''} onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value), 'long')}
+                    <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={(e) => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')}
                       className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
-                    <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width || ''} onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value), 'width')}
+                    <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={(e) => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')}
                       className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
                   </div>
                 ) : (
-                  <input type="number" step="any" value={(formValues[itemKey] as number) || ''} onChange={(e) => handleInputChange(item.key, parseFloat(e.target.value))}
+                  <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={(e) => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
                 )}
 
@@ -212,19 +236,19 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
         </div>
 
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button onClick={handleCalculate} disabled={calculating}
+          <button type="button" onClick={handleCalculate} disabled={calculating}
             className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
             <FaCalculator />
             <span>{calculating ? 'Calculando...' : 'Calcular'}</span>
           </button>
 
-          <button onClick={handleSave} disabled={!calculated || saving}
+          <button type="button" onClick={handleSave} disabled={!calculated || saving}
             className="w-full bg-green-500 text-white font-medium py-3 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
             <FaSave />
             <span>{saving ? 'Guardando...' : 'Guardar'}</span>
           </button>
 
-          <button onClick={() => router.push('/historias')}
+          <button type="button" onClick={() => router.push('/historias')}
             className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors">
             <span>Volver</span>
           </button>
