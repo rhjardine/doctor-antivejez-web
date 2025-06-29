@@ -261,6 +261,19 @@ async function main() {
     { rangeId: 8, name: 'diastolic_blood_pressure', minValue: 35, maxValue: 38, inverse: true },
   ];
 
+  // 1. Borrar todos los baremos existentes para evitar duplicados en futuras ejecuciones
+  await prisma.board.deleteMany({});
+  console.log('✅ Baremos antiguos eliminados.');
+
+  // 2. Crear todos los nuevos baremos en un solo lote
+  await prisma.board.createMany({
+    data: biophysicsBoards.map(board => ({
+      ...board,
+      type: 'FORM_BIOPHYSICS', // Asegurarse de que el tipo se añade
+    })),
+  });
+  console.log('✅ Baremos biofísicos nuevos creados.');
+
   console.log('🎉 Seed completado exitosamente');
 }
 
