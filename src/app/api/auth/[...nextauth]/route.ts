@@ -6,40 +6,46 @@ import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { User } from '@prisma/client';
 
-export const authOptions: NextAuthOptions = {
+// CAMBIO CLAVE: Se elimina la palabra 'export' de esta constante.
+// Ahora es una constante interna de este archivo y no se exporta,
+// lo que cumple con las reglas de las Rutas de API de Next.js.
+const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
-          throw new Error('Por favor, ingrese sus credenciales');
+          throw new Error('Por favor, ingrese sus credenciales.');
         }
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email }
         });
+
         if (!user || !user.password) {
-          throw new Error('No se encontró un usuario con ese correo electrónico');
+          throw new Error('No se encontró un usuario con ese correo electrónico.');
         }
+
         const isPasswordCorrect = await bcrypt.compare(
           credentials.password,
           user.password
         );
+
         if (!isPasswordCorrect) {
-          throw new Error('La contraseña es incorrecta');
+          throw new Error('La contraseña es incorrecta.');
         }
         return user;
-      },
-    }),
+      }
+    })
   ],
   pages: {
     signIn: '/login',
   },
-  debug: process.env.NODE_ENV === 'development',
   session: {
     strategy: 'jwt',
   },
@@ -64,4 +70,5 @@ export const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 
+// Se mantienen estas exportaciones, que son las que Next.js espera.
 export { handler as GET, handler as POST };
