@@ -86,12 +86,14 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       const value = formValues[item.key];
       if (item.hasDimensions) {
         // Para campos con dimensiones, verificar que todos los sub-campos sean números válidos
-        if (value?.high === undefined || isNaN(value.high) || value?.long === undefined || isNaN(value.long) || value?.width === undefined || isNaN(value.width)) {
+        // Se añade una aserción de tipo para indicar a TypeScript que 'value' debe ser tratado como un objeto de dimensiones aquí
+        const dimensionalValue = value as { high: number; long: number; width: number; } | undefined;
+        if (dimensionalValue?.high === undefined || isNaN(dimensionalValue.high) || dimensionalValue?.long === undefined || isNaN(dimensionalValue.long) || dimensionalValue?.width === undefined || isNaN(dimensionalValue.width)) {
           invalidFields.push(item.label);
         }
       } else {
         // Para campos simples, verificar que sea un número válido
-        if (value === undefined || isNaN(value)) {
+        if (value === undefined || isNaN(value as number)) { // 'value as number' para Narrowing
           invalidFields.push(item.label);
         }
       }
@@ -100,7 +102,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     // Si se encontraron campos inválidos, mostrar un único error y detenerse
     if (invalidFields.length > 0) {
       toast.error(`Por favor, complete y/o corrija los siguientes campos: ${invalidFields.join(', ')}`);
-      return; 
+      return;
     }
 
     // 2. Si la validación pasa, proceder con el cálculo como antes
@@ -108,7 +110,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     try {
       const isAthlete = patient.gender.includes('DEPORTIVO');
       // La lógica de cálculo no cambia. Solo se llama si la validación del cliente es exitosa.
-      const calculationResult = calculateBiofisicaResults(boards, formValues as any, patient.chronologicalAge, patient.gender, isAthlete);
+      const calculationResult = calculateBiofisicaResults(boards, formValues, patient.chronologicalAge, patient.gender, isAthlete);
       setResults(calculationResult);
       setCalculated(true);
       toast.success('Cálculo completado exitosamente');
@@ -168,7 +170,11 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-96"><div className="loader"></div></div>;
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="loader"></div>
+      </div>
+    );
   }
 
   const getItemStatus = (partialAge: number | undefined) => {
@@ -182,14 +188,20 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       {/* Panel Izquierdo - Formulario */}
       <div className="w-full md:w-1/2 bg-primary-dark rounded-xl p-6 text-white">
         <div className="flex items-center justify-between mb-6">
-          <button onClick={onBack} className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors">
+          <button
+            onClick={onBack}
+            className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors"
+          >
             <FaArrowLeft />
             <span>Volver al Perfil Medico</span>
           </button>
           <div className="text-right">
-            <h2 className="text-xl font-bold">{patient.firstName} {patient.lastName}</h2>
+            <h2 className="text-xl font-bold">
+              {patient.firstName} {patient.lastName}
+            </h2>
             <p className="text-sm opacity-80">
-              Edad: {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}
+              Edad: {patient.chronologicalAge} años |{' '}
+              {patient.gender.replace(/_/g, ' ')}
             </p>
           </div>
         </div>
@@ -197,7 +209,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
         <h3 className="text-lg font-semibold mb-4">Test de Edad Biofísica</h3>
 
         <div className="space-y-4 pr-2">
-          {BIOPHYSICS_ITEMS.map((item) => {
+          {BIOPHYSICS_ITEMS.map(item => {
             const itemKey = item.key;
             const partialAgeKey = PARTIAL_AGE_KEYS_MAP[itemKey];
             const partialAgeValue = results.partialAges[partialAgeKey];
@@ -210,46 +222,113 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
                 {item.hasDimensions ? (
                   <div className="grid grid-cols-3 gap-2">
-                    <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={(e) => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')}
-                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
-                    <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={(e) => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')}
-                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
-                    <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={(e) => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')}
-                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="Alto"
+                      value={(formValues[itemKey] as any)?.high ?? ''}
+                      onChange={e =>
+                        handleInputChange(
+                          item.key,
+                          e.target.value === ''
+                            ? undefined
+                            : parseFloat(e.target.value),
+                          'high'
+                        )
+                      }
+                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="Largo"
+                      value={(formValues[itemKey] as any)?.long ?? ''}
+                      onChange={e =>
+                        handleInputChange(
+                          item.key,
+                          e.target.value === ''
+                            ? undefined
+                            : parseFloat(e.target.value),
+                          'long'
+                        )
+                      }
+                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="Ancho"
+                      value={(formValues[itemKey] as any)?.width ?? ''}
+                      onChange={e =>
+                        handleInputChange(
+                          item.key,
+                          e.target.value === ''
+                            ? undefined
+                            : parseFloat(e.target.value),
+                          'width'
+                        )
+                      }
+                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
                   </div>
                 ) : (
-                  <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={(e) => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <input
+                    type="number"
+                    step="any"
+                    value={(formValues[itemKey] as number) ?? ''}
+                    onChange={e =>
+                      handleInputChange(
+                        item.key,
+                        e.target.value === ''
+                          ? undefined
+                          : parseFloat(e.target.value)
+                      )
+                    }
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
                 )}
 
                 {calculated && (
                   <div className="mt-2 text-sm">
                     <span className="opacity-70">Edad Calculada: </span>
                     <span className="font-medium">
-                      {partialAgeValue !== undefined ? `${partialAgeValue.toFixed(1)} años` : '--'}
+                      {partialAgeValue !== undefined
+                        ? `${partialAgeValue.toFixed(1)} años`
+                        : '--'}
                     </span>
                   </div>
                 )}
               </div>
-            )
+            );
           })}
         </div>
 
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button type="button" onClick={handleCalculate} disabled={calculating}
-            className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+          <button
+            type="button"
+            onClick={handleCalculate}
+            disabled={calculating}
+            className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+          >
             <FaCalculator />
             <span>{calculating ? 'Calculando...' : 'Calcular'}</span>
           </button>
 
-          <button type="button" onClick={handleSave} disabled={!calculated || saving}
-            className="w-full bg-green-500 text-white font-medium py-3 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!calculated || saving}
+            className="w-full bg-green-500 text-white font-medium py-3 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+          >
             <FaSave />
             <span>{saving ? 'Guardando...' : 'Guardar'}</span>
           </button>
 
-          <button type="button" onClick={() => router.push('/historias')}
-            className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors">
+          <button
+            type="button"
+            onClick={() => router.push('/historias')}
+            className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors"
+          >
             <span>Volver</span>
           </button>
         </div>
@@ -262,37 +341,71 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-1">Edad Biofísica</p>
-              <p className="text-3xl font-bold text-gray-900">{calculated ? `${results.biologicalAge} años` : '--'}</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {calculated ? `${results.biologicalAge} años` : '--'}
+              </p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-1">Edad Diferencial</p>
-              <p className={`text-3xl font-bold ${getStatusColor(getAgeStatus(results.differentialAge))}`}>{calculated ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge} años` : '--'}</p>
+              <p
+                className={`text-3xl font-bold ${getStatusColor(
+                  getAgeStatus(results.differentialAge)
+                )}`}
+              >
+                {calculated
+                  ? `${results.differentialAge > 0 ? '+' : ''}${
+                      results.differentialAge
+                    } años`
+                  : '--'}
+              </p>
             </div>
           </div>
         </div>
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados por Ítem</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {BIOPHYSICS_ITEMS.map((item) => {
+            {BIOPHYSICS_ITEMS.map(item => {
               const ageKey = PARTIAL_AGE_KEYS_MAP[item.key];
               const partialAge = results.partialAges[ageKey];
               const status = getItemStatus(partialAge);
-              const statusColor = status === 'REJUVENECIDO' ? 'bg-status-green' : status === 'NORMAL' ? 'bg-status-yellow' : 'bg-status-red';
+              const statusColor =
+                status === 'REJUVENECIDO'
+                  ? 'bg-status-green'
+                  : status === 'NORMAL'
+                    ? 'bg-status-yellow'
+                    : 'bg-status-red';
 
               return (
-                <div key={item.key} className={`rounded-lg p-4 text-white transition-all ${calculated ? statusColor : 'bg-gray-300'}`}>
+                <div
+                  key={item.key}
+                  className={`rounded-lg p-4 text-white transition-all ${
+                    calculated ? statusColor : 'bg-gray-300'
+                  }`}
+                >
                   <h4 className="font-medium mb-2">{item.label}</h4>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="opacity-80">Edad Calculada:</span>
-                      <span className="font-medium">{calculated && partialAge !== undefined ? `${partialAge.toFixed(1)} años` : '--'}</span>
+                      <span className="font-medium">
+                        {calculated && partialAge !== undefined
+                          ? `${partialAge.toFixed(1)} años`
+                          : '--'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="opacity-80">Diferencia:</span>
-                      <span className="font-medium">{calculated && partialAge !== undefined ? `${(partialAge - patient.chronologicalAge) > 0 ? '+' : ''}${(partialAge - patient.chronologicalAge).toFixed(1)} años` : '--'}</span>
+                      <span className="font-medium">
+                        {calculated && partialAge !== undefined
+                          ? `${partialAge - patient.chronologicalAge > 0 ? '+' : ''}${
+                              (partialAge - patient.chronologicalAge).toFixed(1)
+                            } años`
+                          : '--'}
+                      </span>
                     </div>
                     <div className="mt-2 pt-2 border-t border-white/20">
-                      <span className="text-xs uppercase tracking-wide">{calculated ? status.replace(/_/g, ' ') : 'SIN CALCULAR'}</span>
+                      <span className="text-xs uppercase tracking-wide">
+                        {calculated ? status.replace(/_/g, ' ') : 'SIN CALCULAR'}
+                      </span>
                     </div>
                   </div>
                 </div>
