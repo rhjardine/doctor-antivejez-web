@@ -73,7 +73,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-primary-light flex flex-col">
+    <div className="w-64 bg-primary-dark flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-gray-700 flex justify-center items-center">
         <Link href="/dashboard" passHref>
