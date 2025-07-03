@@ -1,9 +1,7 @@
-// En: src/components/layout/sidebar.tsx
-
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image'; // CAMBIO 1: Importar el componente Image
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { 
@@ -70,32 +68,31 @@ export function Sidebar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    // Aquí iría la lógica de logout, por ahora redirige
+    // Aquí iría la lógica de logout
     router.push('/login');
   };
 
   return (
     <div className="w-64 bg-primary-dark flex flex-col">
-      {/* ===== INICIO DEL CAMBIO ===== */}
       {/* Logo */}
       <div className="p-6 border-b border-gray-700 flex justify-center items-center">
-        {/* Se reemplaza el H1 por el componente Image */}
-        <Image
-          src="/images/logo.png" // Next.js busca automáticamente en la carpeta 'public'
-          alt="Doctor AntiVejez Logo"
-          width={180} // Ajusta el ancho según sea necesario
-          height={40} // Ajusta la altura según sea necesario
-          priority // Carga la imagen con prioridad ya que es el logo principal
-        />
+        <Link href="/dashboard" passHref>
+          <Image
+            src="/images/logo.png"
+            alt="Doctor AntiVejez Logo"
+            width={180} // Adjust width as needed, maintaining aspect ratio
+            height={40} // Start with a height like 40-50px
+            priority // Preload logo as it's likely LCP or important
+          />
+        </Link>
       </div>
-      {/* ===== FIN DEL CAMBIO ===== */}
 
       {/* Menu Items */}
       <nav className="flex-1 px-4 py-6">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
 
             return (
               <li key={item.name}>
@@ -103,12 +100,12 @@ export function Sidebar() {
                   href={item.href}
                   className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                     isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                      ? 'bg-white/10 border-l-4 border-primary'
+                      : 'hover:bg-white/5'
                   }`}
                 >
-                  <Icon className={`text-xl ${isActive ? 'text-primary' : 'text-gray-400'}`} />
-                  <span className={`font-medium`}>
+                  <Icon className={`text-xl ${isActive ? 'text-primary' : item.color}`} />
+                  <span className={`font-medium ${isActive ? 'text-white' : 'text-gray-300'}`}>
                     {item.name}
                   </span>
                 </Link>
