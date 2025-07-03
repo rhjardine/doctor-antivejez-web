@@ -27,6 +27,20 @@ export async function createPatient(formData: PatientFormData & { userId: string
     return { success: true, patient };
   } catch (error) {
     console.error('Error creando paciente:', error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2002: Unique constraint failed
+      if (error.code === 'P2002') {
+        const target = (error.meta?.target as string[])?.join(', ');
+        if (target === 'identification') { // Asegúrate de que es por el campo 'identification'
+          return {
+            success: false,
+            error: `Ya existe un paciente con esta identificación (${formData.identification}). Por favor, inicie una búsqueda.`,
+            errorCode: 'PATIENT_EXISTS', // Código de error personalizado para el frontend
+            identification: formData.identification,
+          };
+        }
+      }
+    }
     return { success: false, error: 'Error al crear el paciente' };
   }
 }
