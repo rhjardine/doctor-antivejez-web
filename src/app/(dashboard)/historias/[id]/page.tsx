@@ -90,7 +90,7 @@ export default function PatientDetailPage() {
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
-    { id: 'omicas', label: 'Ómicas Antivejez', icon: FaDna },
+    { id: 'omicas', label: 'Ómics Antivejez', icon: FaDna },
     { id: 'evolucion', label: 'Evolución y Seguimiento', icon: FaChartLine },
   ];
 
