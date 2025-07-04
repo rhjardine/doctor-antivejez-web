@@ -11,7 +11,7 @@ import {
   FaAppleAlt, 
   FaArrowLeft, 
   FaDna,
-  FaClipboardList
+  FaChartLine // CAMBIO: Icono actualizado para Evolución
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
@@ -19,7 +19,8 @@ import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 
-type TabId = 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omics' | 'plan';
+// CAMBIO: Se actualiza el tipo para incluir todos los IDs de las pestañas y corregir el error
+type TabId = 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'evolucion';
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -78,16 +79,14 @@ export default function PatientDetailPage() {
     );
   }
 
+  // CAMBIO: Se actualiza el array de pestañas con el orden y nombres correctos
   const tabs = [
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
-    { id: 'omics', label: 'Ómics Antivejez', icon: FaDna },
-    { id: 'plan', label: 'Evolución y Seguimiento', icon: FaClipboardList },
-    
-    
-    
+    { id: 'omicas', label: 'Ómicas Antivejez', icon: FaDna },
+    { id: 'evolucion', label: 'Evolución y Seguimiento', icon: FaChartLine },
   ];
 
   return (
@@ -151,13 +150,11 @@ export default function PatientDetailPage() {
                     setActiveTab(tab.id as TabId);
                     setShowBiofisicaTest(false);
                   }}
-                  // ===== INICIO DE LA CORRECCIÓN DE ESTILOS =====
                   className={`flex-shrink-0 flex items-center space-x-2 py-3 px-5 rounded-lg font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(25,168,219)] ${
                     isActive
-                      ? 'bg-white text-[rgb(35,188,239)] shadow-md' // Pestaña activa: fondo blanco, texto azul
-                      : 'bg-[rgb(35,188,239)] text-white hover:bg-[rgb(25,168,219)] shadow-sm' // Pestaña inactiva: fondo azul, texto blanco
+                      ? 'bg-white text-[rgb(35,188,239)] shadow-md'
+                      : 'bg-[rgb(35,188,239)] text-white hover:bg-[rgb(25,168,219)] shadow-sm'
                   }`}
-                  // ===== FIN DE LA CORRECCIÓN DE ESTILOS =====
                 >
                   <Icon className="text-lg" />
                   <span>{tab.label}</span>
@@ -211,12 +208,12 @@ export default function PatientDetailPage() {
             <EdadBiologicaMain patient={patient} onTestClick={() => setShowBiofisicaTest(true)} />
           )
         )}
-
+        
         {activeTab === 'guia' && (
           <div className="card text-center py-12">
             <FaBook className="text-6xl text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-700 mb-2">Guía del Paciente</h3>
-            <p className="text-gray-500">La guía del paciente estará disponible pronto</p>
+            <p className="text-gray-500">La guía del paciente estará disponible pronto.</p>
           </div>
         )}
 
@@ -224,27 +221,26 @@ export default function PatientDetailPage() {
           <div className="card text-center py-12">
             <FaAppleAlt className="text-6xl text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-700 mb-2">Alimentación Nutrigenómica</h3>
-            <p className="text-gray-500">El plan de alimentación nutrigenómica estará disponible pronto</p>
+            <p className="text-gray-500">El plan de alimentación nutrigenómica estará disponible pronto.</p>
           </div>
         )}
 
-         {activeTab === 'omicas' && (
+        {activeTab === 'omicas' && (
           <div className="card text-center py-12">
             <FaDna className="text-6xl text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-700 mb-2">Análisis de Ómicas Antivejez</h3>
             <p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p>
           </div>
         )}
-
-        {activeTab === 'plan' && (
+        
+        {/* CAMBIO: Se actualiza el renderizado condicional para la nueva pestaña */}
+        {activeTab === 'evolucion' && (
           <div className="card text-center py-12">
-            <FaClipboardList className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Plan de Tratamiento</h3>
-            <p className="text-gray-500">Esta sección para gestionar el plan de tratamiento personalizado está en desarrollo.</p>
+            <FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Evolución y Seguimiento</h3>
+            <p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p>
           </div>
         )}
-
-          
       </div>
     </div>
   );
