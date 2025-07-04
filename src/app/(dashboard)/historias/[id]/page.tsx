@@ -85,10 +85,11 @@ export default function PatientDetailPage() {
   const tabs = [
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
-    { id: 'plan', label: 'Plan de Tratamiento', icon: FaClipboardList },
-    { id: 'omicas', label: 'Ómicas Antivejez', icon: FaDna },
-    { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
+    { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
+    { id: 'omicas', label: 'Ómics Antivejez', icon: FaDna },
+    { id: 'plan', label: 'Evolución y Seguimiento', icon: FaClipboardList },
+    
   ];
 
   return (
