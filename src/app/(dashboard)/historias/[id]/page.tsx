@@ -19,7 +19,7 @@ import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 
-type TabId = 'historia' | 'biofisica' | 'plan' | 'omicas' | 'guia' | 'alimentacion';
+type TabId = 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omics' | 'plan';
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -81,10 +81,13 @@ export default function PatientDetailPage() {
   const tabs = [
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
-    { id: 'plan', label: 'Plan de Tratamiento', icon: FaClipboardList },
-    { id: 'omicas', label: 'Ómicas Antivejez', icon: FaDna },
-    { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
+    { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
+    { id: 'omics', label: 'Ómics Antivejez', icon: FaDna },
+    { id: 'plan', label: 'Evolución y Seguimiento', icon: FaClipboardList },
+    
+    
+    
   ];
 
   return (
@@ -208,22 +211,6 @@ export default function PatientDetailPage() {
             <EdadBiologicaMain patient={patient} onTestClick={() => setShowBiofisicaTest(true)} />
           )
         )}
-        
-        {activeTab === 'plan' && (
-          <div className="card text-center py-12">
-            <FaClipboardList className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Plan de Tratamiento</h3>
-            <p className="text-gray-500">Esta sección para gestionar el plan de tratamiento personalizado está en desarrollo.</p>
-          </div>
-        )}
-
-        {activeTab === 'omicas' && (
-          <div className="card text-center py-12">
-            <FaDna className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Análisis de Ómicas Antivejez</h3>
-            <p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p>
-          </div>
-        )}
 
         {activeTab === 'guia' && (
           <div className="card text-center py-12">
@@ -240,6 +227,24 @@ export default function PatientDetailPage() {
             <p className="text-gray-500">El plan de alimentación nutrigenómica estará disponible pronto</p>
           </div>
         )}
+
+         {activeTab === 'omicas' && (
+          <div className="card text-center py-12">
+            <FaDna className="text-6xl text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Análisis de Ómicas Antivejez</h3>
+            <p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p>
+          </div>
+        )}
+
+        {activeTab === 'plan' && (
+          <div className="card text-center py-12">
+            <FaClipboardList className="text-6xl text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Plan de Tratamiento</h3>
+            <p className="text-gray-500">Esta sección para gestionar el plan de tratamiento personalizado está en desarrollo.</p>
+          </div>
+        )}
+
+          
       </div>
     </div>
   );
