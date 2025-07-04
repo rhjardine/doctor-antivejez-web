@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -38,6 +37,27 @@ body {
   color: var(--gray-900);
   line-height: 1.6;
 }
+
+/* ===== INICIO DEL CAMBIO ===== */
+/* Estilos para la barra de desplazamiento horizontal de las pestañas */
+@layer utilities {
+  .custom-scrollbar-tabs::-webkit-scrollbar {
+    height: 6px; /* Grosor de la barra */
+  }
+  .custom-scrollbar-tabs::-webkit-scrollbar-track {
+    background-color: #e2f5fd; /* Color de fondo de la pista (azul muy claro) */
+    border-radius: 10px;
+  }
+  .custom-scrollbar-tabs::-webkit-scrollbar-thumb {
+    background-color: var(--primary-color); /* Color azul para la barra */
+    border-radius: 10px;
+  }
+  .custom-scrollbar-tabs::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary-dark); /* Color azul oscuro al pasar el ratón */
+  }
+}
+/* ===== FIN DEL CAMBIO ===== */
+
 
 /* Componentes reutilizables */
 @layer components {

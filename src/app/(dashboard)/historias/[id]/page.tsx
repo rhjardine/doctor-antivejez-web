@@ -4,15 +4,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getPatientWithTests } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-// CAMBIO 1: Importar los nuevos iconos para las pestañas
 import { 
   FaUser, 
   FaHeartbeat, 
   FaBook, 
   FaAppleAlt, 
   FaArrowLeft, 
-  FaDna, // Icono para Ómicas
-  FaClipboardList // Icono para Plan de Tratamiento
+  FaDna,
+  FaClipboardList
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
@@ -20,7 +19,6 @@ import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 
-// CAMBIO 2: Definir un tipo para los IDs de las pestañas para mayor seguridad y claridad
 type TabId = 'historia' | 'biofisica' | 'plan' | 'omicas' | 'guia' | 'alimentacion';
 
 export default function PatientDetailPage() {
@@ -31,7 +29,6 @@ export default function PatientDetailPage() {
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
-  // CAMBIO 3: Actualizar el estado para usar el nuevo tipo y establecer 'historia' como pestaña inicial
   const [activeTab, setActiveTab] = useState<TabId>('historia');
   const [showBiofisicaTest, setShowBiofisicaTest] = useState(false);
 
@@ -81,15 +78,13 @@ export default function PatientDetailPage() {
     );
   }
 
-  // CAMBIO 4: Actualizar el array de pestañas con las nuevas opciones y reordenarlas
   const tabs = [
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
-    { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
+    { id: 'plan', label: 'Plan de Tratamiento', icon: FaClipboardList },
+    { id: 'omicas', label: 'Ómicas Antivejez', icon: FaDna },
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
-    { id: 'omicas', label: 'Ómics Antivejez', icon: FaDna },
-    { id: 'plan', label: 'Evolución y Seguimiento', icon: FaClipboardList },
-    
+    { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
   ];
 
   return (
@@ -138,9 +133,9 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* CAMBIO 5: Rediseño de la barra de pestañas para mejor estilo y scrolling en móvil */}
+      {/* Barra de pestañas con nuevos estilos y scroll personalizado */}
       <div className="border-b border-gray-200">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto pb-2 custom-scrollbar-tabs">
           <nav className="flex space-x-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -153,11 +148,13 @@ export default function PatientDetailPage() {
                     setActiveTab(tab.id as TabId);
                     setShowBiofisicaTest(false);
                   }}
-                  className={`flex-shrink-0 flex items-center space-x-2 py-3 px-4 rounded-t-lg font-medium transition-all duration-200 ease-in-out focus:outline-none ${
+                  // ===== INICIO DE LA CORRECCIÓN DE ESTILOS =====
+                  className={`flex-shrink-0 flex items-center space-x-2 py-3 px-5 rounded-lg font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(25,168,219)] ${
                     isActive
-                      ? 'bg-primary/10 text-primary border-b-2 border-primary'
-                      : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+                      ? 'bg-white text-[rgb(35,188,239)] shadow-md' // Pestaña activa: fondo blanco, texto azul
+                      : 'bg-[rgb(35,188,239)] text-white hover:bg-[rgb(25,168,219)] shadow-sm' // Pestaña inactiva: fondo azul, texto blanco
                   }`}
+                  // ===== FIN DE LA CORRECCIÓN DE ESTILOS =====
                 >
                   <Icon className="text-lg" />
                   <span>{tab.label}</span>
@@ -168,12 +165,11 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* Contenido de las pestañas (sin cambios en la lógica) */}
       <div className="min-h-[400px]">
         {activeTab === 'historia' && (
           <div className="card">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Detalles de la Historia Médica</h2>
-            {/* ... Contenido de la historia médica sin cambios ... */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div>
                 <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Personal</h3>
@@ -213,7 +209,6 @@ export default function PatientDetailPage() {
           )
         )}
         
-        {/* CAMBIO 6: Añadir el contenido para las nuevas pestañas */}
         {activeTab === 'plan' && (
           <div className="card text-center py-12">
             <FaClipboardList className="text-6xl text-gray-300 mx-auto mb-4" />
