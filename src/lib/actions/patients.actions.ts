@@ -5,6 +5,7 @@ import { Patient } from '@prisma/client';
 import { PatientFormData, patientSchema } from '@/utils/validation';
 import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
   console.log('--- createPatient formData ---', formData);
