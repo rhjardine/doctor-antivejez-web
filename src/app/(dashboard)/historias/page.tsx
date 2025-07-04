@@ -4,11 +4,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList } from 'react-icons/fa';
+// CAMBIO 1: Importar el icono FaHistory
+import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList, FaHistory } from 'react-icons/fa';
 import { getAllPatients, deletePatient, searchPatients } from '@/lib/actions/patients.actions';
 import { formatDate } from '@/utils/date';
 import { toast } from 'sonner';
-// CAMBIO 1: Importar el tipo correcto que incluye las relaciones
 import type { PatientWithDetails } from '@/types';
 
 // Usaremos PatientWithDetails como nuestro tipo principal en este componente
@@ -31,7 +31,6 @@ export default function HistoriasPage() {
     try {
       const result = await getAllPatients();
       if (result.success && result.patients) {
-        // CAMBIO 2: Asegurarle a TypeScript que los datos que llegan tienen la forma correcta
         setPatients(result.patients as Patient[]);
       }
     } catch (error) {
@@ -87,7 +86,6 @@ export default function HistoriasPage() {
     );
   }
 
-  // ... (El resto del return no necesita cambios, puedes pegar aquí la parte visual que ya tenías)
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
@@ -187,13 +185,15 @@ export default function HistoriasPage() {
                 >
                   <FaEye />
                 </button>
+                {/* ===== INICIO DEL CAMBIO (GRID VIEW) ===== */}
                 <button
-                  onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)}
+                  onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)}
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded"
-                  title="Ver Tests"
+                  title="Ver Historial de Tests"
                 >
-                  <FaVial />
+                  <FaHistory />
                 </button>
+                {/* ===== FIN DEL CAMBIO (GRID VIEW) ===== */}
                 <button
                   onClick={() => {
                     setPatientToDelete(patient.id);
@@ -263,6 +263,15 @@ export default function HistoriasPage() {
                         >
                           <FaVial />
                         </button>
+                        {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
+                        <button
+                          onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)}
+                          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
+                          title="Ver Historial de Tests"
+                        >
+                          <FaHistory />
+                        </button>
+                        {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
                         <button
                           onClick={() => {
                             setPatientToDelete(patient.id);

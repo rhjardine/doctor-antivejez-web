@@ -11,16 +11,18 @@ import {
   FaAppleAlt, 
   FaArrowLeft, 
   FaDna,
-  FaChartLine // CAMBIO: Icono actualizado para Evolución
+  FaChartLine,
+  FaHistory
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
+import BiophysicsHistoryView from '@/components/biophysics/biophysics-history-view';
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 
-// CAMBIO: Se actualiza el tipo para incluir todos los IDs de las pestañas y corregir el error
 type TabId = 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'evolucion';
+type BiofisicaView = 'main' | 'test' | 'history';
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -31,12 +33,16 @@ export default function PatientDetailPage() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('historia');
-  const [showBiofisicaTest, setShowBiofisicaTest] = useState(false);
+  const [biofisicaView, setBiofisicaView] = useState<BiofisicaView>('main');
 
   useEffect(() => {
     const tab = searchParams.get('tab');
+    const view = searchParams.get('view');
     if (tab === 'biofisica') {
       setActiveTab('biofisica');
+      if (view === 'history') {
+        setBiofisicaView('history');
+      }
     }
   }, [searchParams]);
 
@@ -79,7 +85,6 @@ export default function PatientDetailPage() {
     );
   }
 
-  // CAMBIO: Se actualiza el array de pestañas con el orden y nombres correctos
   const tabs = [
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
@@ -89,9 +94,13 @@ export default function PatientDetailPage() {
     { id: 'evolucion', label: 'Evolución y Seguimiento', icon: FaChartLine },
   ];
 
+  const handleTabClick = (tabId: TabId) => {
+    setActiveTab(tabId);
+    setBiofisicaView('main');
+  }
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Patient Header (Sin cambios) */}
       <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
         <div className="flex items-center space-x-6">
           <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -112,7 +121,6 @@ export default function PatientDetailPage() {
                 <span>Volver a Pacientes</span>
               </button>
             </div>
-            
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-gray-500">ID</p>
@@ -135,21 +143,16 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* Barra de pestañas con nuevos estilos y scroll personalizado */}
       <div className="border-b border-gray-200">
         <div className="overflow-x-auto pb-2 custom-scrollbar-tabs">
           <nav className="flex space-x-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-
               return (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id as TabId);
-                    setShowBiofisicaTest(false);
-                  }}
+                  onClick={() => handleTabClick(tab.id as TabId)}
                   className={`flex-shrink-0 flex items-center space-x-2 py-3 px-5 rounded-lg font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(25,168,219)] ${
                     isActive
                       ? 'bg-white text-[rgb(35,188,239)] shadow-md'
@@ -165,7 +168,6 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* Contenido de las pestañas (sin cambios en la lógica) */}
       <div className="min-h-[400px]">
         {activeTab === 'historia' && (
           <div className="card">
@@ -202,13 +204,29 @@ export default function PatientDetailPage() {
         )}
 
         {activeTab === 'biofisica' && (
-          showBiofisicaTest ? (
-            <EdadBiofisicaTestView patient={patient} onBack={() => setShowBiofisicaTest(false)} onTestComplete={loadPatient} />
-          ) : (
-            <EdadBiologicaMain patient={patient} onTestClick={() => setShowBiofisicaTest(true)} />
-          )
+          <>
+            {biofisicaView === 'main' && (
+              <div className="relative">
+                <button 
+                  onClick={() => setBiofisicaView('history')}
+                  className="absolute top-0 right-0 flex items-center space-x-2 px-3 py-1.5 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm disabled:opacity-50"
+                  disabled={patient.biophysicsTests.length === 0}
+                >
+                  <FaHistory />
+                  <span>Ver Historial</span>
+                </button>
+                <EdadBiologicaMain patient={patient} onTestClick={() => setBiofisicaView('test')} />
+              </div>
+            )}
+            {biofisicaView === 'test' && (
+              <EdadBiofisicaTestView patient={patient} onBack={() => setBiofisicaView('main')} onTestComplete={loadPatient} />
+            )}
+            {biofisicaView === 'history' && (
+              <BiophysicsHistoryView patient={patient} onBack={() => setBiofisicaView('main')} />
+            )}
+          </>
         )}
-        
+
         {activeTab === 'guia' && (
           <div className="card text-center py-12">
             <FaBook className="text-6xl text-gray-300 mx-auto mb-4" />
@@ -233,7 +251,6 @@ export default function PatientDetailPage() {
           </div>
         )}
         
-        {/* CAMBIO: Se actualiza el renderizado condicional para la nueva pestaña */}
         {activeTab === 'evolucion' && (
           <div className="card text-center py-12">
             <FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" />
