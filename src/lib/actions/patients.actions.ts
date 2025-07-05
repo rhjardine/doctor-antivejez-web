@@ -57,6 +57,7 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
 
 export async function deletePatient(id: string) {
   try {
+    // Usar una transacción para asegurar la integridad de los datos
     await prisma.$transaction([
       prisma.biophysicsTest.deleteMany({ where: { patientId: id } }),
       prisma.patient.delete({ where: { id } }),
