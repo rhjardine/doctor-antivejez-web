@@ -1,17 +1,14 @@
-// src/app/(dashboard)/historias/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-// CAMBIO 1: Importar el icono FaHistory
 import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList, FaHistory } from 'react-icons/fa';
 import { getAllPatients, deletePatient, searchPatients } from '@/lib/actions/patients.actions';
 import { formatDate } from '@/utils/date';
 import { toast } from 'sonner';
 import type { PatientWithDetails } from '@/types';
 
-// Usaremos PatientWithDetails como nuestro tipo principal en este componente
 type Patient = PatientWithDetails;
 
 export default function HistoriasPage() {
@@ -111,7 +108,7 @@ export default function HistoriasPage() {
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por nombre, identificación..."
+                placeholder="Buscar por nombre, identificación, N° Control..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -147,66 +144,76 @@ export default function HistoriasPage() {
       ) : viewMode === 'grid' ? (
         /* Grid View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {patients.map((patient) => (
-            <div key={patient.id} className="card hover:shadow-lg transition-shadow">
-              <div className="flex items-start space-x-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xl font-bold text-primary">
-                    {patient.firstName[0]}{patient.lastName[0]}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">
-                    {patient.firstName} {patient.lastName}
-                  </h3>
-                  <p className="text-sm text-gray-500">ID: {patient.identification}</p>
-                  <p className="text-sm text-gray-500">Edad: {patient.chronologicalAge} años</p>
-                </div>
-              </div>
+          {patients.map((patient) => {
+            // ===== INICIO DEL CAMBIO (GRID VIEW) =====
+            const isMale = patient.gender.startsWith('MASCULINO');
+            const iconBgColor = isMale ? 'bg-blue-100' : 'bg-pink-100';
+            const iconTextColor = isMale ? 'text-blue-600' : 'text-pink-600';
+            // ===== FIN DEL CAMBIO (GRID VIEW) =====
 
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Registrado: {formatDate(patient.createdAt)}</span>
-                  {patient.biophysicsTests && patient.biophysicsTests.length > 0 && (
-                    <span className="text-green-600">
-                      Edad Bio: {patient.biophysicsTests[0].biologicalAge !== null && patient.biophysicsTests[0].biologicalAge !== undefined
-                        ? `${Math.round(patient.biophysicsTests[0].biologicalAge)} años`
-                        : '--'}
+            return (
+              <div key={patient.id} className="card hover:shadow-lg transition-shadow">
+                <div className="flex items-start space-x-4">
+                  {/* ===== INICIO DEL CAMBIO (GRID VIEW) ===== */}
+                  <div className={`w-16 h-16 rounded-full ${iconBgColor} flex items-center justify-center flex-shrink-0`}>
+                    <span className={`text-xl font-bold ${iconTextColor}`}>
+                      {patient.firstName[0]}{patient.lastName[0]}
                     </span>
-                  )}
+                  </div>
+                  {/* ===== FIN DEL CAMBIO (GRID VIEW) ===== */}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">
+                      {patient.firstName} {patient.lastName}
+                    </h3>
+                    {/* ===== INICIO DEL CAMBIO (GRID VIEW) ===== */}
+                    <p className="text-sm text-gray-500">N° Control: {patient.controlNumber}</p>
+                    <p className="text-sm text-gray-500">ID: {patient.identification}</p>
+                    {/* ===== FIN DEL CAMBIO (GRID VIEW) ===== */}
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Registrado: {formatDate(patient.createdAt)}</span>
+                    {patient.biophysicsTests && patient.biophysicsTests.length > 0 && (
+                      <span className="text-green-600">
+                        Edad Bio: {patient.biophysicsTests[0].biologicalAge !== null && patient.biophysicsTests[0].biologicalAge !== undefined
+                          ? `${Math.round(patient.biophysicsTests[0].biologicalAge)} años`
+                          : '--'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex justify-end space-x-2">
+                  <button
+                    onClick={() => router.push(`/historias/${patient.id}`)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                    title="Ver Historia"
+                  >
+                    <FaEye />
+                  </button>
+                  <button
+                    onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)}
+                    className="p-2 text-purple-600 hover:bg-purple-50 rounded"
+                    title="Ver Historial de Tests"
+                  >
+                    <FaHistory />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPatientToDelete(patient.id);
+                      setDeleteModalOpen(true);
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded"
+                    title="Eliminar"
+                  >
+                    <FaTrash />
+                  </button>
                 </div>
               </div>
-
-              <div className="mt-4 flex justify-end space-x-2">
-                <button
-                  onClick={() => router.push(`/historias/${patient.id}`)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                  title="Ver Historia"
-                >
-                  <FaEye />
-                </button>
-                {/* ===== INICIO DEL CAMBIO (GRID VIEW) ===== */}
-                <button
-                  onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)}
-                  className="p-2 text-purple-600 hover:bg-purple-50 rounded"
-                  title="Ver Historial de Tests"
-                >
-                  <FaHistory />
-                </button>
-                {/* ===== FIN DEL CAMBIO (GRID VIEW) ===== */}
-                <button
-                  onClick={() => {
-                    setPatientToDelete(patient.id);
-                    setDeleteModalOpen(true);
-                  }}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded"
-                  title="Eliminar"
-                >
-                  <FaTrash />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         /* List View */
@@ -216,6 +223,9 @@ export default function HistoriasPage() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-medium text-gray-700">PACIENTE</th>
+                  {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
+                  <th className="text-left py-3 px-4 font-medium text-gray-700">N° CONTROL</th>
+                  {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
                   <th className="text-left py-3 px-4 font-medium text-gray-700">IDENTIFICACIÓN</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">EDAD</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">PROFESIONAL</th>
@@ -225,67 +235,78 @@ export default function HistoriasPage() {
                 </tr>
               </thead>
               <tbody>
-                {patients.map((patient) => (
-                  <tr key={patient.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-bold text-primary">
-                            {patient.firstName[0]}{patient.lastName[0]}
-                          </span>
+                {patients.map((patient) => {
+                  // ===== INICIO DEL CAMBIO (LIST VIEW) =====
+                  const isMale = patient.gender.startsWith('MASCULINO');
+                  const iconBgColor = isMale ? 'bg-blue-100' : 'bg-pink-100';
+                  const iconTextColor = isMale ? 'text-blue-600' : 'text-pink-600';
+                  // ===== FIN DEL CAMBIO (LIST VIEW) =====
+
+                  return (
+                    <tr key={patient.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-3">
+                          {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
+                          <div className={`w-10 h-10 rounded-full ${iconBgColor} flex items-center justify-center flex-shrink-0`}>
+                            <span className={`text-sm font-bold ${iconTextColor}`}>
+                              {patient.firstName[0]}{patient.lastName[0]}
+                            </span>
+                          </div>
+                          {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {patient.firstName} {patient.lastName}
+                            </p>
+                            <p className="text-sm text-gray-500">{patient.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {patient.firstName} {patient.lastName}
-                          </p>
-                          <p className="text-sm text-gray-500">{patient.email}</p>
+                      </td>
+                      {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
+                      <td className="py-3 px-4 text-gray-700 font-medium">{patient.controlNumber}</td>
+                      {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
+                      <td className="py-3 px-4 text-gray-700">{patient.identification}</td>
+                      <td className="py-3 px-4 text-gray-700">{patient.chronologicalAge} años</td>
+                      <td className="py-3 px-4 text-gray-700">Dr. Admin</td>
+                      <td className="py-3 px-4 text-gray-700">{patient.phone}</td>
+                      <td className="py-3 px-4 text-gray-700">{formatDate(patient.createdAt)}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => router.push(`/historias/${patient.id}`)}
+                            className="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded"
+                            title="Editar/Ver Historia"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Ver Tests"
+                          >
+                            <FaVial />
+                          </button>
+                          <button
+                            onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)}
+                            className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
+                            title="Ver Historial de Tests"
+                          >
+                            <FaHistory />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPatientToDelete(patient.id);
+                              setDeleteModalOpen(true);
+                            }}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                            title="Eliminar"
+                          >
+                            <FaTrash />
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-gray-700">{patient.identification}</td>
-                    <td className="py-3 px-4 text-gray-700">{patient.chronologicalAge} años</td>
-                    <td className="py-3 px-4 text-gray-700">Dr. Admin</td>
-                    <td className="py-3 px-4 text-gray-700">{patient.phone}</td>
-                    <td className="py-3 px-4 text-gray-700">{formatDate(patient.createdAt)}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => router.push(`/historias/${patient.id}`)}
-                          className="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded"
-                          title="Editar/Ver Historia"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Ver Tests"
-                        >
-                          <FaVial />
-                        </button>
-                        {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
-                        <button
-                          onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)}
-                          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
-                          title="Ver Historial de Tests"
-                        >
-                          <FaHistory />
-                        </button>
-                        {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
-                        <button
-                          onClick={() => {
-                            setPatientToDelete(patient.id);
-                            setDeleteModalOpen(true);
-                          }}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                          title="Eliminar"
-                        >
-                          <FaTrash />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
