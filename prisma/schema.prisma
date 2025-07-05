@@ -6,104 +6,99 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id              String          @id @default(cuid())
-  email           String          @unique
-  password        String
-  name            String
-  role            Role            @default(MEDICO)
-  avatar          String?
-  image           String?         // CAMBIO: Renombrado de 'avatar' a 'image' para compatibilidad con NextAuth
-  isActive        Boolean         @default(true)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  emailVerified   DateTime?       // CAMBIO: Añadido para compatibilidad con NextAuth (verificación de correo)
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(MEDICO)
+  image         String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  emailVerified DateTime?
 
-  patients        Patient[]
+  patients Patient[]
 
   @@map("users")
 }
 
 model Patient {
-  id                String            @id @default(cuid())
-  userId            String
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  // ===== INICIO DEL CAMBIO =====
+  controlNumber Int      @unique @default(autoincrement())
+  // ===== FIN DEL CAMBIO =====
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Información Personal
-  photo             String?
-  nationality       String
-  identification    String            @unique
-  historyDate       DateTime
-  lastName          String
-  firstName         String
-  birthDate         DateTime
-  chronologicalAge  Int
-  gender            Gender
-  birthPlace        String
-  phone             String
-  maritalStatus     String
-  profession        String
-  country           String
-  state             String
-  city              String
-  address           String
-  bloodType         String
-  email             String
-  observations      String?
+  photo         String?
+  nationality   String
+  identification String   @unique
+  historyDate   DateTime
+  lastName      String
+  firstName     String
+  birthDate     DateTime
+  chronologicalAge Int
+  gender        Gender
+  birthPlace    String
+  phone         String
+  maritalStatus String
+  profession    String
+  country       String
+  state         String
+  city          String
+  address       String
+  bloodType     String
+  email         String
+  observations  String?
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relación con tests biofísicos
-  biophysicsTests   BiophysicsTest[]
+  biophysicsTests BiophysicsTest[]
 
   @@map("patients")
 }
 
 model BiophysicsTest {
-  id                  String      @id @default(cuid())
+  id                  String   @id @default(cuid())
   patientId           String
-  patient             Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   chronologicalAge    Float
   biologicalAge       Float
   differentialAge     Float
   gender              String
-  isAthlete           Boolean     @default(false)
+  isAthlete           Boolean  @default(false)
 
   // Resultados de las 8 métricas
   fatPercentage       Float?
   fatAge              Float?
-
   bmi                 Float?
   bmiAge              Float?
-
-  digitalReflexes     Float?      // Promedio de las 3 mediciones
+  digitalReflexes     Float?
   reflexesAge         Float?
-
   visualAccommodation Float?
   visualAge           Float?
-
-  staticBalance       Float?      // Promedio de las 3 mediciones
+  staticBalance       Float?
   balanceAge          Float?
-
   skinHydration       Float?
   hydrationAge        Float?
-
   systolicPressure    Float?
   systolicAge         Float?
-
   diastolicPressure   Float?
   diastolicAge        Float?
 
-  testDate            DateTime    @default(now())
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  testDate  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("biophysics_tests")
 }
@@ -130,7 +125,7 @@ model Range {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  boards    Board[]
+  boards Board[]
 
   @@map("ranges")
 }

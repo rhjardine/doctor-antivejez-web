@@ -5,11 +5,8 @@ import { Patient } from '@prisma/client';
 import { PatientFormData, patientSchema } from '@/utils/validation';
 import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
-import { Prisma } from '@prisma/client';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
-  console.log('--- createPatient formData ---', formData);
-  console.log('--- createPatient formData.userId ---', formData?.userId);
   try {
     const validatedData = patientSchema.parse(formData);
     const chronologicalAge = calculateAge(validatedData.birthDate);
@@ -28,20 +25,6 @@ export async function createPatient(formData: PatientFormData & { userId: string
     return { success: true, patient };
   } catch (error) {
     console.error('Error creando paciente:', error);
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2002: Unique constraint failed
-      if (error.code === 'P2002') {
-        const target = (error.meta?.target as string[])?.join(', ');
-        if (target === 'identification') { // Asegúrate de que es por el campo 'identification'
-          return {
-            success: false,
-            error: `Ya existe un paciente con esta identificación (${formData.identification}). Por favor, inicie una búsqueda.`,
-            errorCode: 'PATIENT_EXISTS', // Código de error personalizado para el frontend
-            identification: formData.identification,
-          };
-        }
-      }
-    }
     return { success: false, error: 'Error al crear el paciente' };
   }
 }
@@ -74,12 +57,10 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
 
 export async function deletePatient(id: string) {
   try {
-    await prisma.biophysicsTest.deleteMany({
-      where: { patientId: id },
-    });
-    await prisma.patient.delete({
-      where: { id },
-    });
+    await prisma.$transaction([
+      prisma.biophysicsTest.deleteMany({ where: { patientId: id } }),
+      prisma.patient.delete({ where: { id } }),
+    ]);
     revalidatePath('/historias');
     return { success: true };
   } catch (error) {
@@ -145,6 +126,8 @@ export async function getAllPatients(userId?: string) {
 
 export async function searchPatients(query: string) {
   try {
+    const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
+    
     const patients = await prisma.patient.findMany({
       where: {
         OR: [
@@ -152,6 +135,7 @@ export async function searchPatients(query: string) {
           { lastName: { contains: query, mode: 'insensitive' } },
           { identification: { contains: query, mode: 'insensitive' } },
           { email: { contains: query, mode: 'insensitive' } },
+          ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
         ],
       },
       include: {

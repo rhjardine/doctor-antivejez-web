@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createPatient } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-import { FaCamera, FaArrowLeft, FaSave, FaArrowRight } from 'react-icons/fa'; // Importar FaArrowRight
+import { FaCamera, FaArrowLeft, FaSave } from 'react-icons/fa';
 import { BLOOD_TYPES, MARITAL_STATUS, NATIONALITIES } from '@/lib/constants';
 import { GENDER_OPTIONS } from '@/types/biophysics';
 import { calculateAge } from '@/utils/date';
 import { Gender } from '@prisma/client';
-import Link from 'next/link';
 
 type NewPatientFormData = {
   photo: string;
@@ -38,9 +37,7 @@ export default function NuevoPacientePage() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const [loading, setLoading] = useState(false);
-  const [showPatientExistsMessage, setShowPatientExistsMessage] = useState(false); // Nuevo estado para el mensaje
-  const [existingPatientId, setExistingPatientId] = useState(''); // Nuevo estado para la identificación del paciente existente
-
+  
   const [formData, setFormData] = useState<NewPatientFormData>({
     photo: '',
     nationality: 'Venezolano',
@@ -67,11 +64,6 @@ export default function NuevoPacientePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    // Si cambia la identificación, ocultar el mensaje de paciente existente
-    if (name === 'identification') {
-      setShowPatientExistsMessage(false);
-      setExistingPatientId('');
-    }
     if (name === 'gender') {
         setFormData(prev => ({ ...prev, [name]: value as Gender }));
     } else {
@@ -87,7 +79,6 @@ export default function NuevoPacientePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setShowPatientExistsMessage(false); // Resetear el mensaje al intentar guardar de nuevo
 
     if (sessionStatus !== 'authenticated' || !session?.user?.id) {
       toast.error('Error de autenticación. No se pudo identificar al usuario.');
@@ -100,19 +91,10 @@ export default function NuevoPacientePage() {
       const result = await createPatient({ ...formData, userId });
 
       if (result.success && result.patient) {
-        toast.success("¡Historia guardada exitosamente! Redirigiendo a la sección de Tests.");
+        toast.success("Se ha guardado la Historia");
         router.push(`/historias/${result.patient.id}?tab=biofisica`);
       } else {
-        // --- Lógica para manejar el error de paciente existente o errores generales ---
-        // result.errorCode viene del backend (patients.actions.ts)
-        if (result.errorCode === 'PATIENT_EXISTS') {
-          setExistingPatientId(formData.identification); // Guardar la identificación que causó el conflicto
-          setShowPatientExistsMessage(true); // Activar la visibilidad del mensaje
-          toast.warning(result.error || 'El paciente ya existe.'); // Mostrar un toast de advertencia
-        } else {
-          toast.error(result.error || 'Error al crear paciente');
-        }
-        // --- Fin lógica de error ---
+        toast.error(result.error || 'Error al crear paciente');
       }
     } catch (error) {
       console.error('Error en handleSubmit:', error);
@@ -158,6 +140,16 @@ export default function NuevoPacientePage() {
               </div>
             </div>
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* ===== INICIO DEL CAMBIO ===== */}
+              <div>
+                <label className="label">N° Control</label>
+                <input type="text" value="Automático" readOnly className="input bg-gray-100" />
+              </div>
+              {/* ===== FIN DEL CAMBIO ===== */}
+              <div>
+                <label className="label">Identificación *</label>
+                <input type="text" name="identification" value={formData.identification} onChange={handleInputChange} required placeholder="Ej: 12345678" className="input" />
+              </div>
               <div>
                 <label className="label">Nacionalidad *</label>
                 <select name="nationality" value={formData.nationality} onChange={handleInputChange} required className="input">
@@ -165,10 +157,6 @@ export default function NuevoPacientePage() {
                     <option key={nat} value={nat}>{nat}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="label">Identificación *</label>
-                <input type="text" name="identification" value={formData.identification} onChange={handleInputChange} required placeholder="Ej: 12345678" className="input" />
               </div>
               <div>
                 <label className="label">Fecha Historia *</label>
@@ -222,26 +210,7 @@ export default function NuevoPacientePage() {
             </div>
           </div>
         </div>
-
-        {/* --- NUEVA SECCIÓN DE MENSAJE DE PACIENTE EXISTENTE --- */}
-        {showPatientExistsMessage && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-lg flex items-center justify-between animate-fadeIn">
-            <div>
-              <p className="font-semibold">¡Paciente Existente!</p>
-              <p className="text-sm">Ya existe un paciente con la identificación {existingPatientId}.</p>
-              <p className="text-sm mt-1">Inicie la búsqueda por cédula o ID en la sección de pacientes.</p>
-            </div>
-            <Link
-              href={`/historias?search=${existingPatientId}`} // Redirige a la sección de historias con el ID de búsqueda
-              className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
-            >
-              <span>Buscar Paciente</span>
-              <FaArrowRight />
-            </Link>
-          </div>
-        )}
-        {/* --- FIN NUEVA SECCIÓN --- */}
-
+        
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Dirección</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

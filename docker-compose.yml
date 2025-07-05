@@ -15,7 +15,10 @@ services:
       - "3001:3000"
     environment:
       DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
-      # Agrega las demás variables de entorno aquí
+      # ===== INICIO DEL CAMBIO =====
+      # Añadir DIRECT_URL para que Prisma pueda ejecutar migraciones dentro del contenedor
+      DIRECT_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
+      # ===== FIN DEL CAMBIO =====
       NEXTAUTH_URL: "http://localhost:3001"
       NEXTAUTH_SECRET: "n5bQGpiu3t03I8NOA3RfClMcQAfYvx6Hyo7yOTWEO1M="
     depends_on:
