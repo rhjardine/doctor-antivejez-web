@@ -38,8 +38,7 @@ body {
   line-height: 1.6;
 }
 
-/* ===== INICIO DEL CAMBIO ===== */
-/* Estilos para la barra de desplazamiento horizontal de las pestañas */
+/* Estilos para la barra de desplazamiento horizontal personalizada */
 @layer utilities {
   .custom-scrollbar-tabs::-webkit-scrollbar {
     height: 6px; /* Grosor de la barra */
@@ -56,8 +55,6 @@ body {
     background-color: var(--primary-dark); /* Color azul oscuro al pasar el ratón */
   }
 }
-/* ===== FIN DEL CAMBIO ===== */
-
 
 /* Componentes reutilizables */
 @layer components {

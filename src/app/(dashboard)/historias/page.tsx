@@ -145,30 +145,25 @@ export default function HistoriasPage() {
         /* Grid View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {patients.map((patient) => {
-            // ===== INICIO DEL CAMBIO (GRID VIEW) =====
             const isMale = patient.gender.startsWith('MASCULINO');
             const iconBgColor = isMale ? 'bg-blue-100' : 'bg-pink-100';
             const iconTextColor = isMale ? 'text-blue-600' : 'text-pink-600';
-            // ===== FIN DEL CAMBIO (GRID VIEW) =====
-
+            
             return (
               <div key={patient.id} className="card hover:shadow-lg transition-shadow">
                 <div className="flex items-start space-x-4">
-                  {/* ===== INICIO DEL CAMBIO (GRID VIEW) ===== */}
                   <div className={`w-16 h-16 rounded-full ${iconBgColor} flex items-center justify-center flex-shrink-0`}>
                     <span className={`text-xl font-bold ${iconTextColor}`}>
                       {patient.firstName[0]}{patient.lastName[0]}
                     </span>
                   </div>
-                  {/* ===== FIN DEL CAMBIO (GRID VIEW) ===== */}
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">
                       {patient.firstName} {patient.lastName}
                     </h3>
-                    {/* ===== INICIO DEL CAMBIO (GRID VIEW) ===== */}
-                    <p className="text-sm text-gray-500">N° Control: {patient.controlNumber}</p>
+                    <p className="text-sm text-gray-500">N° Control: {String(patient.controlNumber).padStart(4, '0')}</p>
                     <p className="text-sm text-gray-500">ID: {patient.identification}</p>
-                    {/* ===== FIN DEL CAMBIO (GRID VIEW) ===== */}
+                    <p className="text-sm text-gray-500">Edad: {patient.chronologicalAge} años</p>
                   </div>
                 </div>
 
@@ -194,11 +189,11 @@ export default function HistoriasPage() {
                     <FaEye />
                   </button>
                   <button
-                    onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)}
+                    onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)}
                     className="p-2 text-purple-600 hover:bg-purple-50 rounded"
-                    title="Ver Historial de Tests"
+                    title="Ver Tests"
                   >
-                    <FaHistory />
+                    <FaVial />
                   </button>
                   <button
                     onClick={() => {
@@ -218,41 +213,34 @@ export default function HistoriasPage() {
       ) : (
         /* List View */
         <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto custom-scrollbar-tabs">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-medium text-gray-700">PACIENTE</th>
-                  {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
                   <th className="text-left py-3 px-4 font-medium text-gray-700">N° CONTROL</th>
-                  {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
                   <th className="text-left py-3 px-4 font-medium text-gray-700">IDENTIFICACIÓN</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">EDAD</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">PROFESIONAL</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">CONTACTO</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">FECHA REGISTRO</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
                 {patients.map((patient) => {
-                  // ===== INICIO DEL CAMBIO (LIST VIEW) =====
                   const isMale = patient.gender.startsWith('MASCULINO');
                   const iconBgColor = isMale ? 'bg-blue-100' : 'bg-pink-100';
                   const iconTextColor = isMale ? 'text-blue-600' : 'text-pink-600';
-                  // ===== FIN DEL CAMBIO (LIST VIEW) =====
 
                   return (
                     <tr key={patient.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-3">
-                          {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
                           <div className={`w-10 h-10 rounded-full ${iconBgColor} flex items-center justify-center flex-shrink-0`}>
                             <span className={`text-sm font-bold ${iconTextColor}`}>
                               {patient.firstName[0]}{patient.lastName[0]}
                             </span>
                           </div>
-                          {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
                           <div>
                             <p className="font-medium text-gray-900">
                               {patient.firstName} {patient.lastName}
@@ -261,13 +249,10 @@ export default function HistoriasPage() {
                           </div>
                         </div>
                       </td>
-                      {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
-                      <td className="py-3 px-4 text-gray-700 font-medium">{patient.controlNumber}</td>
-                      {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
+                      <td className="py-3 px-4 text-gray-700 font-medium">{String(patient.controlNumber).padStart(4, '0')}</td>
                       <td className="py-3 px-4 text-gray-700">{patient.identification}</td>
                       <td className="py-3 px-4 text-gray-700">{patient.chronologicalAge} años</td>
                       <td className="py-3 px-4 text-gray-700">Dr. Admin</td>
-                      <td className="py-3 px-4 text-gray-700">{patient.phone}</td>
                       <td className="py-3 px-4 text-gray-700">{formatDate(patient.createdAt)}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2">
