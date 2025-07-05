@@ -1,4 +1,3 @@
-
 'use server';
 
 import { prisma } from '@/lib/db';
@@ -21,7 +20,6 @@ export async function signUp(formData: z.infer<typeof signUpSchema>) {
   try {
     const validatedData = signUpSchema.parse(formData);
 
-    // Verificar si el usuario ya existe
     const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email },
     });
@@ -30,10 +28,8 @@ export async function signUp(formData: z.infer<typeof signUpSchema>) {
       return { success: false, error: 'El email ya está registrado' };
     }
 
-    // Hash de la contraseña
     const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
-    // Crear el usuario
     const user = await prisma.user.create({
       data: {
         email: validatedData.email,
@@ -60,7 +56,6 @@ export async function signIn(formData: z.infer<typeof signInSchema>) {
   try {
     const validatedData = signInSchema.parse(formData);
 
-    // Buscar el usuario
     const user = await prisma.user.findUnique({
       where: { email: validatedData.email },
     });
@@ -69,14 +64,12 @@ export async function signIn(formData: z.infer<typeof signInSchema>) {
       return { success: false, error: 'Credenciales inválidas' };
     }
 
-    // Verificar la contraseña
     const passwordMatch = await bcrypt.compare(validatedData.password, user.password);
 
     if (!passwordMatch) {
       return { success: false, error: 'Credenciales inválidas' };
     }
 
-    // Retornar usuario sin la contraseña
     const { password, ...userWithoutPassword } = user;
 
     return { success: true, user: userWithoutPassword };
@@ -95,7 +88,10 @@ export async function getUserById(id: string) {
         email: true,
         name: true,
         role: true,
-        avatar: true,
+        // ===== INICIO DE LA CORRECCIÓN =====
+        // Se cambia 'avatar' por 'image' para que coincida con el schema.prisma
+        image: true,
+        // ===== FIN DE LA CORRECCIÓN =====
       },
     });
 
