@@ -12,6 +12,7 @@ import {
   FaArrowLeft, 
   FaDna,
   FaChartLine,
+  FaFileMedicalAlt, // CAMBIO: Icono para Resumen Clínico
   FaHistory
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
@@ -21,7 +22,8 @@ import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 
-type TabId = 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'evolucion';
+// CAMBIO: Se actualiza el tipo para incluir los nuevos IDs de las pestañas
+type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
 type BiofisicaView = 'main' | 'test' | 'history';
 
 export default function PatientDetailPage() {
@@ -32,7 +34,8 @@ export default function PatientDetailPage() {
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabId>('historia');
+  // CAMBIO: La pestaña activa por defecto ahora es 'resumen'
+  const [activeTab, setActiveTab] = useState<TabId>('resumen');
   const [biofisicaView, setBiofisicaView] = useState<BiofisicaView>('main');
 
   useEffect(() => {
@@ -70,28 +73,22 @@ export default function PatientDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="loader"></div>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-96"><div className="loader"></div></div>;
   }
 
   if (!patient) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">Paciente no encontrado. Redirigiendo...</p>
-      </div>
-    );
+    return <div className="text-center py-12"><p className="text-gray-500">Paciente no encontrado. Redirigiendo...</p></div>;
   }
 
+  // CAMBIO: Se actualiza el array de pestañas con el nuevo orden, nombres y iconos
   const tabs = [
+    { id: 'resumen', label: 'Resumen Clínico', icon: FaFileMedicalAlt },
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
-    { id: 'omicas', label: 'Ómics', icon: FaDna },
-    { id: 'evolucion', label: 'Evolución y Seguimiento', icon: FaChartLine },
+    { id: 'omicas', label: 'Programa OMICS', icon: FaDna },
+    { id: 'seguimiento', label: 'Seguimiento', icon: FaChartLine },
   ];
 
   const handleTabClick = (tabId: TabId) => {
@@ -104,40 +101,25 @@ export default function PatientDetailPage() {
       <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
         <div className="flex items-center space-x-6">
           <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-3xl font-bold text-primary">
-              {patient.firstName[0]}{patient.lastName[0]}
-            </span>
+            <span className="text-3xl font-bold text-primary">{patient.firstName[0]}{patient.lastName[0]}</span>
           </div>
           <div className="flex-1">
             <div className="flex justify-between items-start mb-3">
-              <h1 className="text-3xl font-bold text-gray-900">
-                {patient.firstName} {patient.lastName}
-              </h1>
+              <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
+              {/* CAMBIO: Nuevo estilo para el botón "Volver a Pacientes" */}
               <button
                 onClick={() => router.push('/historias')}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary transition-colors shadow-sm"
+                className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm"
               >
                 <FaArrowLeft />
                 <span>Volver a Pacientes</span>
               </button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">ID</p>
-                <p className="font-medium">{patient.identification}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Edad</p>
-                <p className="font-medium">{patient.chronologicalAge} años</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Género</p>
-                <p className="font-medium">{patient.gender.replace(/_/g, ' ')}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">ID Único</p>
-                <p className="font-medium text-xs break-all">{patient.id}</p>
-              </div>
+              <div><p className="text-sm text-gray-500">ID</p><p className="font-medium">{patient.identification}</p></div>
+              <div><p className="text-sm text-gray-500">Edad</p><p className="font-medium">{patient.chronologicalAge} años</p></div>
+              <div><p className="text-sm text-gray-500">Género</p><p className="font-medium">{patient.gender.replace(/_/g, ' ')}</p></div>
+              <div><p className="text-sm text-gray-500">ID Único</p><p className="font-medium text-xs break-all">{patient.id}</p></div>
             </div>
           </div>
         </div>
@@ -153,13 +135,14 @@ export default function PatientDetailPage() {
                 <button
                   key={tab.id}
                   onClick={() => handleTabClick(tab.id as TabId)}
-                  className={`flex-shrink-0 flex items-center space-x-2 py-3 px-5 rounded-lg font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(25,168,219)] ${
+                  // CAMBIO: Ajuste de padding y tamaño de fuente para pestañas más compactas
+                  className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(25,168,219)] ${
                     isActive
                       ? 'bg-white text-[rgb(35,188,239)] shadow-md'
                       : 'bg-[rgb(35,188,239)] text-white hover:bg-[rgb(25,168,219)] shadow-sm'
                   }`}
                 >
-                  <Icon className="text-lg" />
+                  <Icon className="text-base" />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -169,6 +152,15 @@ export default function PatientDetailPage() {
       </div>
 
       <div className="min-h-[400px]">
+        {/* CAMBIO: Contenido para la nueva pestaña "Resumen Clínico" */}
+        {activeTab === 'resumen' && (
+          <div className="card text-center py-12">
+            <FaFileMedicalAlt className="text-6xl text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Resumen Clínico</h3>
+            <p className="text-gray-500">Esta sección mostrará un resumen inteligente del estado del paciente. Próximamente.</p>
+          </div>
+        )}
+
         {activeTab === 'historia' && (
           <div className="card">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Detalles de la Historia Médica</h2>
@@ -246,15 +238,15 @@ export default function PatientDetailPage() {
         {activeTab === 'omicas' && (
           <div className="card text-center py-12">
             <FaDna className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Análisis de Ómicas Antivejez</h3>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3>
             <p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p>
           </div>
         )}
         
-        {activeTab === 'evolucion' && (
+        {activeTab === 'seguimiento' && (
           <div className="card text-center py-12">
             <FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Evolución y Seguimiento</h3>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Seguimiento</h3>
             <p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p>
           </div>
         )}
