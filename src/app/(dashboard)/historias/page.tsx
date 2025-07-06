@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList, FaHistory } from 'react-icons/fa';
+// CAMBIO: Importar el nuevo icono FaFileMedicalAlt
+import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList, FaHistory, FaFileMedicalAlt } from 'react-icons/fa';
 import { getAllPatients, deletePatient, searchPatients } from '@/lib/actions/patients.actions';
 import { formatDate } from '@/utils/date';
 import { formatIdentification } from '@/utils/format';
@@ -181,32 +182,15 @@ export default function HistoriasPage() {
                   </div>
                 </div>
 
+                {/* ===== INICIO DEL CAMBIO (GRID VIEW) ===== */}
                 <div className="mt-4 flex justify-end space-x-2">
-                  <button
-                    onClick={() => router.push(`/historias/${patient.id}`)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                    title="Ver Historia"
-                  >
-                    <FaEye />
-                  </button>
-                  <button
-                    onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)}
-                    className="p-2 text-purple-600 hover:bg-purple-50 rounded"
-                    title="Ver Tests"
-                  >
-                    <FaVial />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setPatientToDelete(patient.id);
-                      setDeleteModalOpen(true);
-                    }}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded"
-                    title="Eliminar"
-                  >
-                    <FaTrash />
-                  </button>
+                  <button onClick={() => router.push(`/historias/${patient.id}?tab=resumen`)} className="p-2 text-green-600 hover:bg-green-50 rounded" title="Ver Resumen Clínico"><FaFileMedicalAlt /></button>
+                  <button onClick={() => router.push(`/historias/${patient.id}?tab=historia`)} className="p-2 text-cyan-600 hover:bg-cyan-50 rounded" title="Ver Historia Médica"><FaEdit /></button>
+                  <button onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Ir a Tests"><FaVial /></button>
+                  <button onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)} className="p-2 text-purple-600 hover:bg-purple-50 rounded" title="Ver Historial de Tests"><FaHistory /></button>
+                  <button onClick={() => { setPatientToDelete(patient.id); setDeleteModalOpen(true); }} className="p-2 text-red-600 hover:bg-red-50 rounded" title="Eliminar Registro de Paciente"><FaTrash /></button>
                 </div>
+                {/* ===== FIN DEL CAMBIO (GRID VIEW) ===== */}
               </div>
             );
           })}
@@ -256,39 +240,15 @@ export default function HistoriasPage() {
                       <td className="py-3 px-4 text-gray-700">Dr. Admin</td>
                       <td className="py-3 px-4 text-gray-700">{formatDate(patient.createdAt)}</td>
                       <td className="py-3 px-4">
+                        {/* ===== INICIO DEL CAMBIO (LIST VIEW) ===== */}
                         <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => router.push(`/historias/${patient.id}`)}
-                            className="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded"
-                            title="Editar/Ver Historia"
-                          >
-                            <FaEdit />
-                          </button>
-                          <button
-                            onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Ver Tests"
-                          >
-                            <FaVial />
-                          </button>
-                          <button
-                            onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)}
-                            className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
-                            title="Ver Historial de Tests"
-                          >
-                            <FaHistory />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setPatientToDelete(patient.id);
-                              setDeleteModalOpen(true);
-                            }}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                            title="Eliminar"
-                          >
-                            <FaTrash />
-                          </button>
+                          <button onClick={() => router.push(`/historias/${patient.id}?tab=resumen`)} className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Ver Resumen Clínico"><FaFileMedicalAlt /></button>
+                          <button onClick={() => router.push(`/historias/${patient.id}?tab=historia`)} className="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded" title="Ver Historia Médica"><FaEdit /></button>
+                          <button onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Ir a Tests"><FaVial /></button>
+                          <button onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Ver Historial de Tests"><FaHistory /></button>
+                          <button onClick={() => { setPatientToDelete(patient.id); setDeleteModalOpen(true); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar Registro de Paciente"><FaTrash /></button>
                         </div>
+                        {/* ===== FIN DEL CAMBIO (LIST VIEW) ===== */}
                       </td>
                     </tr>
                   );
