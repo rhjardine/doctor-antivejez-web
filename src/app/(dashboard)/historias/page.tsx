@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList, FaHistory } from 'react-icons/fa';
 import { getAllPatients, deletePatient, searchPatients } from '@/lib/actions/patients.actions';
 import { formatDate } from '@/utils/date';
-import { formatIdentification } from '@/utils/format'; // Importar la nueva función
+import { formatIdentification } from '@/utils/format';
 import { toast } from 'sonner';
 import type { PatientWithDetails } from '@/types';
 
@@ -109,7 +109,7 @@ export default function HistoriasPage() {
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por nombre, identificación..."
+                placeholder="Buscar por nombre, identificación, N° Control..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -162,6 +162,7 @@ export default function HistoriasPage() {
                     <h3 className="font-semibold text-gray-900">
                       {patient.firstName} {patient.lastName}
                     </h3>
+                    <p className="text-sm text-gray-500">N° Control: {String(patient.controlNumber).padStart(4, '0')}</p>
                     <p className="text-sm text-gray-500">ID: {formatIdentification(patient.nationality, patient.identification)}</p>
                     <p className="text-sm text-gray-500">Edad: {patient.chronologicalAge}</p>
                   </div>
@@ -218,8 +219,10 @@ export default function HistoriasPage() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-medium text-gray-700">PACIENTE</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-700">N° CONTROL</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">IDENTIFICACIÓN</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">EDAD</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-700">PROFESIONAL</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">FECHA REGISTRO</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">ACCIONES</th>
                 </tr>
@@ -247,8 +250,10 @@ export default function HistoriasPage() {
                           </div>
                         </div>
                       </td>
+                      <td className="py-3 px-4 text-gray-700 font-medium">{String(patient.controlNumber).padStart(4, '0')}</td>
                       <td className="py-3 px-4 text-gray-700">{formatIdentification(patient.nationality, patient.identification)}</td>
                       <td className="py-3 px-4 text-gray-700">{patient.chronologicalAge}</td>
+                      <td className="py-3 px-4 text-gray-700">Dr. Admin</td>
                       <td className="py-3 px-4 text-gray-700">{formatDate(patient.createdAt)}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2">
