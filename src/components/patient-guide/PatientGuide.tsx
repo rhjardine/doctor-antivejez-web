@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import { PatientWithDetails } from '@/types';
-// Importar los tipos centralizados desde el nuevo archivo
-import { GuideCategory, Selections, StandardGuideItem, MetabolicActivatorItem } from '@/types/guide'; 
+import { GuideCategory, Selections, StandardGuideItem, MetabolicActivatorItem } from '@/types/guide';
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt } from 'react-icons/fa';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
-// --- DATOS INICIALES CON LA NUEVA ESTRUCTURA ---
-// Idealmente, esto vendría de la base de datos para ser completamente dinámico.
+// --- DATOS INICIALES COMPLETOS Y RESTAURADOS ---
 const initialGuideData: GuideCategory[] = [
   {
     id: 'cat_remocion',
@@ -18,28 +16,8 @@ const initialGuideData: GuideCategory[] = [
     items: [
       { id: 'rem_1', name: 'Aceite de ricino', dose: '30 CC (adultos) / 15 CC (niños y ancianos) - Una vez en la noche' },
       { id: 'rem_2', name: 'Leche de magnesia', dose: '30 CC (adultos) / 15 CC (niños y ancianos) - Una vez en la noche' },
+      { id: 'rem_3', name: 'Sal de higuera o sal de Epson', dose: '30 Grs en 1 litro de agua (adultos) - Una vez en la noche; Evitar en niños y ancianos debilitados' },
     ],
-  },
-  {
-    id: 'cat_activador',
-    title: 'Activador Metabólico',
-    type: 'metabolic',
-    items: {
-      homeopathy: [
-        { id: 'am_hom_1', name: 'Cardiovascular' },
-        { id: 'am_hom_2', name: 'Respiratorio' },
-        { id: 'am_hom_3', name: 'Digestivo' },
-        { id: 'am_hom_4', name: 'Neuro' },
-        { id: 'am_hom_5', name: 'Inmune' },
-      ],
-      bachFlowers: [
-        { id: 'am_bach_1', name: 'Agrimonia' },
-        { id: 'am_bach_2', name: 'Brezo' },
-        { id: 'am_bach_3', name: 'Aspen' },
-        { id: 'am_bach_4', name: 'Acebo' },
-        { id: 'am_bach_5', name: 'Haya' },
-      ]
-    }
   },
   {
     id: 'cat_nutra_primarios',
@@ -48,6 +26,78 @@ const initialGuideData: GuideCategory[] = [
     items: [
       { id: 'np_1', name: 'MegaGH4 (Fórmula Antienvejecimiento)' },
       { id: 'np_2', name: 'StemCell Enhancer (Revierte la oxidación)' },
+      { id: 'np_3', name: 'Transfer Tri Factor (Modulador celular)' },
+      { id: 'np_4', name: 'Telomeros (Activador de la Telomerasa)' },
+    ]
+  },
+  {
+    id: 'cat_activador',
+    title: 'Activador Metabólico',
+    type: 'metabolic',
+    items: {
+      homeopathy: [
+        { id: 'am_hom_1', name: 'Cardiovascular' }, { id: 'am_hom_2', name: 'Respiratorio' }, { id: 'am_hom_3', name: 'Digestivo' },
+        { id: 'am_hom_4', name: 'Neuro' }, { id: 'am_hom_5', name: 'Inmune' }, { id: 'am_hom_6', name: 'Inflamación' },
+        { id: 'am_hom_7', name: 'Glicólisis(m)' }, { id: 'am_hom_8', name: 'Ciclo Krebs(t)' }, { id: 'am_hom_9', name: 'Cadena Resp(n)' },
+      ],
+      bachFlowers: [
+        { id: 'am_bach_1', name: 'Agrimonia' }, { id: 'am_bach_2', name: 'Brezo' }, { id: 'am_bach_3', name: 'Aspen' },
+        { id: 'am_bach_4', name: 'Acebo' }, { id: 'am_bach_5', name: 'Haya' }, { id: 'am_bach_6', name: 'Madreselva' },
+        { id: 'am_bach_7', name: 'Estrella de Belén' }, { id: 'am_bach_8', name: 'Centaura' }, { id: 'am_bach_9', name: 'Carpe' },
+      ]
+    }
+  },
+  {
+    id: 'cat_nutra_secundarios',
+    title: 'Nutracéuticos Secundarios',
+    type: 'standard',
+    items: [
+        { id: 'ns_1', name: 'Digestivo (Gases / Estreñimiento)' },
+        { id: 'ns_2', name: 'Femenino (Precursor hormonal mujer)' },
+        { id: 'ns_3', name: 'Osteo Articular (Regenerador Articular)' },
+        { id: 'ns_4', name: 'Inmune Booster (Estimula las defensas)' },
+        { id: 'ns_5', name: 'Inmune Modulador (Regulador Inflamatorio)' },
+        { id: 'ns_6', name: 'Masculino (Precursor hormonal masc)' },
+        { id: 'ns_7', name: 'Neuro Central (Regenerador Cerebral)' },
+        { id: 'ns_8', name: 'Neuro Emocional (Restaurador Emocional)' },
+        { id: 'ns_9', name: 'Próstata (Regenerador prostático)' },
+    ]
+  },
+  {
+    id: 'cat_nutra_complementarios',
+    title: 'Nutracéuticos Complementarios',
+    type: 'standard',
+    items: [
+        { id: 'nc_1', name: 'Aloe Vera' },
+        { id: 'nc_2', name: 'Antioxidante (Revierte la oxidación)' },
+        { id: 'nc_3', name: 'Colágeno' },
+        { id: 'nc_4', name: 'Energy' },
+        { id: 'nc_5', name: 'Immune Spray' },
+        { id: 'nc_6', name: 'Magnesio Quelatado' },
+        { id: 'nc_7', name: 'Vit C c/Zinc' },
+        { id: 'nc_8', name: 'Vit E c/Selenio' },
+        { id: 'nc_9', name: 'Zinc Quelatado' },
+    ]
+  },
+  {
+    id: 'cat_sueros',
+    title: 'Sueros - Shot Antivejez',
+    type: 'standard',
+    items: [
+        { id: 'suero_1', name: 'Antianémico' },
+        { id: 'suero_2', name: 'Pro Vital o Antienvejecimiento' },
+        { id: 'suero_3', name: 'Antiviral c/Ozono' },
+        { id: 'suero_4', name: 'Bioxigenación' },
+        { id: 'suero_5', name: 'CardioVascular' },
+        { id: 'suero_6', name: 'Energizante' },
+        { id: 'suero_7', name: 'Inmuno Estimulante' },
+        { id: 'suero_8', name: 'Inmuno Modular' },
+        { id: 'suero_9', name: 'Mega Vitamina C' },
+        { id: 'suero_10', name: 'Metabólico' },
+        { id: 'suero_11', name: 'Osteo Articular' },
+        { id: 'suero_12', name: 'Ozono' },
+        { id: 'suero_13', name: 'Pre Natal' },
+        { id: 'suero_14', name: 'Quelación' },
     ]
   },
   {
@@ -61,7 +111,6 @@ const initialGuideData: GuideCategory[] = [
   }
 ];
 
-// --- COMPONENTE PRINCIPAL ---
 export default function PatientGuide({ patient }: { patient: PatientWithDetails }) {
   const [guideData, setGuideData] = useState<GuideCategory[]>(initialGuideData);
   const [selections, setSelections] = useState<Selections>({});
