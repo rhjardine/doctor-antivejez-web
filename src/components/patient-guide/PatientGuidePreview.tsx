@@ -2,12 +2,12 @@
 
 import { PatientWithDetails } from '@/types';
 // Importar los tipos centralizados desde el nuevo archivo
-import { GuideData, Selections } from '@/types/guide';
+import { GuideCategory, Selections, StandardGuideItem } from '@/types/guide';
 import { FaPrint, FaTimes } from 'react-icons/fa';
 
 interface Props {
   patient: PatientWithDetails;
-  guideData: GuideData;
+  guideData: GuideCategory[];
   selections: Selections;
   onClose: () => void;
 }
@@ -31,14 +31,10 @@ export default function PatientGuidePreview({ patient, guideData, selections, on
                 -webkit-print-color-adjust: exact; /* Fuerza la impresión de colores de fondo en Chrome */
                 print-color-adjust: exact; /* Estándar */
               }
-              @media print {
-                .no-print { display: none; }
-              }
+              @media print { .no-print { display: none; } }
             </style>
           </head>
-          <body>
-            ${printContent.innerHTML}
-          </body>
+          <body>${printContent.innerHTML}</body>
         </html>
       `;
       window.print();
@@ -83,17 +79,17 @@ export default function PatientGuidePreview({ patient, guideData, selections, on
           </div>
 
           <div className="space-y-6">
-            {Object.entries(guideData).map(([category, content]) => {
+            {guideData.map((category) => {
               // Determina los ítems seleccionados, ya sea de un array simple o de las subcategorías
-              const selectedItems = Array.isArray(content) 
-                ? content.filter(item => selections[item.id]?.selected)
-                : [...content.homeopathy, ...content.bachFlowers].filter(item => selections[item.id]?.selected);
+              const selectedItems = category.type === 'standard'
+                ? (category.items as StandardGuideItem[]).filter(item => selections[item.id]?.selected)
+                : [...(category.items as any).homeopathy, ...(category.items as any).bachFlowers].filter((item: any) => selections[item.id]?.selected);
 
               if (selectedItems.length === 0) return null;
 
               return (
-                <div key={category}>
-                  <h3 className="text-xl font-semibold text-[#293B64] border-b-2 border-gray-200 pb-2 mb-3">{category}</h3>
+                <div key={category.id}>
+                  <h3 className="text-xl font-semibold text-[#293B64] border-b-2 border-gray-200 pb-2 mb-3">{category.title}</h3>
                   <ul className="list-disc list-inside space-y-2 pl-2">
                     {selectedItems.map(item => {
                       const details = selections[item.id];
