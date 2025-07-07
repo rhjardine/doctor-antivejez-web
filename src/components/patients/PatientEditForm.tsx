@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -14,11 +13,11 @@ import { GENDER_OPTIONS } from '@/types/biophysics';
 
 interface PatientEditFormProps {
   patient: Patient;
-  onClose: () => void;
+  onUpdate: () => void; // Función para notificar que la actualización fue exitosa
+  onCancel: () => void; // Función para cancelar la edición
 }
 
-export default function PatientEditForm({ patient, onClose }: PatientEditFormProps) {
-  const router = useRouter();
+export default function PatientEditForm({ patient, onUpdate, onCancel }: PatientEditFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -27,9 +26,8 @@ export default function PatientEditForm({ patient, onClose }: PatientEditFormPro
     formState: { errors },
   } = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
-    // ===== INICIO DE LA CORRECCIÓN =====
-    // Se manejan los posibles valores `null` de la base de datos
-    // para que sean compatibles con el formulario.
+    // Se inicializa el formulario con los datos actuales del paciente.
+    // Se manejan los posibles valores `null` de la base de datos y se formatea la fecha.
     defaultValues: {
       ...patient,
       historyDate: new Date(patient.historyDate).toISOString().split('T')[0],
@@ -37,7 +35,6 @@ export default function PatientEditForm({ patient, onClose }: PatientEditFormPro
       photo: patient.photo ?? '',
       observations: patient.observations ?? '',
     },
-    // ===== FIN DE LA CORRECCIÓN =====
   });
 
   const onSubmit: SubmitHandler<PatientFormData> = async (data) => {
@@ -46,13 +43,12 @@ export default function PatientEditForm({ patient, onClose }: PatientEditFormPro
       const result = await updatePatient(patient.id, data);
       if (result.success) {
         toast.success('Historia del Paciente Actualizada');
-        onClose(); // Cierra el formulario y refresca los datos en la vista principal
-        router.refresh(); // Refresca la data en el servidor
+        onUpdate(); // Notifica al componente padre para que recargue los datos y cierre el form.
       } else {
         toast.error(result.error || 'Error al actualizar la historia');
       }
     } catch (error) {
-      toast.error('Ocurrió un error inesperado');
+      toast.error('Ocurrió un error inesperado al guardar los cambios.');
     } finally {
       setIsSubmitting(false);
     }
@@ -65,8 +61,9 @@ export default function PatientEditForm({ patient, onClose }: PatientEditFormPro
           <h2 className="text-2xl font-bold text-gray-900">Editando Historia Médica</h2>
           <button
             type="button"
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-200"
+            onClick={onCancel} // Botón para cerrar el formulario
+            className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+            title="Cancelar Edición"
           >
             <FaTimes className="text-gray-600" />
           </button>
@@ -116,6 +113,7 @@ export default function PatientEditForm({ patient, onClose }: PatientEditFormPro
             <div>
               <label className="label">Estado Civil</label>
               <select {...register('maritalStatus')} className="input">
+                <option value="">Seleccionar...</option>
                 {MARITAL_STATUS.map(status => <option key={status} value={status}>{status}</option>)}
               </select>
             </div>
@@ -164,6 +162,7 @@ export default function PatientEditForm({ patient, onClose }: PatientEditFormPro
               <div>
                 <label className="label">Grupo Sanguíneo</label>
                 <select {...register('bloodType')} className="input">
+                   <option value="">Seleccionar...</option>
                    {BLOOD_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                 </select>
               </div>
@@ -175,7 +174,7 @@ export default function PatientEditForm({ patient, onClose }: PatientEditFormPro
         </div>
 
         <div className="flex justify-end space-x-4 pt-4">
-          <button type="button" onClick={onClose} className="btn-secondary">
+          <button type="button" onClick={onCancel} className="btn-secondary">
             Cancelar
           </button>
           <button type="submit" disabled={isSubmitting} className="btn-primary flex items-center space-x-2">

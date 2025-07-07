@@ -12,17 +12,17 @@ import {
   FaArrowLeft, 
   FaDna,
   FaChartLine,
-  FaFileMedicalAlt, // CAMBIO: Icono para Resumen Clínico
-  FaHistory
+  FaFileMedicalAlt,
+  FaHistory,
+  FaEdit // Icono para editar
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
 import BiophysicsHistoryView from '@/components/biophysics/biophysics-history-view';
+import PatientEditForm from '@/components/patients/PatientEditForm'; // <-- 1. IMPORTAR EL FORMULARIO
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
-
-// CAMBIO: Se actualiza el tipo para incluir los nuevos IDs de las pestañas
 type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
 type BiofisicaView = 'main' | 'test' | 'history';
 
@@ -34,9 +34,9 @@ export default function PatientDetailPage() {
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
-  // CAMBIO: La pestaña activa por defecto ahora es 'resumen'
   const [activeTab, setActiveTab] = useState<TabId>('resumen');
   const [biofisicaView, setBiofisicaView] = useState<BiofisicaView>('main');
+  const [isEditing, setIsEditing] = useState(false); // <-- 2. AÑADIR ESTADO DE EDICIÓN
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -46,6 +46,8 @@ export default function PatientDetailPage() {
       if (view === 'history') {
         setBiofisicaView('history');
       }
+    } else if (tab) {
+      setActiveTab(tab as TabId);
     }
   }, [searchParams]);
 
@@ -56,7 +58,7 @@ export default function PatientDetailPage() {
   }, [patientId]);
 
   const loadPatient = async () => {
-    setLoading(true);
+    // No es necesario setLoading(true) aquí para evitar parpadeo al actualizar
     try {
       const result = await getPatientWithTests(patientId);
       if (result.success && result.patient) {
@@ -68,8 +70,14 @@ export default function PatientDetailPage() {
     } catch (error) {
       toast.error('Error al cargar paciente');
     } finally {
-      setLoading(false);
+      setLoading(false); // Solo se establece en false una vez
     }
+  };
+
+  // 3. FUNCIÓN PARA MANEJAR LA ACTUALIZACIÓN EXITOSA
+  const handleUpdateSuccess = () => {
+    setIsEditing(false); // Cierra el formulario
+    loadPatient();      // Vuelve a cargar los datos del paciente para reflejar los cambios
   };
 
   if (loading) {
@@ -80,7 +88,6 @@ export default function PatientDetailPage() {
     return <div className="text-center py-12"><p className="text-gray-500">Paciente no encontrado. Redirigiendo...</p></div>;
   }
 
-  // CAMBIO: Se actualiza el array de pestañas con el nuevo orden, nombres y iconos
   const tabs = [
     { id: 'resumen', label: 'Resumen Clínico', icon: FaFileMedicalAlt },
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
@@ -94,6 +101,8 @@ export default function PatientDetailPage() {
   const handleTabClick = (tabId: TabId) => {
     setActiveTab(tabId);
     setBiofisicaView('main');
+    // Actualiza la URL sin recargar la página
+    router.push(`/historias/${patientId}?tab=${tabId}`, { scroll: false });
   }
 
   return (
@@ -106,7 +115,6 @@ export default function PatientDetailPage() {
           <div className="flex-1">
             <div className="flex justify-between items-start mb-3">
               <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
-              {/* CAMBIO: Nuevo estilo para el botón "Volver a Pacientes" */}
               <button
                 onClick={() => router.push('/historias')}
                 className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm"
@@ -135,7 +143,6 @@ export default function PatientDetailPage() {
                 <button
                   key={tab.id}
                   onClick={() => handleTabClick(tab.id as TabId)}
-                  // CAMBIO: Ajuste de padding y tamaño de fuente para pestañas más compactas
                   className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(25,168,219)] ${
                     isActive
                       ? 'bg-white text-[rgb(35,188,239)] shadow-md'
@@ -152,7 +159,6 @@ export default function PatientDetailPage() {
       </div>
 
       <div className="min-h-[400px]">
-        {/* CAMBIO: Contenido para la nueva pestaña "Resumen Clínico" */}
         {activeTab === 'resumen' && (
           <div className="card text-center py-12">
             <FaFileMedicalAlt className="text-6xl text-gray-300 mx-auto mb-4" />
@@ -161,40 +167,58 @@ export default function PatientDetailPage() {
           </div>
         )}
 
+        {/* 4. RENDERIZADO CONDICIONAL PARA LA PESTAÑA HISTORIA */}
         {activeTab === 'historia' && (
-          <div className="card">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Detalles de la Historia Médica</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <div>
-                <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Personal</h3>
-                <dl className="space-y-3">
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Identificación</dt><dd className="font-medium text-gray-700">{patient.identification}</dd></div>
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Nacionalidad</dt><dd className="font-medium text-gray-700">{patient.nationality}</dd></div>
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Lugar de Nacimiento</dt><dd className="font-medium text-gray-700">{patient.birthPlace}</dd></div>
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Estado Civil</dt><dd className="font-medium text-gray-700">{patient.maritalStatus}</dd></div>
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Profesión</dt><dd className="font-medium text-gray-700">{patient.profession}</dd></div>
-                </dl>
+          isEditing ? (
+            <PatientEditForm 
+              patient={patient} 
+              onUpdate={handleUpdateSuccess} 
+              onCancel={() => setIsEditing(false)} 
+            />
+          ) : (
+            <div className="card">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Detalles de la Historia Médica</h2>
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="btn-secondary flex items-center space-x-2"
+                >
+                  <FaEdit />
+                  <span>Editar Historia</span>
+                </button>
               </div>
-              <div>
-                <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información de Contacto</h3>
-                <dl className="space-y-3">
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Teléfono</dt><dd className="font-medium text-gray-700">{patient.phone}</dd></div>
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Email</dt><dd className="font-medium text-gray-700">{patient.email}</dd></div>
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Dirección</dt><dd className="font-medium text-gray-700">{patient.address}, {patient.city}, {patient.state}, {patient.country}</dd></div>
-                </dl>
-              </div>
-              <div className="md:col-span-2 pt-4">
-                <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Médica</h3>
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Grupo Sanguíneo</dt><dd className="font-medium text-gray-700">{patient.bloodType}</dd></div>
-                  <div className="flex justify-between"><dt className="text-sm text-gray-500">Edad Cronológica</dt><dd className="font-medium text-gray-700">{patient.chronologicalAge} años</dd></div>
-                </dl>
-                {patient.observations && (<div className="mt-4"><dt className="text-sm text-gray-500 mb-1">Observaciones</dt><dd className="text-gray-700 bg-gray-50 p-3 rounded-md border">{patient.observations}</dd></div>)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div>
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Personal</h3>
+                  <dl className="space-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Identificación</dt><dd className="font-medium text-gray-700">{patient.identification}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Nacionalidad</dt><dd className="font-medium text-gray-700">{patient.nationality}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Lugar de Nacimiento</dt><dd className="font-medium text-gray-700">{patient.birthPlace}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Estado Civil</dt><dd className="font-medium text-gray-700">{patient.maritalStatus}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Profesión</dt><dd className="font-medium text-gray-700">{patient.profession}</dd></div>
+                  </dl>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información de Contacto</h3>
+                  <dl className="space-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Teléfono</dt><dd className="font-medium text-gray-700">{patient.phone}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Email</dt><dd className="font-medium text-gray-700">{patient.email}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Dirección</dt><dd className="font-medium text-gray-700 text-right">{patient.address}, {patient.city}, {patient.state}, {patient.country}</dd></div>
+                  </dl>
+                </div>
+                <div className="md:col-span-2 pt-4">
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Médica</h3>
+                  <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Grupo Sanguíneo</dt><dd className="font-medium text-gray-700">{patient.bloodType}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Edad Cronológica</dt><dd className="font-medium text-gray-700">{patient.chronologicalAge} años</dd></div>
+                  </dl>
+                  {patient.observations && (<div className="mt-4"><dt className="text-sm text-gray-500 mb-1">Observaciones</dt><dd className="text-gray-700 bg-gray-50 p-3 rounded-md border">{patient.observations}</dd></div>)}
+                </div>
               </div>
             </div>
-          </div>
+          )
         )}
-
+        
         {activeTab === 'biofisica' && (
           <>
             {biofisicaView === 'main' && (
@@ -219,37 +243,11 @@ export default function PatientDetailPage() {
           </>
         )}
 
-        {activeTab === 'guia' && (
-          <div className="card text-center py-12">
-            <FaBook className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Guía del Paciente</h3>
-            <p className="text-gray-500">La guía del paciente estará disponible pronto.</p>
-          </div>
-        )}
-
-        {activeTab === 'alimentacion' && (
-          <div className="card text-center py-12">
-            <FaAppleAlt className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Alimentación Nutrigenómica</h3>
-            <p className="text-gray-500">El plan de alimentación nutrigenómica estará disponible pronto.</p>
-          </div>
-        )}
-
-        {activeTab === 'omicas' && (
-          <div className="card text-center py-12">
-            <FaDna className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3>
-            <p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p>
-          </div>
-        )}
-        
-        {activeTab === 'seguimiento' && (
-          <div className="card text-center py-12">
-            <FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Seguimiento</h3>
-            <p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p>
-          </div>
-        )}
+        {/* Resto de las pestañas (sin cambios) */}
+        {activeTab === 'guia' && <div className="card text-center py-12"><FaBook className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Guía del Paciente</h3><p className="text-gray-500">La guía del paciente estará disponible pronto.</p></div>}
+        {activeTab === 'alimentacion' && <div className="card text-center py-12"><FaAppleAlt className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Alimentación Nutrigenómica</h3><p className="text-gray-500">El plan de alimentación nutrigenómica estará disponible pronto.</p></div>}
+        {activeTab === 'omicas' && <div className="card text-center py-12"><FaDna className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3><p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p></div>}
+        {activeTab === 'seguimiento' && <div className="card text-center py-12"><FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Seguimiento</h3><p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p></div>}
       </div>
     </div>
   );
