@@ -27,11 +27,17 @@ export default function PatientEditForm({ patient, onClose }: PatientEditFormPro
     formState: { errors },
   } = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // Se manejan los posibles valores `null` de la base de datos
+    // para que sean compatibles con el formulario.
     defaultValues: {
       ...patient,
       historyDate: new Date(patient.historyDate).toISOString().split('T')[0],
       birthDate: new Date(patient.birthDate).toISOString().split('T')[0],
+      photo: patient.photo ?? '',
+      observations: patient.observations ?? '',
     },
+    // ===== FIN DE LA CORRECCIÓN =====
   });
 
   const onSubmit: SubmitHandler<PatientFormData> = async (data) => {
