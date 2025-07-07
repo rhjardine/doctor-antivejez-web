@@ -2,20 +2,14 @@
 
 import { useState } from 'react';
 import { PatientWithDetails } from '@/types';
+// Importar los tipos centralizados
+import { GuideData, Selections, GuideItem, MetabolicActivatorItem } from '@/types/guide'; 
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaPrint, FaTrash, FaTimes, FaEnvelope, FaMobileAlt } from 'react-icons/fa';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
-// --- TIPOS DE DATOS ---
-type GuideItem = { id: string; name: string; dose?: string; };
-type MetabolicActivatorItem = { id: string; name: string; };
-type GuideData = {
-  [key: string]: GuideItem[] | { homeopathy: MetabolicActivatorItem[]; bachFlowers: MetabolicActivatorItem[] };
-};
-type Selections = Record<string, { selected: boolean; qty?: string; freq?: string; custom?: string; }>;
-
 // --- DATOS INICIALES ---
-// Idealmente, esto vendría de la base de datos para ser completamente dinámico.
+// Los datos ahora se adhieren estrictamente a los tipos importados.
 const initialGuideData: GuideData = {
   "Fase de Remoción": [
     { id: 'rem_1', name: 'Aceite de ricino', dose: '30 CC (adultos) / 15 CC (niños y ancianos) - Una vez en la noche' },
@@ -74,18 +68,17 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     const newItemName = newItemInputs[subCategory ? `${category}-${subCategory}` : category];
     if (!newItemName || newItemName.trim() === '') return;
 
-    const newItem = {
+    const newItem: GuideItem | MetabolicActivatorItem = {
       id: `${category.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}`,
       name: newItemName.trim(),
     };
 
     setGuideData(prev => {
-      const newGuideData = { ...prev };
+      const newGuideData = JSON.parse(JSON.stringify(prev)); // Deep copy para evitar mutaciones
       if (subCategory) {
-        const cat = newGuideData[category] as { homeopathy: MetabolicActivatorItem[]; bachFlowers: MetabolicActivatorItem[] };
-        cat[subCategory] = [...cat[subCategory], newItem];
+        (newGuideData[category] as any)[subCategory].push(newItem);
       } else {
-        (newGuideData[category] as GuideItem[]).push(newItem);
+        (newGuideData[category] as GuideItem[]).push(newItem as GuideItem);
       }
       return newGuideData;
     });
@@ -104,7 +97,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
        }
        return newGuideData;
      });
-     // También elimina la selección
      setSelections(prev => {
        const newSelections = {...prev};
        delete newSelections[itemId];
@@ -113,8 +105,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   };
 
   const handleSendAction = (action: 'email' | 'app') => {
-      // Aquí iría la lógica para enviar los datos al backend
-      // Por ahora, solo mostramos una notificación
       if (action === 'email') {
           toast.success("Guía enviada por correo electrónico (simulación).");
       } else {
@@ -125,7 +115,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
 
   const frequencyOptions = ["Mañana", "Noche", "30 min antes de Desayuno", "30 min antes de Cena", "Antes del Ejercicio", "Otros"];
 
-  const renderItem = (item: GuideItem, category: string, subCategory?: 'homeopathy' | 'bachFlowers') => (
+  const renderItem = (item: GuideItem | MetabolicActivatorItem, category: string, subCategory?: 'homeopathy' | 'bachFlowers') => (
     <div key={item.id} className="p-3 bg-gray-50 rounded-md transition-all hover:bg-gray-100">
       <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
         <input
@@ -136,12 +126,12 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           className="w-5 h-5 accent-primary"
         />
         <label htmlFor={item.id} className="flex-grow font-medium text-gray-800">{item.name}</label>
-        {item.dose && <span className="text-sm text-gray-600 bg-gray-200 px-2 py-1 rounded">{item.dose}</span>}
+        {'dose' in item && item.dose && <span className="text-sm text-gray-600 bg-gray-200 px-2 py-1 rounded">{item.dose}</span>}
         <button onClick={() => handleDeleteItem(category, item.id, subCategory)} className="text-gray-400 hover:text-red-500 transition-colors ml-auto">
             <FaTrash />
         </button>
       </div>
-      {selections[item.id]?.selected && !item.dose && (
+      {selections[item.id]?.selected && !('dose' in item) && (
          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
             <input type="text" placeholder="Cant." value={selections[item.id]?.qty || ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
             <select value={selections[item.id]?.freq || ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
@@ -185,7 +175,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                 </div>
               ) : (
                 <div className="grid md:grid-cols-2 gap-8">
-                  {/* Columna Homeopatía */}
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-2">Homeopatía</h4>
                     <div className="space-y-3">
@@ -196,7 +185,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                       </div>
                     </div>
                   </div>
-                  {/* Columna Flores de Bach */}
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-2">Flores de Bach</h4>
                     <div className="space-y-3">
