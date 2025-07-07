@@ -14,12 +14,13 @@ import {
   FaChartLine,
   FaFileMedicalAlt,
   FaHistory,
-  FaEdit // Icono para editar
+  FaEdit
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
 import BiophysicsHistoryView from '@/components/biophysics/biophysics-history-view';
-import PatientEditForm from '@/components/patients/PatientEditForm'; // <-- 1. IMPORTAR EL FORMULARIO
+import PatientEditForm from '@/components/patients/PatientEditForm';
+import PatientGuide from '@/components/patient-guide/PatientGuide';
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
@@ -36,18 +37,16 @@ export default function PatientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('resumen');
   const [biofisicaView, setBiofisicaView] = useState<BiofisicaView>('main');
-  const [isEditing, setIsEditing] = useState(false); // <-- 2. AÑADIR ESTADO DE EDICIÓN
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
     const view = searchParams.get('view');
-    if (tab === 'biofisica') {
-      setActiveTab('biofisica');
-      if (view === 'history') {
-        setBiofisicaView('history');
-      }
-    } else if (tab) {
+    if (tab) {
       setActiveTab(tab as TabId);
+    }
+    if (tab === 'biofisica' && view === 'history') {
+      setBiofisicaView('history');
     }
   }, [searchParams]);
 
@@ -58,7 +57,6 @@ export default function PatientDetailPage() {
   }, [patientId]);
 
   const loadPatient = async () => {
-    // No es necesario setLoading(true) aquí para evitar parpadeo al actualizar
     try {
       const result = await getPatientWithTests(patientId);
       if (result.success && result.patient) {
@@ -70,14 +68,13 @@ export default function PatientDetailPage() {
     } catch (error) {
       toast.error('Error al cargar paciente');
     } finally {
-      setLoading(false); // Solo se establece en false una vez
+      setLoading(false);
     }
   };
 
-  // 3. FUNCIÓN PARA MANEJAR LA ACTUALIZACIÓN EXITOSA
   const handleUpdateSuccess = () => {
-    setIsEditing(false); // Cierra el formulario
-    loadPatient();      // Vuelve a cargar los datos del paciente para reflejar los cambios
+    setIsEditing(false);
+    loadPatient();
   };
 
   if (loading) {
@@ -101,12 +98,12 @@ export default function PatientDetailPage() {
   const handleTabClick = (tabId: TabId) => {
     setActiveTab(tabId);
     setBiofisicaView('main');
-    // Actualiza la URL sin recargar la página
     router.push(`/historias/${patientId}?tab=${tabId}`, { scroll: false });
   }
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {/* Header del Paciente */}
       <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
         <div className="flex items-center space-x-6">
           <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -115,10 +112,7 @@ export default function PatientDetailPage() {
           <div className="flex-1">
             <div className="flex justify-between items-start mb-3">
               <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
-              <button
-                onClick={() => router.push('/historias')}
-                className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm"
-              >
+              <button onClick={() => router.push('/historias')} className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm">
                 <FaArrowLeft />
                 <span>Volver a Pacientes</span>
               </button>
@@ -133,41 +127,32 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
+      {/* Navegación de Pestañas */}
       <div className="border-b border-gray-200">
         <div className="overflow-x-auto pb-2 custom-scrollbar-tabs">
           <nav className="flex space-x-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabClick(tab.id as TabId)}
-                  className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(25,168,219)] ${
-                    isActive
-                      ? 'bg-white text-[rgb(35,188,239)] shadow-md'
-                      : 'bg-[rgb(35,188,239)] text-white hover:bg-[rgb(25,168,219)] shadow-sm'
-                  }`}
-                >
-                  <Icon className="text-base" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabClick(tab.id as TabId)}
+                className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
+                  activeTab === tab.id
+                    ? 'bg-white text-primary shadow-md'
+                    : 'bg-primary text-white hover:bg-primary-dark shadow-sm'
+                }`}
+              >
+                <tab.icon className="text-base" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </nav>
         </div>
       </div>
 
-      <div className="min-h-[400px]">
-        {activeTab === 'resumen' && (
-          <div className="card text-center py-12">
-            <FaFileMedicalAlt className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Resumen Clínico</h3>
-            <p className="text-gray-500">Esta sección mostrará un resumen inteligente del estado del paciente. Próximamente.</p>
-          </div>
-        )}
-
-        {/* 4. RENDERIZADO CONDICIONAL PARA LA PESTAÑA HISTORIA */}
+      {/* Contenido de las Pestañas */}
+      <div className="min-h-[400px] mt-6">
+        {activeTab === 'resumen' && <div className="card text-center py-12"><FaFileMedicalAlt className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Resumen Clínico</h3><p className="text-gray-500">Esta sección mostrará un resumen inteligente del estado del paciente. Próximamente.</p></div>}
+        
         {activeTab === 'historia' && (
           isEditing ? (
             <PatientEditForm 
@@ -176,6 +161,7 @@ export default function PatientDetailPage() {
               onCancel={() => setIsEditing(false)} 
             />
           ) : (
+            // ===== INICIO DEL CÓDIGO RESTAURADO =====
             <div className="card">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Detalles de la Historia Médica</h2>
@@ -216,35 +202,22 @@ export default function PatientDetailPage() {
                 </div>
               </div>
             </div>
+            // ===== FIN DEL CÓDIGO RESTAURADO =====
           )
         )}
         
         {activeTab === 'biofisica' && (
           <>
-            {biofisicaView === 'main' && (
-              <div className="relative">
-                <button 
-                  onClick={() => setBiofisicaView('history')}
-                  className="absolute top-0 right-0 flex items-center space-x-2 px-3 py-1.5 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm disabled:opacity-50"
-                  disabled={patient.biophysicsTests.length === 0}
-                >
-                  <FaHistory />
-                  <span>Ver Historial</span>
-                </button>
-                <EdadBiologicaMain patient={patient} onTestClick={() => setBiofisicaView('test')} />
-              </div>
-            )}
-            {biofisicaView === 'test' && (
-              <EdadBiofisicaTestView patient={patient} onBack={() => setBiofisicaView('main')} onTestComplete={loadPatient} />
-            )}
-            {biofisicaView === 'history' && (
-              <BiophysicsHistoryView patient={patient} onBack={() => setBiofisicaView('main')} />
-            )}
+            {biofisicaView === 'main' && <EdadBiologicaMain patient={patient} onTestClick={() => setBiofisicaView('test')} />}
+            {biofisicaView === 'test' && <EdadBiofisicaTestView patient={patient} onBack={() => setBiofisicaView('main')} onTestComplete={loadPatient} />}
+            {biofisicaView === 'history' && <BiophysicsHistoryView patient={patient} onBack={() => setBiofisicaView('main')} />}
           </>
         )}
 
-        {/* Resto de las pestañas (sin cambios) */}
-        {activeTab === 'guia' && <div className="card text-center py-12"><FaBook className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Guía del Paciente</h3><p className="text-gray-500">La guía del paciente estará disponible pronto.</p></div>}
+        {activeTab === 'guia' && (
+          <PatientGuide patient={patient} />
+        )}
+
         {activeTab === 'alimentacion' && <div className="card text-center py-12"><FaAppleAlt className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Alimentación Nutrigenómica</h3><p className="text-gray-500">El plan de alimentación nutrigenómica estará disponible pronto.</p></div>}
         {activeTab === 'omicas' && <div className="card text-center py-12"><FaDna className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3><p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p></div>}
         {activeTab === 'seguimiento' && <div className="card text-center py-12"><FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Seguimiento</h3><p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p></div>}
