@@ -161,7 +161,6 @@ export default function PatientDetailPage() {
               onCancel={() => setIsEditing(false)} 
             />
           ) : (
-            // ===== INICIO DEL CÓDIGO RESTAURADO =====
             <div className="card">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Detalles de la Historia Médica</h2>
@@ -202,15 +201,33 @@ export default function PatientDetailPage() {
                 </div>
               </div>
             </div>
-            // ===== FIN DEL CÓDIGO RESTAURADO =====
           )
         )}
         
         {activeTab === 'biofisica' && (
           <>
-            {biofisicaView === 'main' && <EdadBiologicaMain patient={patient} onTestClick={() => setBiofisicaView('test')} />}
-            {biofisicaView === 'test' && <EdadBiofisicaTestView patient={patient} onBack={() => setBiofisicaView('main')} onTestComplete={loadPatient} />}
-            {biofisicaView === 'history' && <BiophysicsHistoryView patient={patient} onBack={() => setBiofisicaView('main')} />}
+            {biofisicaView === 'main' && (
+              // ===== INICIO DEL CÓDIGO RESTAURADO =====
+              <div className="relative">
+                <button 
+                  onClick={() => setBiofisicaView('history')}
+                  className="absolute top-0 right-0 flex items-center space-x-2 px-3 py-1.5 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm disabled:opacity-50"
+                  disabled={!patient.biophysicsTests || patient.biophysicsTests.length === 0}
+                  title="Ver Historial de Tests"
+                >
+                  <FaHistory />
+                  <span>Ver Historial</span>
+                </button>
+                <EdadBiologicaMain patient={patient} onTestClick={() => setBiofisicaView('test')} />
+              </div>
+              // ===== FIN DEL CÓDIGO RESTAURADO =====
+            )}
+            {biofisicaView === 'test' && (
+              <EdadBiofisicaTestView patient={patient} onBack={() => setBiofisicaView('main')} onTestComplete={loadPatient} />
+            )}
+            {biofisicaView === 'history' && (
+              <BiophysicsHistoryView patient={patient} onBack={() => setBiofisicaView('main')} />
+            )}
           </>
         )}
 
