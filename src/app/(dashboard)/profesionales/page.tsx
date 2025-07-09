@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { FaPlus, FaSearch, FaTimes, FaFileExcel, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaFileAlt } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaTimes, FaFileExcel, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaFileAlt, FaLayerGroup } from 'react-icons/fa';
 import { toast } from 'sonner';
 
 // --- TIPOS DE DATOS ---
@@ -32,6 +32,54 @@ const initialProfessionals: Professional[] = [
 
 const ITEMS_PER_PAGE = 5;
 
+// --- COMPONENTE MODAL ASIGNAR FORMULARIOS ---
+function AssignFormsModal({ professional, onSave, onClose }: { professional: Professional, onSave: (id: number, amount: number) => void, onClose: () => void }) {
+  const [amount, setAmount] = useState(100);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numericAmount = Number(amount);
+    if (!isNaN(numericAmount) && numericAmount > 0) {
+      onSave(professional.id, numericAmount);
+    } else {
+      toast.error("La cantidad debe ser un número mayor a cero.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+        <div className="flex justify-between items-center mb-4 pb-4 border-b">
+          <h2 className="text-xl font-bold text-gray-800">Asignar Formularios</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100"><FaTimes className="text-gray-500"/></button>
+        </div>
+        <p className="mb-2">Profesional: <span className="font-semibold">{professional.nombre} {professional.apellido}</span></p>
+        <p className="mb-4">Formularios Disponibles: <span className="font-semibold">{professional.formularios}</span></p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="form-amount" className="label">Cantidad a Asignar</label>
+            <input
+              id="form-amount"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="input"
+              min="1"
+              step="1"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-4 pt-4 border-t mt-4">
+            <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+            <button type="submit" className="btn-primary">Asignar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
 // --- COMPONENTE PRINCIPAL ---
 export default function ProfesionalesPage() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -40,6 +88,8 @@ export default function ProfesionalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [professionalToAssign, setProfessionalToAssign] = useState<Professional | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -72,16 +122,36 @@ export default function ProfesionalesPage() {
     setEditingProfessional(null);
   };
 
+  const handleOpenAssignModal = (professional: Professional) => {
+    setProfessionalToAssign(professional);
+    setIsAssignModalOpen(true);
+  };
+
+  const handleCloseAssignModal = () => {
+    setIsAssignModalOpen(false);
+    setProfessionalToAssign(null);
+  };
+
   const handleSave = (professionalData: Professional) => {
     if (editingProfessional) {
       setProfessionals(prev => prev.map(p => p.id === editingProfessional.id ? { ...p, ...professionalData } : p));
       toast.success("Profesional actualizado con éxito.");
     } else {
-      const newProfessional = { ...professionalData, id: Date.now(), formularios: 0 };
+      const newProfessional = { ...professionalData, id: Date.now(), formularios: professionalData.formularios || 0 };
       setProfessionals(prev => [newProfessional, ...prev]);
       toast.success("Profesional agregado con éxito.");
     }
     handleCloseModal();
+  };
+
+  const handleAssignForms = (id: number, amount: number) => {
+    setProfessionals(prev =>
+      prev.map(p =>
+        p.id === id ? { ...p, formularios: p.formularios + amount } : p
+      )
+    );
+    toast.success(`${amount} formularios asignados con éxito.`);
+    handleCloseAssignModal();
   };
   
   const handleToggleStatus = (id: number) => {
@@ -149,7 +219,7 @@ export default function ProfesionalesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Correo</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Rol</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Estatus</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Formularios</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Formularios Disp.</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -171,6 +241,7 @@ export default function ProfesionalesPage() {
                         <button onClick={() => handleToggleStatus(p.id)} className={`p-2 rounded-md transition-colors ${p.estatus === '1' ? 'text-green-500 hover:bg-green-100' : 'text-gray-400 hover:bg-gray-200'}`} title={p.estatus === '1' ? 'Desactivar' : 'Activar'}>
                           {p.estatus === '1' ? <FaToggleOn size={18}/> : <FaToggleOff size={18}/>}
                         </button>
+                        <button onClick={() => handleOpenAssignModal(p)} className="p-2 rounded-md text-indigo-500 hover:bg-indigo-100" title="Asignar Formularios"><FaLayerGroup /></button>
                         <button onClick={() => toast.info('Funcionalidad de Formularios en desarrollo.')} className="p-2 rounded-md text-blue-500 hover:bg-blue-100" title="Ver Formularios"><FaFileAlt /></button>
                         <button onClick={() => handleOpenModal(p)} className="p-2 rounded-md text-yellow-500 hover:bg-yellow-100" title="Ver/Editar"><FaEdit /></button>
                         <button onClick={() => handleDelete(p.id)} className="p-2 rounded-md text-red-500 hover:bg-red-100" title="Eliminar"><FaTrash /></button>
@@ -194,11 +265,12 @@ export default function ProfesionalesPage() {
       </div>
 
       {isModalOpen && <ProfessionalFormModal professional={editingProfessional} onSave={handleSave} onClose={handleCloseModal} />}
+      {isAssignModalOpen && professionalToAssign && <AssignFormsModal professional={professionalToAssign} onSave={handleAssignForms} onClose={handleCloseAssignModal} />}
     </div>
   );
 }
 
-// --- COMPONENTE MODAL ---
+// --- COMPONENTE MODAL EDICIÓN ---
 function ProfessionalFormModal({ professional, onSave, onClose }: { professional: Professional | null, onSave: (data: Professional) => void, onClose: () => void }) {
   const [formData, setFormData] = useState({
     nombre: professional?.nombre || '',
@@ -235,7 +307,8 @@ function ProfessionalFormModal({ professional, onSave, onClose }: { professional
             <div><label className="label">Correo</label><input type="email" name="correo" value={formData.correo} onChange={handleChange} className="input" required/></div>
             <div><label className="label">Rol</label><select name="rol" value={formData.rol} onChange={handleChange} className="input"><option>Medico</option><option>Odontologo</option><option>Coach</option><option>Administrativo</option></select></div>
             <div><label className="label">Estatus</label><select name="estatus" value={formData.estatus} onChange={handleChange} className="input"><option value="1">Activo</option><option value="0">Inactivo</option></select></div>
-            <div className="md:col-span-2"><label className="label">Formularios Usados</label><input type="number" name="formularios" value={formData.formularios} className="input bg-gray-100 cursor-not-allowed" readOnly/></div>
+             {/* El campo de formularios no es editable directamente aquí, se gestiona con el nuevo modal */}
+            <div className="md:col-span-2"><label className="label">Formularios Disponibles</label><input type="number" name="formularios" value={formData.formularios} className="input bg-gray-100 cursor-not-allowed" readOnly/></div>
           </div>
           <div className="flex justify-end gap-4 pt-6 border-t mt-6">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
