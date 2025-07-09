@@ -120,56 +120,60 @@ export default function ProfesionalesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card text-center"><h3 className="text-gray-500 font-medium">TOTAL DE PROFESIONALES</h3><p className="text-4xl font-bold text-primary">{summaryCards.total}</p></div>
-        <div className="card text-center"><h3 className="text-gray-500 font-medium">ACTIVOS</h3><p className="text-4xl font-bold text-status-green">{summaryCards.active}</p></div>
-        <div className="card text-center"><h3 className="text-gray-500 font-medium">INACTIVOS</h3><p className="text-4xl font-bold text-status-red">{summaryCards.inactive}</p></div>
+        <div className="card text-center"><h3 className="text-gray-500 font-medium">ACTIVOS</h3><p className="text-4xl font-bold text-green-600">{summaryCards.active}</p></div>
+        <div className="card text-center"><h3 className="text-gray-500 font-medium">INACTIVOS</h3><p className="text-4xl font-bold text-red-600">{summaryCards.inactive}</p></div>
       </div>
       
       <div className="card">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-          <div className="relative flex-grow">
+          <div className="relative flex-grow max-w-lg">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input type="text" placeholder="Buscar por nombre, apellido o cédula..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="input pl-10 w-full"/>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setSearchTerm('')} className="btn-secondary"><FaTimes /> Limpiar</button>
-            <button className="btn-success"><FaFileExcel /> Exportar</button>
+            <button onClick={() => setSearchTerm('')} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+              <FaTimes /> Limpiar
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+              <FaFileExcel /> Exportar
+            </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-primary-dark">
               <tr>
-                <th className="table-header">Nombre y Apellido</th>
-                <th className="table-header">Cédula</th>
-                <th className="table-header">Correo</th>
-                <th className="table-header">Rol</th>
-                <th className="table-header text-center">Estatus</th>
-                <th className="table-header text-center">Formularios</th>
-                <th className="table-header text-center">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nombre y Apellido</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Cédula</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Correo</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Rol</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Estatus</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Formularios</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {paginatedProfessionals.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="table-cell font-medium text-gray-900">{p.nombre} {p.apellido}</td>
-                    <td className="table-cell text-gray-600">{p.cedula}</td>
-                    <td className="table-cell text-gray-600">{p.correo}</td>
-                    <td className="table-cell text-gray-600">{p.rol}</td>
-                    <td className="table-cell text-center">
+                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{p.nombre} {p.apellido}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">{p.cedula}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">{p.correo}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">{p.rol}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${p.estatus === '1' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {p.estatus === '1' ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td className="table-cell text-center font-medium text-gray-700">{p.formularios}</td>
-                    <td className="table-cell">
+                    <td className="px-6 py-4 whitespace-nowrap text-center font-medium text-gray-700">{p.formularios}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
                         <button onClick={() => handleToggleStatus(p.id)} className={`p-2 rounded-md transition-colors ${p.estatus === '1' ? 'text-green-500 hover:bg-green-100' : 'text-gray-400 hover:bg-gray-200'}`} title={p.estatus === '1' ? 'Desactivar' : 'Activar'}>
                           {p.estatus === '1' ? <FaToggleOn size={18}/> : <FaToggleOff size={18}/>}
                         </button>
-                        <button onClick={() => toast.info('Funcionalidad de Formularios en desarrollo.')} className="p-2 rounded-md text-gray-500 hover:bg-blue-100 hover:text-blue-600" title="Ver Formularios"><FaFileAlt /></button>
-                        <button onClick={() => handleOpenModal(p)} className="p-2 rounded-md text-gray-500 hover:bg-yellow-100 hover:text-yellow-600" title="Ver/Editar"><FaEdit /></button>
-                        <button onClick={() => handleDelete(p.id)} className="p-2 rounded-md text-gray-500 hover:bg-red-100 hover:text-red-600" title="Eliminar"><FaTrash /></button>
+                        <button onClick={() => toast.info('Funcionalidad de Formularios en desarrollo.')} className="p-2 rounded-md text-blue-500 hover:bg-blue-100" title="Ver Formularios"><FaFileAlt /></button>
+                        <button onClick={() => handleOpenModal(p)} className="p-2 rounded-md text-yellow-500 hover:bg-yellow-100" title="Ver/Editar"><FaEdit /></button>
+                        <button onClick={() => handleDelete(p.id)} className="p-2 rounded-md text-red-500 hover:bg-red-100" title="Eliminar"><FaTrash /></button>
                       </div>
                     </td>
                   </tr>
