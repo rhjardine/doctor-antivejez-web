@@ -1,37 +1,74 @@
 'use client';
 
-import { Search, Bell, UserCircle } from 'lucide-react';
-import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import Image from 'next/image';
+import { Bell, LogOut, UserCircle } from 'lucide-react';
+import { signOut, useSession } from 'next-auth/react';
+
+// Mapeo de rutas a títulos para mostrar en el header
+const routeTitles: { [key: string]: string } = {
+  '/dashboard': 'Consulta Global',
+  '/historias': 'Gestión de Pacientes',
+  '/profesionales': 'Gestión de Profesionales',
+  '/agente-ia': 'Agente IA',
+  '/edad-biologica': 'Análisis de Edad Biológica',
+  '/reportes': 'Reportes y Estadísticas',
+  '/ajustes': 'Configuración y Ajustes',
+};
+
+const getCurrentTitle = (pathname: string): string => {
+  // Busca una coincidencia exacta primero
+  if (routeTitles[pathname]) {
+    return routeTitles[pathname];
+  }
+  // Si no, busca si la ruta comienza con alguna de las claves (para sub-rutas)
+  const matchingRoute = Object.keys(routeTitles).find(route => pathname.startsWith(route + '/'));
+  return matchingRoute ? routeTitles[matchingRoute] : 'Dashboard';
+};
+
 
 export function Header() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const title = getCurrentTitle(pathname);
+
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    return now.toLocaleString('es-VE', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+    });
+  };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        {/* Search Bar */}
-        <div className="flex-1 max-w-2xl">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar pacientes, historias..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+    <header className="bg-primary-dark text-white shadow-md z-10">
+      <div className="flex items-center justify-between h-20 px-6 lg:px-8">
+        {/* Sección Izquierda: Título de la página */}
+        <div className="flex items-center gap-4">
+            <Image
+                src="/images/logo_icon.png" // Un icono más pequeño para el header
+                alt="Doctor AntiVejez Icono"
+                width={40}
+                height={40}
             />
-          </div>
+            <h1 className="text-xl font-semibold hidden md:block">{title}</h1>
         </div>
-        {/* Actions */}
-        <div className="flex items-center space-x-4 ml-6">
-          <button className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors">
-            <Bell className="text-xl" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
 
-          <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
-            <UserCircle className="text-2xl" />
-          </button>
+        {/* Sección Derecha: Info de Usuario y Acciones */}
+        <div className="flex items-center gap-6">
+          <div className="text-right hidden sm:block">
+            <p className="font-semibold">Bienvenido(a) {session?.user?.name || 'Usuario'}</p>
+            <p className="text-xs text-gray-300">Última conexión: {getCurrentDateTime()}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="relative p-2 rounded-full hover:bg-white/10 transition-colors">
+              <Bell />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-primary-dark"></span>
+            </button>
+            <button onClick={() => signOut({ callbackUrl: '/login' })} className="p-2 rounded-full hover:bg-white/10 transition-colors" title="Cerrar Sesión">
+              <LogOut />
+            </button>
+          </div>
         </div>
       </div>
     </header>
