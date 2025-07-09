@@ -17,49 +17,14 @@ import {
   FaChevronUp
 } from 'react-icons/fa';
 
+// Se mantiene la misma estructura de menú
 const menuItems = [
-  { 
-    name: 'Dashboard', 
-    icon: FaHome, 
-    href: '/dashboard',
-    color: 'text-primary'
-  },
-  { 
-    name: 'Historias', 
-    icon: FaHistory, 
-    href: '/historias',
-    color: 'text-blue-500'
-  },
-  { 
-    name: 'Profesionales', 
-    icon: FaUserMd, 
-    href: '/profesionales',
-    color: 'text-green-500'
-  },
-  { 
-    name: 'Agente IA', 
-    icon: FaRobot, 
-    href: '/agente-ia',
-    color: 'text-purple-500'
-  },
-  { 
-    name: 'Edad Biológica', 
-    icon: FaHeartbeat, 
-    href: '/edad-biologica',
-    color: 'text-red-500'
-  },
-  { 
-    name: 'Reportes', 
-    icon: FaChartBar, 
-    href: '/reportes',
-    color: 'text-yellow-500'
-  },
-  { 
-    name: 'Ajustes', 
-    icon: FaCog, 
-    href: '/ajustes',
-    color: 'text-gray-500'
-  },
+  { name: 'Dashboard', icon: FaHome, href: '/dashboard' },
+  { name: 'Historias', icon: FaHistory, href: '/historias' },
+  { name: 'Profesionales', icon: FaUserMd, href: '/profesionales' },
+  { name: 'Agente IA', icon: FaRobot, href: '/agente-ia' },
+  { name: 'Edad Biológica', icon: FaHeartbeat, href: '/edad-biologica' },
+  { name: 'Reportes', icon: FaChartBar, href: '/reportes' },
 ];
 
 export function Sidebar() {
@@ -68,46 +33,45 @@ export function Sidebar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    // Aquí iría la lógica de logout
+    // Aquí iría la lógica de logout, por ejemplo, signOut() de next-auth
     router.push('/login');
   };
 
   return (
-    <div className="w-64 bg-primary-dark flex flex-col">
+    // Contenedor principal del sidebar con el nuevo color de fondo corporativo
+    <div className="w-64 bg-primary-dark flex flex-col h-screen fixed">
       {/* Logo */}
-      <div className="p-6 border-b border-gray-700 flex justify-center items-center">
+      <div className="p-4 flex justify-center items-center h-20 border-b border-white/10">
         <Link href="/dashboard" passHref>
           <Image
             src="/images/logo.png"
             alt="Doctor AntiVejez Logo"
-            width={180} // Adjust width as needed, maintaining aspect ratio
-            height={40} // Start with a height like 40-50px
-            priority // Preload logo as it's likely LCP or important
+            width={160}
+            height={35}
+            priority
           />
         </Link>
       </div>
 
-      {/* Menu Items */}
-      <nav className="flex-1 px-4 py-6">
+      {/* Navegación Principal */}
+      <nav className="flex-1 px-3 py-4">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            // El estado activo ahora se resalta con un fondo más claro y un borde
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-
             return (
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
+                  className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium ${
                     isActive
-                      ? 'bg-white/10 border-l-4 border-primary'
-                      : 'hover:bg-white/5'
+                      ? 'bg-white/10 text-white border-l-4 border-primary'
+                      : 'text-gray-300 hover:bg-white/5 hover:text-white'
                   }`}
                 >
-                  <Icon className={`text-xl ${isActive ? 'text-primary' : item.color}`} />
-                  <span className={`font-medium ${isActive ? 'text-white' : 'text-gray-300'}`}>
-                    {item.name}
-                  </span>
+                  <Icon className="text-lg w-6 text-center" />
+                  <span>{item.name}</span>
                 </Link>
               </li>
             );
@@ -115,10 +79,24 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      {/* User Profile */}
-      <div className="border-t border-gray-700 p-4">
+      {/* Menú inferior de Ajustes y Perfil */}
+      <div className="px-3 py-4 border-t border-white/10">
+         {/* Link de Ajustes */}
+        <Link
+            href="/ajustes"
+            className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium ${
+            pathname.startsWith('/ajustes')
+                ? 'bg-white/10 text-white'
+                : 'text-gray-300 hover:bg-white/5 hover:text-white'
+            }`}
+        >
+            <FaCog className="text-lg w-6 text-center" />
+            <span>Ajustes</span>
+        </Link>
+        
+        {/* Perfil de Usuario */}
         <div 
-          className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 cursor-pointer"
+          className="flex items-center justify-between p-3 mt-2 rounded-lg hover:bg-white/5 cursor-pointer"
           onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
         >
           <div className="flex items-center space-x-3">
@@ -128,7 +106,7 @@ export function Sidebar() {
             <div>
               <p className="text-white font-medium text-sm">Dr. Admin</p>
               <p className="text-green-400 text-xs flex items-center">
-                <span className="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-1.5"></span>
                 En línea
               </p>
             </div>
@@ -140,12 +118,12 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* User Menu Dropdown */}
+        {/* Menú desplegable de Salir */}
         {isUserMenuOpen && (
-          <div className="mt-2 py-2 bg-gray-800 rounded-lg">
+          <div className="mt-2 bg-gray-900/50 rounded-lg">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-4 py-2 text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+              className="w-full flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-white/5 hover:text-white transition-colors rounded-lg"
             >
               <FaSignOutAlt />
               <span>Salir</span>
