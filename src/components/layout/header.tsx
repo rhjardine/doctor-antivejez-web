@@ -7,33 +7,30 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    // Cabecera con el nuevo fondo azul oscuro y borde sutil
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        {/* Barra de búsqueda con estilos adaptados al fondo oscuro */}
+        {/* Search Bar */}
         <div className="flex-1 max-w-2xl">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Buscar pacientes, historias..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-white text-gray-800 placeholder-gray-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
         </div>
-        
-        {/* Iconos de acción con colores adaptados */}
-        <div className="flex items-center space-x-2 ml-6">
-          <button className="relative p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-primary/10">
-            <Bell size={22} />
-            {/* Notificación */}
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+        {/* Actions */}
+        <div className="flex items-center space-x-4 ml-6">
+          <button className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <Bell className="text-xl" />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
 
-          <button className="p-2 text-gray-500 hover:text-primary transition-colors rounded-full hover:bg-primary/10">
-            <UserCircle size={24} />
+          <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <UserCircle className="text-2xl" />
           </button>
         </div>
       </div>
