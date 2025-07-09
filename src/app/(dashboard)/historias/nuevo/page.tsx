@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createPatient } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-import { FaCamera, FaArrowLeft, FaSave } from 'react-icons/fa';
+import { FaCamera, FaArrowLeft, FaSave, FaUser, FaMapMarkerAlt, FaBriefcaseMedical } from 'react-icons/fa';
 import { BLOOD_TYPES, MARITAL_STATUS, NATIONALITIES } from '@/lib/constants';
 import { GENDER_OPTIONS } from '@/types/biophysics';
 import { calculateAge } from '@/utils/date';
@@ -64,9 +64,11 @@ export default function NuevoPacientePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    // La aserción 'as any' o 'as Gender' es necesaria aquí porque TypeScript
-    // no puede inferir dinámicamente el tipo correcto en el estado.
-    setFormData(prev => ({ ...prev, [name]: value as any }));
+    if (name === 'gender') {
+        setFormData(prev => ({ ...prev, [name]: value as Gender }));
+    } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
 
     if (name === 'birthDate' && value) {
       const age = calculateAge(new Date(value));
@@ -110,9 +112,8 @@ export default function NuevoPacientePage() {
     );
   }
 
-  // Se mantiene la estructura original del return, pero aplicando clases de Tailwind
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
+    <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Nueva Historia Clínica</h1>
@@ -120,28 +121,29 @@ export default function NuevoPacientePage() {
         </div>
         <button
           onClick={() => router.push('/historias')}
-          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+          className="btn-secondary flex items-center space-x-2"
         >
           <FaArrowLeft />
           <span>Volver</span>
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Información Personal</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1">
-              <label className="label">Foto</label>
-              <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                <FaCamera className="text-2xl text-gray-400 mb-2" />
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Card de Información Personal */}
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3"><FaUser className="text-primary"/>Información Personal</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-1 flex flex-col items-center">
+              <label className="label self-start">Foto</label>
+              <div className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors bg-gray-50">
+                <FaCamera className="text-3xl text-gray-400 mb-2" />
                 <span className="text-sm text-gray-500">Subir foto</span>
               </div>
             </div>
-            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
               <div>
                 <label className="label">N° Control</label>
-                <input type="text" value="Automático" readOnly className="input bg-gray-100" />
+                <input type="text" value="Automático" readOnly className="input bg-gray-100 cursor-not-allowed" />
               </div>
               <div>
                 <label className="label">Identificación *</label>
@@ -159,11 +161,11 @@ export default function NuevoPacientePage() {
                 <label className="label">Fecha Historia *</label>
                 <input type="date" name="historyDate" value={formData.historyDate} onChange={handleInputChange} required className="input" />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="label">Apellidos *</label>
                 <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} required placeholder="Apellidos completos" className="input" />
               </div>
-              <div>
+              <div className="md:col-span-3">
                 <label className="label">Nombres *</label>
                 <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} required placeholder="Nombres completos" className="input" />
               </div>
@@ -173,7 +175,7 @@ export default function NuevoPacientePage() {
               </div>
               <div>
                 <label className="label">Edad Cronológica</label>
-                <input type="text" value={chronologicalAge !== null ? `${chronologicalAge} años` : ''} readOnly className="input bg-gray-100" />
+                <input type="text" value={chronologicalAge !== null ? `${chronologicalAge} años` : ''} readOnly className="input bg-gray-100 cursor-not-allowed" />
               </div>
               <div>
                 <label className="label">Género *</label>
@@ -183,7 +185,7 @@ export default function NuevoPacientePage() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="label">Lugar Nacimiento *</label>
                 <input type="text" name="birthPlace" value={formData.birthPlace} onChange={handleInputChange} required placeholder="Ciudad, País" className="input" />
               </div>
@@ -208,9 +210,9 @@ export default function NuevoPacientePage() {
           </div>
         </div>
         
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Dirección</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3"><FaMapMarkerAlt className="text-primary"/>Dirección</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="label">País *</label>
               <input type="text" name="country" value={formData.country} onChange={handleInputChange} required className="input" />
@@ -230,9 +232,9 @@ export default function NuevoPacientePage() {
           </div>
         </div>
 
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Información Médica</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3"><FaBriefcaseMedical className="text-primary"/>Información Médica</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="label">Grupo Sanguíneo *</label>
               <select name="bloodType" value={formData.bloodType} onChange={handleInputChange} required className="input" >
@@ -246,7 +248,7 @@ export default function NuevoPacientePage() {
             </div>
             <div className="md:col-span-2">
               <label className="label">Observaciones Generales</label>
-              <textarea name="observations" value={formData.observations} onChange={handleInputChange} rows={4} placeholder="Notas adicionales sobre el paciente..." className="input resize-none" />
+              <textarea name="observations" value={formData.observations} onChange={handleInputChange} rows={4} placeholder="Notas adicionales sobre el paciente..." className="input resize-y" />
             </div>
           </div>
         </div>
