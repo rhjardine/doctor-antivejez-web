@@ -1,16 +1,133 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createPatient } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-import { FaCamera, FaArrowLeft, FaSave, FaUser, FaMapMarkerAlt, FaBriefcaseMedical } from 'react-icons/fa';
+import { FaCamera, FaArrowLeft, FaSave, FaUser, FaMapMarkerAlt, FaBriefcaseMedical, FaTimes, FaCheck, FaRedo } from 'react-icons/fa';
 import { BLOOD_TYPES, MARITAL_STATUS, NATIONALITIES } from '@/lib/constants';
 import { GENDER_OPTIONS } from '@/types/biophysics';
 import { calculateAge } from '@/utils/date';
 import { Gender } from '@prisma/client';
+import Image from 'next/image';
 
+// --- Componente Reutilizable para Carga de Imágenes ---
+interface ImageUploaderProps {
+  onImageCapture: (imageDataUrl: string) => void;
+  onClose: () => void;
+}
+
+function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const startCamera = async () => {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (err) {
+        console.error("Error accessing camera:", err);
+        setError("No se pudo acceder a la cámara. Por favor, verifica los permisos en tu navegador.");
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
+  const handleTakePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+      const dataUrl = canvas.toDataURL('image/png');
+      setCapturedImage(dataUrl);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    }
+  };
+
+  const handleRetake = () => {
+    setCapturedImage(null);
+    const startCamera = async () => {
+        try {
+          const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setStream(mediaStream);
+          if (videoRef.current) {
+            videoRef.current.srcObject = mediaStream;
+          }
+        } catch (err) {
+          console.error("Error accessing camera:", err);
+          setError("No se pudo acceder a la cámara. Por favor, verifica los permisos en tu navegador.");
+        }
+      };
+  
+      startCamera();
+  };
+
+  const handleConfirm = () => {
+    if (capturedImage) {
+      onImageCapture(capturedImage);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-lg w-full text-center relative">
+        <h3 className="text-xl font-bold text-primary-dark mb-4">Capturar Foto del Paciente</h3>
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><FaTimes size={20}/></button>
+        
+        <div className="relative w-full aspect-video bg-gray-200 rounded-lg overflow-hidden mb-4">
+          {error && <div className="flex items-center justify-center h-full text-red-500">{error}</div>}
+          {!capturedImage ? (
+            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
+          ) : (
+            <Image src={capturedImage} alt="Captura del paciente" layout="fill" objectFit="cover" />
+          )}
+          <canvas ref={canvasRef} className="hidden"></canvas>
+        </div>
+
+        <div className="flex justify-center gap-4">
+          {!capturedImage ? (
+            <button onClick={handleTakePhoto} className="btn-primary flex-grow flex items-center justify-center gap-2" disabled={!!error}>
+              <FaCamera /> Tomar Foto
+            </button>
+          ) : (
+            <>
+              <button onClick={handleRetake} className="btn-secondary flex-grow flex items-center justify-center gap-2">
+                <FaRedo /> Tomar de Nuevo
+              </button>
+              <button onClick={handleConfirm} className="btn-success flex-grow flex items-center justify-center gap-2">
+                <FaCheck /> Confirmar Foto
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// --- Página Principal Modificada ---
 type NewPatientFormData = {
   photo: string;
   nationality: string;
@@ -37,6 +154,7 @@ export default function NuevoPacientePage() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const [loading, setLoading] = useState(false);
+  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
   
   const [formData, setFormData] = useState<NewPatientFormData>({
     photo: '',
@@ -74,6 +192,10 @@ export default function NuevoPacientePage() {
       const age = calculateAge(new Date(value));
       setChronologicalAge(age);
     }
+  };
+
+  const handleImageCapture = (imageDataUrl: string) => {
+    setFormData(prev => ({ ...prev, photo: imageDataUrl }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,6 +236,7 @@ export default function NuevoPacientePage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
+      {isUploaderOpen && <ImageUploader onImageCapture={handleImageCapture} onClose={() => setIsUploaderOpen(false)} />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Nueva Historia Clínica</h1>
@@ -135,9 +258,18 @@ export default function NuevoPacientePage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1 flex flex-col items-center">
               <label className="label self-start">Foto</label>
-              <div className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors bg-gray-50">
-                <FaCamera className="text-3xl text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500">Subir foto</span>
+              <div 
+                onClick={() => setIsUploaderOpen(true)}
+                className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors bg-gray-50 overflow-hidden"
+              >
+                {formData.photo ? (
+                  <Image src={formData.photo} alt="Foto del paciente" width={160} height={160} className="object-cover w-full h-full" />
+                ) : (
+                  <>
+                    <FaCamera className="text-3xl text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-500 text-center">Tomar Foto</span>
+                  </>
+                )}
               </div>
             </div>
             <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
