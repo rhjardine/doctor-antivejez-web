@@ -12,7 +12,9 @@ import { calculateAge } from '@/utils/date';
 import { Gender } from '@prisma/client';
 import Image from 'next/image';
 
-// --- Componente Reutilizable para Carga de Imágenes ---
+// --- Componente Reutilizable para Captura de Imágenes ---
+// Este componente maneja la lógica para acceder a la cámara,
+// capturar una foto y devolver la imagen como un data URL.
 interface ImageUploaderProps {
   onImageCapture: (imageDataUrl: string) => void;
   onClose: () => void;
@@ -25,9 +27,11 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Efecto para iniciar la cámara al montar el componente
   useEffect(() => {
     const startCamera = async () => {
       try {
+        // Solicita acceso a la cámara de video del dispositivo
         const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
         setStream(mediaStream);
         if (videoRef.current) {
@@ -41,13 +45,15 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
 
     startCamera();
 
+    // Función de limpieza para detener la cámara cuando el componente se desmonte
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [stream]);
+  }, [stream]); // Se ejecuta solo cuando el stream cambia
 
+  // Captura una foto del stream de video
   const handleTakePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
@@ -56,14 +62,16 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-      const dataUrl = canvas.toDataURL('image/png');
+      const dataUrl = canvas.toDataURL('image/png'); // Convierte la imagen a base64
       setCapturedImage(dataUrl);
+      // Detiene el stream de la cámara después de tomar la foto
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     }
   };
 
+  // Permite al usuario tomar una nueva foto
   const handleRetake = () => {
     setCapturedImage(null);
     const startCamera = async () => {
@@ -82,6 +90,7 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
       startCamera();
   };
 
+  // Confirma la foto capturada y la envía al formulario principal
   const handleConfirm = () => {
     if (capturedImage) {
       onImageCapture(capturedImage);
@@ -96,7 +105,7 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><FaTimes size={20}/></button>
         
         <div className="relative w-full aspect-video bg-gray-200 rounded-lg overflow-hidden mb-4">
-          {error && <div className="flex items-center justify-center h-full text-red-500">{error}</div>}
+          {error && <div className="flex items-center justify-center h-full text-red-500 p-4">{error}</div>}
           {!capturedImage ? (
             <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
           ) : (
@@ -237,6 +246,8 @@ export default function NuevoPacientePage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
       {isUploaderOpen && <ImageUploader onImageCapture={handleImageCapture} onClose={() => setIsUploaderOpen(false)} />}
+      
+      {/* Header de la página con botón "Volver" estilizado */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Nueva Historia Clínica</h1>
@@ -244,7 +255,7 @@ export default function NuevoPacientePage() {
         </div>
         <button
           onClick={() => router.push('/historias')}
-          className="btn-secondary flex items-center space-x-2"
+          className="btn-light-blue flex items-center space-x-2" // <-- Botón estilizado
         >
           <FaArrowLeft />
           <span>Volver</span>
@@ -252,7 +263,7 @@ export default function NuevoPacientePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Card de Información Personal */}
+        {/* Card de Información Personal con UI mejorada */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3"><FaUser className="text-primary"/>Información Personal</h2>
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -342,6 +353,7 @@ export default function NuevoPacientePage() {
           </div>
         </div>
         
+        {/* Card de Dirección */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3"><FaMapMarkerAlt className="text-primary"/>Dirección</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -364,6 +376,7 @@ export default function NuevoPacientePage() {
           </div>
         </div>
 
+        {/* Card de Información Médica */}
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3"><FaBriefcaseMedical className="text-primary"/>Información Médica</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -385,6 +398,7 @@ export default function NuevoPacientePage() {
           </div>
         </div>
 
+        {/* Botones de Acción */}
         <div className="flex justify-end space-x-4">
           <button type="button" onClick={() => router.push('/historias')} className="btn-secondary">
             Cancelar
