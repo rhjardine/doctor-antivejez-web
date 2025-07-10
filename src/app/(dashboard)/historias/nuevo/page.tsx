@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createPatient } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-import { FaCamera, FaArrowLeft, FaSave, FaUser, FaMapMarkerAlt, FaBriefcaseMedical, FaTimes, FaCheck, FaRedo } from 'react-icons/fa';
+import { FaCamera, FaArrowLeft, FaSave, FaUser, FaMapMarkerAlt, FaBriefcaseMedical, FaTimes, FaCheck, FaRedo, FaUpload } from 'react-icons/fa';
 import { BLOOD_TYPES, MARITAL_STATUS, NATIONALITIES } from '@/lib/constants';
 import { GENDER_OPTIONS } from '@/types/biophysics';
 import { calculateAge } from '@/utils/date';
@@ -23,6 +23,7 @@ interface ImageUploaderProps {
 function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // <-- Referencia para el input de archivo
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [stream]); // Se ejecuta solo cuando el stream cambia
+  }, []); // Dependencia vacía para que se ejecute solo una vez
 
   // Captura una foto del stream de video
   const handleTakePhoto = () => {
@@ -67,6 +68,7 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
       // Detiene el stream de la cámara después de tomar la foto
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+        setStream(null);
       }
     }
   };
@@ -74,6 +76,7 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
   // Permite al usuario tomar una nueva foto
   const handleRetake = () => {
     setCapturedImage(null);
+    setError(null);
     const startCamera = async () => {
         try {
           const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -98,6 +101,26 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
     }
   };
 
+  // --- NUEVA FUNCIONALIDAD: Manejar la selección de un archivo local ---
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        onImageCapture(result);
+        onClose();
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // --- NUEVA FUNCIONALIDAD: Simular click en el input de archivo ---
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
       <div className="bg-white rounded-xl shadow-2xl p-6 max-w-lg w-full text-center relative">
@@ -105,20 +128,33 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><FaTimes size={20}/></button>
         
         <div className="relative w-full aspect-video bg-gray-200 rounded-lg overflow-hidden mb-4">
-          {error && <div className="flex items-center justify-center h-full text-red-500 p-4">{error}</div>}
+          {error && !capturedImage && <div className="flex items-center justify-center h-full text-red-500 p-4">{error}</div>}
           {!capturedImage ? (
-            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
+            <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover ${error ? 'hidden' : ''}`}></video>
           ) : (
             <Image src={capturedImage} alt="Captura del paciente" layout="fill" objectFit="cover" />
           )}
           <canvas ref={canvasRef} className="hidden"></canvas>
         </div>
 
+        {/* --- UI de botones actualizada --- */}
         <div className="flex justify-center gap-4">
           {!capturedImage ? (
-            <button onClick={handleTakePhoto} className="btn-primary flex-grow flex items-center justify-center gap-2" disabled={!!error}>
-              <FaCamera /> Tomar Foto
-            </button>
+            <>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileSelect} 
+                className="hidden"
+                accept="image/png, image/jpeg, image/webp"
+              />
+              <button onClick={handleUploadClick} className="btn-secondary flex-grow flex items-center justify-center gap-2">
+                <FaUpload /> Adjuntar Archivo
+              </button>
+              <button onClick={handleTakePhoto} className="btn-primary flex-grow flex items-center justify-center gap-2" disabled={!!error}>
+                <FaCamera /> Tomar Foto
+              </button>
+            </>
           ) : (
             <>
               <button onClick={handleRetake} className="btn-secondary flex-grow flex items-center justify-center gap-2">
@@ -278,7 +314,7 @@ export default function NuevoPacientePage() {
                 ) : (
                   <>
                     <FaCamera className="text-3xl text-gray-400 mb-2" />
-                    <span className="text-sm text-gray-500 text-center">Tomar Foto</span>
+                    <span className="text-sm text-gray-500 text-center">Tomar/Adjuntar Foto</span>
                   </>
                 )}
               </div>
