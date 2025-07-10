@@ -57,6 +57,10 @@ export default function PatientDetailPage() {
   }, [patientId]);
 
   const loadPatient = async () => {
+    // Para evitar un parpadeo, no activamos el loading en recargas, solo en la carga inicial.
+    if (!patient) {
+        setLoading(true);
+    }
     try {
       const result = await getPatientWithTests(patientId);
       if (result.success && result.patient) {
@@ -207,7 +211,6 @@ export default function PatientDetailPage() {
         {activeTab === 'biofisica' && (
           <>
             {biofisicaView === 'main' && (
-              // ===== INICIO DEL CÓDIGO RESTAURADO =====
               <div className="relative">
                 <button 
                   onClick={() => setBiofisicaView('history')}
@@ -220,13 +223,16 @@ export default function PatientDetailPage() {
                 </button>
                 <EdadBiologicaMain patient={patient} onTestClick={() => setBiofisicaView('test')} />
               </div>
-              // ===== FIN DEL CÓDIGO RESTAURADO =====
             )}
             {biofisicaView === 'test' && (
               <EdadBiofisicaTestView patient={patient} onBack={() => setBiofisicaView('main')} onTestComplete={loadPatient} />
             )}
             {biofisicaView === 'history' && (
-              <BiophysicsHistoryView patient={patient} onBack={() => setBiofisicaView('main')} />
+              <BiophysicsHistoryView 
+                patient={patient} 
+                onBack={() => setBiofisicaView('main')} 
+                onHistoryChange={loadPatient} 
+              />
             )}
           </>
         )}

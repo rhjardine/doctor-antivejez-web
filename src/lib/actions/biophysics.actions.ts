@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { BoardWithRanges } from '@/types/biophysics';
 import { revalidatePath } from 'next/cache';
 
-// ... (otras funciones sin cambios)
+// ... (código existente de getBiophysicsBoardsAndRanges y saveBiophysicsTest)
 
 export async function getBiophysicsBoardsAndRanges(): Promise<BoardWithRanges[]> {
   try {
@@ -80,6 +80,25 @@ export async function saveBiophysicsTest(data: {
   }
 }
 
+// --- NUEVA FUNCIÓN PARA ELIMINAR UN TEST ---
+export async function deleteBiophysicsTest(testId: string, patientId: string) {
+  try {
+    await prisma.biophysicsTest.delete({
+      where: { id: testId },
+    });
+
+    // Revalida las rutas afectadas para que Next.js actualice la cache
+    revalidatePath(`/historias/${patientId}`);
+    revalidatePath('/dashboard');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error eliminando test biofísico:', error);
+    return { success: false, error: 'Error al eliminar el test' };
+  }
+}
+
+
 export async function getLatestBiophysicsTest(patientId: string) {
   try {
     const test = await prisma.biophysicsTest.findFirst({
@@ -124,7 +143,7 @@ export async function getDashboardStats() {
       by: ['patientId'],
       _max: { testDate: true },
     });
-    const latestTestDates = latestTests.map(t => t._max.testDate!);
+    const latestTestDates = latestTests.map(t => t._max.testDate!).filter(Boolean);
     const latestTestsData = await prisma.biophysicsTest.findMany({
       where: { testDate: { in: latestTestDates } },
     });
