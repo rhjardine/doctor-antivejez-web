@@ -1,33 +1,32 @@
-// src/app/(dashboard)/layout.tsx
-import { Sidebar } from '@/components/layout/sidebar';
-import { Header } from '@/components/layout/header';
+// src/app/layout.tsx
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import AuthProvider from '@/components/layout/auth-provider'; // 👈 1. Importar el AuthProvider
 import { Toaster } from 'sonner';
+import './globals.css';
 
-export default function DashboardLayout({
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
+  title: 'Doctor AntiVejez',
+  description: 'Sistema de Gestión Médica Antienvejecimiento',
+};
+
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen bg-gray-100 font-sans">
-      {/* Sidebar a la izquierda */}
-      <Sidebar />
-      
-      {/* Contenedor principal que incluye el Header y el contenido */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header en la parte superior */}
-        <Header />
-        
-        {/* Área de contenido principal con scroll */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
-        </main>
-      </div>
-      
-      {/* Componente para mostrar notificaciones (toasts) */}
-      <Toaster richColors position="top-right" />
-    </div>
+    <html lang="es">
+      <body className={inter.className}>
+        {/* ▼▼▼ 2. Envolver el contenido con AuthProvider ▼▼▼ */}
+        <AuthProvider>
+          {children}
+          <Toaster richColors position="top-right" />
+        </AuthProvider>
+        {/* ▲▲▲ Fin del wrapper ▲▲▲ */}
+      </body>
+    </html>
   );
 }
