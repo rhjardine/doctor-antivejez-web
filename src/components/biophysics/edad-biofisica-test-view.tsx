@@ -6,7 +6,7 @@ import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, Parti
 import { getBiophysicsBoardsAndRanges, saveBiophysicsTest } from '@/lib/actions/biophysics.actions';
 import { calculateBiofisicaResults, getAgeStatus, getStatusColor } from '@/utils/biofisica-calculations';
 import { toast } from 'sonner';
-import { FaArrowLeft, FaCalculator, FaSave, FaCheckCircle } from 'react-icons/fa'; // Se añade FaCheckCircle
+import { FaArrowLeft, FaCalculator, FaSave, FaCheckCircle } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
 interface EdadBiofisicaTestViewProps {
@@ -15,8 +15,7 @@ interface EdadBiofisicaTestViewProps {
   onTestComplete: () => void;
 }
 
-// --- NUEVO Componente de Modal de Éxito ---
-// Este modal aparecerá después de guardar el test exitosamente.
+// --- Componente de Modal de Éxito ---
 function SuccessModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
@@ -53,7 +52,8 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   const [calculating, setCalculating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [calculated, setCalculated] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); // <-- Nuevo estado para el modal
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); 
+  const [isSaved, setIsSaved] = useState(false); // Estado para controlar si ya se guardó
 
   const [formValues, setFormValues] = useState<FormValues>({
     fatPercentage: undefined,
@@ -87,6 +87,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     }
   };
 
+  // --- Lógica de input MODIFICADA ---
   const handleInputChange = (key: string, value: number | undefined, dimension?: 'high' | 'long' | 'width') => {
     setFormValues(prev => {
       const formKey = key as keyof FormValues;
@@ -97,6 +98,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       return { ...prev, [formKey]: value };
     });
     setCalculated(false);
+    setIsSaved(false); // Resetea el estado de guardado si hay cambios en el formulario
   };
 
   const handleCalculate = () => {
@@ -135,7 +137,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     }
   };
 
-  // --- Lógica de guardado MODIFICADA ---
   const handleSave = async () => {
     if (!calculated) {
       toast.error('Debe calcular los resultados antes de guardar');
@@ -169,8 +170,9 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       };
       const result = await saveBiophysicsTest(testData);
       if (result.success) {
-        onTestComplete(); // Actualiza los datos del paciente en segundo plano
-        setIsSuccessModalOpen(true); // Muestra el modal de éxito
+        onTestComplete(); 
+        setIsSuccessModalOpen(true); 
+        setIsSaved(true); // Marca como guardado para deshabilitar los botones
       } else {
         toast.error(result.error || 'Error al guardar el test');
       }
@@ -197,11 +199,9 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
   return (
     <>
-      {/* Renderizado condicional del modal */}
       {isSuccessModalOpen && <SuccessModal onClose={() => setIsSuccessModalOpen(false)} />}
       
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Panel Izquierdo - Formulario */}
         <div className="w-full md:w-1/2 bg-primary-dark rounded-xl p-6 text-white">
           <div className="flex items-center justify-between mb-6">
             <button
@@ -243,48 +243,27 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                         step="any"
                         placeholder="Alto"
                         value={(formValues[itemKey] as any)?.high ?? ''}
-                        onChange={e =>
-                          handleInputChange(
-                            item.key,
-                            e.target.value === ''
-                              ? undefined
-                              : parseFloat(e.target.value),
-                            'high'
-                          )
-                        }
-                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                        onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')}
+                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-200"
+                        disabled={isSaved} // <-- Deshabilitar si ya se guardó
                       />
                       <input
                         type="number"
                         step="any"
                         placeholder="Largo"
                         value={(formValues[itemKey] as any)?.long ?? ''}
-                        onChange={e =>
-                          handleInputChange(
-                            item.key,
-                            e.target.value === ''
-                              ? undefined
-                              : parseFloat(e.target.value),
-                            'long'
-                          )
-                        }
-                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                        onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')}
+                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-200"
+                        disabled={isSaved} // <-- Deshabilitar si ya se guardó
                       />
                       <input
                         type="number"
                         step="any"
                         placeholder="Ancho"
                         value={(formValues[itemKey] as any)?.width ?? ''}
-                        onChange={e =>
-                          handleInputChange(
-                            item.key,
-                            e.target.value === ''
-                              ? undefined
-                              : parseFloat(e.target.value),
-                            'width'
-                          )
-                        }
-                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                        onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')}
+                        className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-200"
+                        disabled={isSaved} // <-- Deshabilitar si ya se guardó
                       />
                     </div>
                   ) : (
@@ -292,15 +271,9 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                       type="number"
                       step="any"
                       value={(formValues[itemKey] as number) ?? ''}
-                      onChange={e =>
-                        handleInputChange(
-                          item.key,
-                          e.target.value === ''
-                            ? undefined
-                            : parseFloat(e.target.value)
-                        )
-                      }
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                      onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-200"
+                      disabled={isSaved} // <-- Deshabilitar si ya se guardó
                     />
                   )}
 
@@ -308,9 +281,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                     <div className="mt-2 text-sm">
                       <span className="opacity-70">Edad Calculada: </span>
                       <span className="font-medium">
-                        {partialAgeValue !== undefined
-                          ? `${partialAgeValue.toFixed(1)} años`
-                          : '--'}
+                        {partialAgeValue !== undefined ? `${partialAgeValue.toFixed(1)} años` : '--'}
                       </span>
                     </div>
                   )}
@@ -323,7 +294,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
             <button
               type="button"
               onClick={handleCalculate}
-              disabled={calculating}
+              disabled={calculating || isSaved} // <-- Deshabilitar si ya se guardó
               className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               <FaCalculator />
@@ -333,7 +304,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
             <button
               type="button"
               onClick={handleSave}
-              disabled={!calculated || saving}
+              disabled={!calculated || saving || isSaved} // <-- Deshabilitar si ya se guardó
               className="w-full bg-green-500 text-white font-medium py-3 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               <FaSave />
@@ -350,7 +321,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
           </div>
         </div>
 
-        {/* Panel Derecho - Resultados */}
         <div className="w-full md:w-1/2 space-y-6">
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Finales</h3>
@@ -412,9 +382,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                         <span className="opacity-80">Diferencia:</span>
                         <span className="font-medium">
                           {calculated && partialAge !== undefined
-                            ? `${partialAge - patient.chronologicalAge > 0 ? '+' : ''}${
-                                (partialAge - patient.chronologicalAge).toFixed(1)
-                              } años`
+                            ? `${(partialAge - patient.chronologicalAge).toFixed(1)} años`
                             : '--'}
                         </span>
                       </div>
