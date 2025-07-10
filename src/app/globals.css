@@ -6,6 +6,11 @@
 :root {
   --primary-color: rgb(35, 188, 239);
   --primary-dark: rgb(25, 168, 219);
+  /* Nuevo color azul oscuro para el layout principal */
+  --primary-navy: rgb(10, 25, 49); 
+  /* Nuevo color de fondo para el área de contenido */
+  --background-main: #f4f7fa;
+
   --secondary-color: rgb(99, 102, 241);
   --success-color: rgb(34, 197, 94);
   --warning-color: rgb(251, 191, 36);
@@ -20,6 +25,11 @@
   --gray-700: rgb(55, 65, 81);
   --gray-800: rgb(31, 41, 55);
   --gray-900: rgb(17, 24, 39);
+
+  /* Colores para estados */
+  --status-green: rgb(22, 163, 74);
+  --status-yellow: rgb(234, 179, 8);
+  --status-red: rgb(220, 38, 38);
 }
 
 /* Estilos base */
@@ -33,7 +43,7 @@ html {
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: var(--gray-50);
+  background-color: var(--background-main);
   color: var(--gray-900);
   line-height: 1.6;
 }
@@ -395,4 +405,18 @@ body {
   .card {
     @apply shadow-none border border-gray-300;
   }
+}
+
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

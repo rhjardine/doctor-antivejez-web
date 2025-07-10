@@ -27,7 +27,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-20 lg:w-64 bg-primary-dark flex flex-col transition-all duration-300">
+    <aside className="w-20 lg:w-64 bg-primary-navy flex flex-col transition-all duration-300">
       {/* Logo Principal */}
       <div className="flex items-center justify-center h-20 border-b border-white/10">
         <Link href="/dashboard" passHref>
@@ -64,20 +64,16 @@ export function Sidebar() {
                   title={item.name}
                   className={`flex items-center h-12 rounded-lg transition-colors relative ${
                     isActive
-                      ? 'bg-white text-primary-dark shadow-lg'
+                      ? 'bg-background-main text-primary-dark font-semibold'
                       : 'text-gray-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   <div className="w-16 flex items-center justify-center">
                      <Icon className="text-2xl" />
                   </div>
-                  <span className="font-medium text-sm hidden lg:block pr-4">
+                  <span className="hidden lg:block pr-4">
                     {item.name}
                   </span>
-                   {/* Indicador de página activa */}
-                   {isActive && (
-                    <div className="absolute -right-2 w-4 h-8 bg-white rounded-l-full"></div>
-                  )}
                 </Link>
               </li>
             );
@@ -87,4 +83,3 @@ export function Sidebar() {
     </aside>
   );
 }
-//Nuevo

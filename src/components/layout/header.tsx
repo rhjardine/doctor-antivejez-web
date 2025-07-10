@@ -2,8 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { Bell, LogOut, UserCircle } from 'lucide-react';
+import { Bell, LogOut } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
+import { useMemo } from 'react';
 
 // Mapeo de rutas a títulos para mostrar en el header
 const routeTitles: { [key: string]: string } = {
@@ -32,38 +33,32 @@ export function Header() {
   const { data: session } = useSession();
   const title = getCurrentTitle(pathname);
 
-  const getCurrentDateTime = () => {
+  // Usamos useMemo para que la fecha no se recalcule en cada render
+  const dateTime = useMemo(() => {
     const now = new Date();
-    return now.toLocaleString('es-VE', {
-      dateStyle: 'full',
-      timeStyle: 'short',
-    });
-  };
+    const date = now.toLocaleDateString('es-VE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const time = now.toLocaleTimeString('es-VE', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${date}, ${time}`;
+  }, []);
 
   return (
-    <header className="bg-primary-dark text-white shadow-md z-10">
+    <header className="bg-primary-navy text-white">
       <div className="flex items-center justify-between h-20 px-6 lg:px-8">
         {/* Sección Izquierda: Título de la página */}
         <div className="flex items-center gap-4">
-            <Image
-                src="/images/logo_icon.png" // Un icono más pequeño para el header
-                alt="Doctor AntiVejez Icono"
-                width={40}
-                height={40}
-            />
-            <h1 className="text-xl font-semibold hidden md:block">{title}</h1>
+            <h1 className="text-xl font-semibold">{title}</h1>
         </div>
 
         {/* Sección Derecha: Info de Usuario y Acciones */}
         <div className="flex items-center gap-6">
           <div className="text-right hidden sm:block">
-            <p className="font-semibold">Bienvenido(a) {session?.user?.name || 'Usuario'}</p>
-            <p className="text-xs text-gray-300">Última conexión: {getCurrentDateTime()}</p>
+            <p className="font-semibold text-sm">Bienvenido(a) {session?.user?.name || 'Usuario'}</p>
+            <p className="text-xs text-gray-400">Última conexión: {dateTime}</p>
           </div>
           <div className="flex items-center gap-3">
             <button className="relative p-2 rounded-full hover:bg-white/10 transition-colors">
               <Bell />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-primary-dark"></span>
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-primary-navy"></span>
             </button>
             <button onClick={() => signOut({ callbackUrl: '/login' })} className="p-2 rounded-full hover:bg-white/10 transition-colors" title="Cerrar Sesión">
               <LogOut />

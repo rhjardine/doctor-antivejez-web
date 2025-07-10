@@ -1,35 +1,35 @@
-// src/app/layout.tsx
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import AuthProvider from '@/components/layout/auth-provider';
-import { getServerSession } from 'next-auth'; // Importar getServerSession
-import { authOptions } from '@/lib/auth';     // Importar authOptions
+// src/app/(dashboard)/layout.tsx
+import { Sidebar } from '@/components/layout/sidebar';
+import { Header } from '@/components/layout/header';
+import { Toaster } from 'sonner';
 
-const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: 'Doctor AntiVejez - Sistema de Gestión Médica',
-  description: 'Sistema integral para la gestión de pacientes y análisis biofísicos antienvejecimiento',
-};
-
-// Convertir el layout en una función asíncrona
-export default async function RootLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Obtener la sesión en el lado del servidor
-  const session = await getServerSession(authOptions);
-
   return (
-    <html lang="es">
-      <body className={inter.className}>
-        {/* Pasar la sesión obtenida al AuthProvider */}
-        <AuthProvider session={session}>
-          {children}
-        </AuthProvider>
-      </body>
-    </html>
+    <div className="flex h-screen bg-background-main font-sans">
+      {/* Sidebar a la izquierda, con un z-index para asegurar su correcta visualización */}
+      <div className="z-20">
+        <Sidebar />
+      </div>
+      
+      {/* Contenedor principal que se expande */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header en la parte superior */}
+        <Header />
+        
+        {/* Área de contenido principal con el borde superior izquierdo redondeado */}
+        <main className="flex-1 overflow-y-auto bg-background-main p-6 lg:p-8 rounded-tl-3xl">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+      
+      {/* Componente para mostrar notificaciones (toasts) */}
+      <Toaster richColors position="top-right" />
+    </div>
   );
 }
