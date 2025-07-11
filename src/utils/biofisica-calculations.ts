@@ -21,13 +21,12 @@ const METRIC_NAME_MAP: Record<string, string> = {
   diastolicPressure: 'diastolic_blood_pressure',
 };
 
-// --- Claves y Mapa de Nombres (CORREGIDO Y CENTRALIZADO) ---
+// --- Claves y Mapa de Nombres (Sin cambios) ---
 const BIOPHYSICS_KEYS = [
   'fatPercentage', 'bmi', 'digitalReflexes', 'visualAccommodation', 
   'staticBalance', 'skinHydration', 'systolicPressure', 'diastolicPressure'
 ] as const;
 
-// MAPA EXPLÍCITO para asegurar la consistencia de los nombres de las edades parciales.
 const PARTIAL_AGE_KEYS_MAP: Record<typeof BIOPHYSICS_KEYS[number], keyof PartialAges> = {
   fatPercentage: 'fatAge',
   bmi: 'bmiAge',
@@ -39,7 +38,7 @@ const PARTIAL_AGE_KEYS_MAP: Record<typeof BIOPHYSICS_KEYS[number], keyof Partial
   diastolicPressure: 'diastolicAge',
 };
 
-// --- Lógica de Cálculo Principal (Refactorizada con el mapa de claves) ---
+// --- Lógica de Cálculo Principal (Sin cambios) ---
 export function calculateBiofisicaResults(
   boards: BoardWithRanges[],
   formValues: FormValues,
@@ -71,7 +70,6 @@ export function calculateBiofisicaResults(
     
     const partialAge = calculatePartialAge(boards, metricName, inputValue);
     
-    // Usa el mapa para asignar el resultado a la propiedad correcta.
     const ageKey = PARTIAL_AGE_KEYS_MAP[key];
     partialAges[ageKey] = partialAge;
     
@@ -88,7 +86,7 @@ export function calculateBiofisicaResults(
   };
 }
 
-// --- Funciones de Soporte (con la interpolación universal correcta) ---
+// --- Funciones de Soporte (Sin cambios en estas dos) ---
 
 function validateAllMetricsPresent(formValues: FormValues) {
   for (const key of BIOPHYSICS_KEYS) {
@@ -108,6 +106,7 @@ function calculateDimensionsAverage(dimensions: { high: number; long: number; wi
   return (dimensions.high + dimensions.long + dimensions.width) / 3;
 }
 
+// --- Lógica de Búsqueda y Cálculo de Edad Parcial (Sin cambios) ---
 function calculatePartialAge(
   boards: BoardWithRanges[],
   metricName: string,
@@ -118,16 +117,15 @@ function calculatePartialAge(
     throw new Error(`Datos de configuración incompletos: No se encontraron baremos para la métrica "${metricName}".`);
   }
 
-  // Encuentra el baremo aplicable basado en el valor de entrada.
-  // Esto ahora maneja correctamente rangos normales (min < max) e invertidos (min > max).
   const applicableBoard = metricBoards.find(board => {
     const start = Math.min(board.minValue, board.maxValue);
     const end = Math.max(board.minValue, board.maxValue);
-    return inputValue >= start && inputValue <= end;
+    // Usar una pequeña tolerancia (epsilon) para evitar errores de punto flotante en los bordes
+    const epsilon = 1e-9;
+    return inputValue >= (start - epsilon) && inputValue <= (end + epsilon);
   });
 
   if (!applicableBoard) {
-    // Si no se encuentra un baremo, significa que el valor está fuera de rango.
     const sortedBoards = metricBoards.sort((a,b) => Math.min(a.minValue, a.maxValue) - Math.min(b.minValue, b.maxValue));
     const minRange = Math.min(sortedBoards[0].minValue, sortedBoards[0].maxValue);
     const maxRange = Math.max(sortedBoards[sortedBoards.length - 1].minValue, sortedBoards[sortedBoards.length - 1].maxValue);
@@ -137,23 +135,24 @@ function calculatePartialAge(
   return interpolateAge(applicableBoard, inputValue);
 }
 
-// --- FUNCIÓN DE INTERPOLACIÓN CORREGIDA ---
-// Esta función ahora maneja correctamente la interpolación para rangos
-// normales (donde un mayor valor biofísico implica mayor edad) e
-// inversos (donde un menor valor biofísico implica mayor edad).
+// --- FUNCIÓN DE INTERPOLACIÓN CORREGIDA Y MEJORADA ---
+// Esta función ahora maneja correctamente los rangos inversos y normales.
 function interpolateAge(board: BoardWithRanges, inputValue: number): number {
-  const { minValue, maxValue, range } = board;
+  const { minValue, maxValue, range, inverse } = board;
   const { minAge, maxAge } = range;
 
-  // Si los valores del baremo son iguales, no hay nada que interpolar.
   if (minValue === maxValue) return minAge;
   
-  // Calcula la proporción del valor de entrada dentro del rango del baremo.
+  // Si el baremo es inverso, la edad se interpola en la dirección opuesta.
+  // Un valor más alto en el baremo corresponde a una edad menor.
+  const effectiveMinAge = inverse ? maxAge : minAge;
+  const effectiveMaxAge = inverse ? minAge : maxAge;
+
   const proportion = (inputValue - minValue) / (maxValue - minValue);
   
-  // Aplica esa proporción al rango de edad para obtener la edad parcial.
-  const partialAge = minAge + (proportion * (maxAge - minAge));
+  const partialAge = effectiveMinAge + (proportion * (effectiveMaxAge - effectiveMinAge));
 
+  // Se usa Math.round() para coincidir con la lógica del sistema legado (toFixed(0) en PHP/JS).
   return Math.round(partialAge);
 }
 

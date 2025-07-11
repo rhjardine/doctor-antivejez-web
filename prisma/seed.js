@@ -39,7 +39,6 @@ async function main() {
   }
   console.log('✅ Rangos de edad creados o actualizados.');
 
-  // Datos de baremos biofísicos
   const biophysicsBoards = [
     // % Grasa Masculino
     { rangeId: 1, name: 'male_fat', minValue: 10, maxValue: 14 },
@@ -56,7 +55,6 @@ async function main() {
     { rangeId: 12, name: 'male_fat', minValue: 45, maxValue: 48 },
     { rangeId: 13, name: 'male_fat', minValue: 48, maxValue: 51 },
     { rangeId: 14, name: 'male_fat', minValue: 51, maxValue: 54 },
-    // Con inverse para valores bajos
     { rangeId: 1, name: 'male_fat', minValue: 7, maxValue: 9.99, inverse: true },
     { rangeId: 2, name: 'male_fat', minValue: 6, maxValue: 7, inverse: true },
     { rangeId: 3, name: 'male_fat', minValue: 5, maxValue: 6, inverse: true },
@@ -97,7 +95,6 @@ async function main() {
     { rangeId: 12, name: 'female_fat', minValue: 53, maxValue: 56 },
     { rangeId: 13, name: 'female_fat', minValue: 56, maxValue: 59 },
     { rangeId: 14, name: 'female_fat', minValue: 59, maxValue: 62 },
-    // Con inverse para valores bajos
     { rangeId: 1, name: 'female_fat', minValue: 15, maxValue: 17.99, inverse: true },
     { rangeId: 2, name: 'female_fat', minValue: 14, maxValue: 15, inverse: true },
     { rangeId: 3, name: 'female_fat', minValue: 13, maxValue: 14, inverse: true },
@@ -138,7 +135,6 @@ async function main() {
     { rangeId: 12, name: 'body_mass', minValue: 51, maxValue: 54 },
     { rangeId: 13, name: 'body_mass', minValue: 54, maxValue: 57 },
     { rangeId: 14, name: 'body_mass', minValue: 57, maxValue: 60 },
-    // Con inverse para valores bajos
     { rangeId: 1, name: 'body_mass', minValue: 16, maxValue: 17.99, inverse: true },
     { rangeId: 2, name: 'body_mass', minValue: 15, maxValue: 16, inverse: true },
     { rangeId: 3, name: 'body_mass', minValue: 14, maxValue: 15, inverse: true },
@@ -148,23 +144,24 @@ async function main() {
     { rangeId: 7, name: 'body_mass', minValue: 10, maxValue: 11, inverse: true },
     { rangeId: 8, name: 'body_mass', minValue: 9, maxValue: 10, inverse: true },
 
-    // Reflejos Digitales
-    { rangeId: 1, name: 'digital_reflections', minValue: 45, maxValue: 50 },
-    { rangeId: 2, name: 'digital_reflections', minValue: 35, maxValue: 45 },
-    { rangeId: 3, name: 'digital_reflections', minValue: 30, maxValue: 35 },
-    { rangeId: 4, name: 'digital_reflections', minValue: 25, maxValue: 30 },
-    { rangeId: 5, name: 'digital_reflections', minValue: 20, maxValue: 25 },
-    { rangeId: 6, name: 'digital_reflections', minValue: 15, maxValue: 20 },
-    { rangeId: 7, name: 'digital_reflections', minValue: 10, maxValue: 15 },
-    { rangeId: 8, name: 'digital_reflections', minValue: 8, maxValue: 10 },
-    { rangeId: 9, name: 'digital_reflections', minValue: 6, maxValue: 8 },
-    { rangeId: 10, name: 'digital_reflections', minValue: 4, maxValue: 6 },
-    { rangeId: 11, name: 'digital_reflections', minValue: 3, maxValue: 4 },
-    { rangeId: 12, name: 'digital_reflections', minValue: 2, maxValue: 3 },
-    { rangeId: 13, name: 'digital_reflections', minValue: 1, maxValue: 2 },
-    { rangeId: 14, name: 'digital_reflections', minValue: 0, maxValue: 1 },
+    // ===== INICIO DE LA CORRECCIÓN DE DATOS =====
+    // Reflejos Digitales (valores decrecientes)
+    { rangeId: 1, name: 'digital_reflections', minValue: 50, maxValue: 45 },
+    { rangeId: 2, name: 'digital_reflections', minValue: 45, maxValue: 35 },
+    { rangeId: 3, name: 'digital_reflections', minValue: 35, maxValue: 30 },
+    { rangeId: 4, name: 'digital_reflections', minValue: 30, maxValue: 25 },
+    { rangeId: 5, name: 'digital_reflections', minValue: 25, maxValue: 20 },
+    { rangeId: 6, name: 'digital_reflections', minValue: 20, maxValue: 15 },
+    { rangeId: 7, name: 'digital_reflections', minValue: 15, maxValue: 10 },
+    { rangeId: 8, name: 'digital_reflections', minValue: 10, maxValue: 8 },
+    { rangeId: 9, name: 'digital_reflections', minValue: 8, maxValue: 6 },
+    { rangeId: 10, name: 'digital_reflections', minValue: 6, maxValue: 4 },
+    { rangeId: 11, name: 'digital_reflections', minValue: 4, maxValue: 3 },
+    { rangeId: 12, name: 'digital_reflections', minValue: 3, maxValue: 2 },
+    { rangeId: 13, name: 'digital_reflections', minValue: 2, maxValue: 1 },
+    { rangeId: 14, name: 'digital_reflections', minValue: 1, maxValue: 0 },
 
-    // Acomodación Visual
+    // Acomodación Visual (valores crecientes)
     { rangeId: 1, name: 'visual_accommodation', minValue: 0, maxValue: 10 },
     { rangeId: 2, name: 'visual_accommodation', minValue: 10, maxValue: 15 },
     { rangeId: 3, name: 'visual_accommodation', minValue: 15, maxValue: 18 },
@@ -180,15 +177,22 @@ async function main() {
     { rangeId: 13, name: 'visual_accommodation', minValue: 47, maxValue: 50 },
     { rangeId: 14, name: 'visual_accommodation', minValue: 50, maxValue: 53 },
 
-    // Balance Estático
-    { rangeId: 1, name: 'static_balance', minValue: 64, maxValue: 120 },
-    { rangeId: 2, name: 'static_balance', minValue: 32, maxValue: 64 },
-    { rangeId: 3, name: 'static_balance', minValue: 16, maxValue: 32 },
-    { rangeId: 4, name: 'static_balance', minValue: 8, maxValue: 16 },
-    { rangeId: 5, name: 'static_balance', minValue: 4, maxValue: 8 },
-    { rangeId: 6, name: 'static_balance', minValue: 2, maxValue: 4 },
-    { rangeId: 7, name: 'static_balance', minValue: 1, maxValue: 2 },
-    { rangeId: 8, name: 'static_balance', minValue: 0, maxValue: 1 },
+    // Balance Estático (valores decrecientes)
+    { rangeId: 1, name: 'static_balance', minValue: 120, maxValue: 30 },
+    { rangeId: 2, name: 'static_balance', minValue: 30, maxValue: 25 },
+    { rangeId: 3, name: 'static_balance', minValue: 25, maxValue: 20 },
+    { rangeId: 4, name: 'static_balance', minValue: 20, maxValue: 15 },
+    { rangeId: 5, name: 'static_balance', minValue: 15, maxValue: 12 },
+    { rangeId: 6, name: 'static_balance', minValue: 12, maxValue: 9 },
+    { rangeId: 7, name: 'static_balance', minValue: 9, maxValue: 7 },
+    { rangeId: 8, name: 'static_balance', minValue: 7, maxValue: 6 },
+    { rangeId: 9, name: 'static_balance', minValue: 6, maxValue: 5 },
+    { rangeId: 10, name: 'static_balance', minValue: 5, maxValue: 4 },
+    { rangeId: 11, name: 'static_balance', minValue: 4, maxValue: 3 },
+    { rangeId: 12, name: 'static_balance', minValue: 3, maxValue: 2 },
+    { rangeId: 13, name: 'static_balance', minValue: 2, maxValue: 1 },
+    { rangeId: 14, name: 'static_balance', minValue: 1, maxValue: 0 },
+    // ===== FIN DE LA CORRECCIÓN DE DATOS =====
 
     // Hidratación Cutánea
     { rangeId: 1, name: 'quaten_hydration', minValue: 0, maxValue: 1 },
@@ -221,7 +225,6 @@ async function main() {
     { rangeId: 12, name: 'systolic_blood_pressure', minValue: 210, maxValue: 220 },
     { rangeId: 13, name: 'systolic_blood_pressure', minValue: 220, maxValue: 230 },
     { rangeId: 14, name: 'systolic_blood_pressure', minValue: 230, maxValue: 240 },
-    // Con inverse para valores bajos
     { rangeId: 1, name: 'systolic_blood_pressure', minValue: 95, maxValue: 99.99, inverse: true },
     { rangeId: 2, name: 'systolic_blood_pressure', minValue: 90, maxValue: 95, inverse: true },
     { rangeId: 3, name: 'systolic_blood_pressure', minValue: 85, maxValue: 90, inverse: true },
@@ -250,7 +253,6 @@ async function main() {
     { rangeId: 12, name: 'diastolic_blood_pressure', minValue: 130, maxValue: 140 },
     { rangeId: 13, name: 'diastolic_blood_pressure', minValue: 140, maxValue: 150 },
     { rangeId: 14, name: 'diastolic_blood_pressure', minValue: 150, maxValue: 160 },
-    // Con inverse para valores bajos
     { rangeId: 1, name: 'diastolic_blood_pressure', minValue: 57, maxValue: 59.99, inverse: true },
     { rangeId: 2, name: 'diastolic_blood_pressure', minValue: 53, maxValue: 57, inverse: true },
     { rangeId: 3, name: 'diastolic_blood_pressure', minValue: 50, maxValue: 53, inverse: true },
@@ -261,15 +263,13 @@ async function main() {
     { rangeId: 8, name: 'diastolic_blood_pressure', minValue: 35, maxValue: 38, inverse: true },
   ];
 
-  // 1. Borrar todos los baremos existentes para evitar duplicados en futuras ejecuciones
   await prisma.board.deleteMany({});
   console.log('✅ Baremos antiguos eliminados.');
 
-  // 2. Crear todos los nuevos baremos en un solo lote
   await prisma.board.createMany({
     data: biophysicsBoards.map(board => ({
       ...board,
-      type: 'FORM_BIOPHYSICS', // Asegurarse de que el tipo se añade
+      type: 'FORM_BIOPHYSICS',
     })),
   });
   console.log('✅ Baremos biofísicos nuevos creados.');
