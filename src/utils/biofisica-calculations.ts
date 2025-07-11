@@ -120,7 +120,6 @@ function calculatePartialAge(
   const applicableBoard = metricBoards.find(board => {
     const start = Math.min(board.minValue, board.maxValue);
     const end = Math.max(board.minValue, board.maxValue);
-    // Usar una pequeña tolerancia (epsilon) para evitar errores de punto flotante en los bordes
     const epsilon = 1e-9;
     return inputValue >= (start - epsilon) && inputValue <= (end + epsilon);
   });
@@ -135,24 +134,28 @@ function calculatePartialAge(
   return interpolateAge(applicableBoard, inputValue);
 }
 
-// --- FUNCIÓN DE INTERPOLACIÓN CORREGIDA Y MEJORADA ---
-// Esta función ahora maneja correctamente los rangos inversos y normales.
+// --- FUNCIÓN DE INTERPOLACIÓN DEFINITIVA Y CALIBRADA ---
 function interpolateAge(board: BoardWithRanges, inputValue: number): number {
   const { minValue, maxValue, range, inverse } = board;
   const { minAge, maxAge } = range;
 
   if (minValue === maxValue) return minAge;
   
-  // Si el baremo es inverso, la edad se interpola en la dirección opuesta.
-  // Un valor más alto en el baremo corresponde a una edad menor.
+  // Determina si el rango de valores del baremo es decreciente (ej. Reflejos Digitales)
+  const isDecreasingRange = minValue > maxValue;
+
+  // Si el baremo es inverso (ej. Tensión baja), la edad se interpola en la dirección opuesta.
   const effectiveMinAge = inverse ? maxAge : minAge;
   const effectiveMaxAge = inverse ? minAge : maxAge;
 
+  // Si el rango es decreciente, la interpolación también se invierte para la edad.
+  const ageStart = isDecreasingRange ? maxAge : effectiveMinAge;
+  const ageEnd = isDecreasingRange ? minAge : effectiveMaxAge;
+
   const proportion = (inputValue - minValue) / (maxValue - minValue);
   
-  const partialAge = effectiveMinAge + (proportion * (effectiveMaxAge - effectiveMinAge));
+  const partialAge = ageStart + (proportion * (ageEnd - ageStart));
 
-  // Se usa Math.round() para coincidir con la lógica del sistema legado (toFixed(0) en PHP/JS).
   return Math.round(partialAge);
 }
 
