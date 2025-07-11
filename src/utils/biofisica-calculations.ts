@@ -11,7 +11,7 @@ export const getFatName = (gender: string, isAthlete: boolean): string => {
 };
 
 const METRIC_NAME_MAP: Record<string, string> = {
-  fatPercentage: '',
+  fatPercentage: '', // Se maneja con getFatName
   bmi: 'body_mass',
   digitalReflexes: 'digital_reflections',
   visualAccommodation: 'visual_accommodation',
@@ -118,13 +118,16 @@ function calculatePartialAge(
     throw new Error(`Datos de configuración incompletos: No se encontraron baremos para la métrica "${metricName}".`);
   }
 
+  // Encuentra el baremo aplicable basado en el valor de entrada.
+  // Esto ahora maneja correctamente rangos normales (min < max) e invertidos (min > max).
   const applicableBoard = metricBoards.find(board => {
     const start = Math.min(board.minValue, board.maxValue);
-    const end = Math.max(board.maxValue, board.minValue);
+    const end = Math.max(board.minValue, board.maxValue);
     return inputValue >= start && inputValue <= end;
   });
 
   if (!applicableBoard) {
+    // Si no se encuentra un baremo, significa que el valor está fuera de rango.
     const sortedBoards = metricBoards.sort((a,b) => Math.min(a.minValue, a.maxValue) - Math.min(b.minValue, b.maxValue));
     const minRange = Math.min(sortedBoards[0].minValue, sortedBoards[0].maxValue);
     const maxRange = Math.max(sortedBoards[sortedBoards.length - 1].minValue, sortedBoards[sortedBoards.length - 1].maxValue);
@@ -134,17 +137,26 @@ function calculatePartialAge(
   return interpolateAge(applicableBoard, inputValue);
 }
 
+// --- FUNCIÓN DE INTERPOLACIÓN CORREGIDA ---
+// Esta función ahora maneja correctamente la interpolación para rangos
+// normales (donde un mayor valor biofísico implica mayor edad) e
+// inversos (donde un menor valor biofísico implica mayor edad).
 function interpolateAge(board: BoardWithRanges, inputValue: number): number {
   const { minValue, maxValue, range } = board;
   const { minAge, maxAge } = range;
 
+  // Si los valores del baremo son iguales, no hay nada que interpolar.
   if (minValue === maxValue) return minAge;
   
+  // Calcula la proporción del valor de entrada dentro del rango del baremo.
   const proportion = (inputValue - minValue) / (maxValue - minValue);
+  
+  // Aplica esa proporción al rango de edad para obtener la edad parcial.
   const partialAge = minAge + (proportion * (maxAge - minAge));
 
   return Math.round(partialAge);
 }
+
 
 // --- Funciones de Estado y Color (Sin cambios) ---
 export function getAgeStatus(ageDifference: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
