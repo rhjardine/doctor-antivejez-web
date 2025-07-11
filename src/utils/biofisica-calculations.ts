@@ -134,28 +134,35 @@ function calculatePartialAge(
   return interpolateAge(applicableBoard, inputValue);
 }
 
-// --- FUNCIÓN DE INTERPOLACIÓN DEFINITIVA Y CALIBRADA ---
+// ===== FUNCIÓN DE INTERPOLACIÓN DEFINITIVA Y CALIBRADA =====
+// Esta función ahora replica la lógica exacta del sistema legado.
 function interpolateAge(board: BoardWithRanges, inputValue: number): number {
   const { minValue, maxValue, range, inverse } = board;
   const { minAge, maxAge } = range;
 
   if (minValue === maxValue) return minAge;
+
+  // Determina si el rango de la métrica es decreciente (un valor más alto es "mejor").
+  // Ejemplo: Reflejos Digitales, donde 50 es peor que 45.
+  const isDecreasingMetric = minValue > maxValue;
+
+  // Para los baremos marcados como 'inverse' (ej. tensión baja),
+  // un valor bajo en la métrica corresponde a una edad mayor.
+  // Invertimos el rango de edad para la interpolación.
+  const y1 = inverse ? maxAge : minAge;
+  const y2 = inverse ? minAge : maxAge;
+
+  // Para los baremos con métrica decreciente (como Reflejos y Balance),
+  // un valor de métrica ALTO (peor) debe corresponder a una edad ALTA.
+  // Por lo tanto, invertimos la asignación de edades a los puntos de la métrica.
+  const agePoint1 = isDecreasingMetric ? maxAge : y1;
+  const agePoint2 = isDecreasingMetric ? minAge : y2;
   
-  // Determina si el rango de valores del baremo es decreciente (ej. Reflejos Digitales)
-  const isDecreasingRange = minValue > maxValue;
-
-  // Si el baremo es inverso (ej. Tensión baja), la edad se interpola en la dirección opuesta.
-  const effectiveMinAge = inverse ? maxAge : minAge;
-  const effectiveMaxAge = inverse ? minAge : maxAge;
-
-  // Si el rango es decreciente, la interpolación también se invierte para la edad.
-  const ageStart = isDecreasingRange ? maxAge : effectiveMinAge;
-  const ageEnd = isDecreasingRange ? minAge : effectiveMaxAge;
-
+  // Fórmula de interpolación lineal estándar: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
   const proportion = (inputValue - minValue) / (maxValue - minValue);
-  
-  const partialAge = ageStart + (proportion * (ageEnd - ageStart));
+  const partialAge = agePoint1 + (proportion * (agePoint2 - agePoint1));
 
+  // Se usa Math.round() para coincidir con la lógica del sistema legado.
   return Math.round(partialAge);
 }
 
