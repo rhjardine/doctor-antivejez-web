@@ -6,7 +6,7 @@ import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, Parti
 import { getBiophysicsBoardsAndRanges, saveBiophysicsTest } from '@/lib/actions/biophysics.actions';
 import { calculateBiofisicaResults, getAgeStatus, getStatusColor } from '@/utils/biofisica-calculations';
 import { toast } from 'sonner';
-import { FaArrowLeft, FaCalculator, FaSave, FaCheckCircle, FaEdit, FaUndo } from 'react-icons/fa'; // Se añade FaEdit y FaUndo
+import { FaArrowLeft, FaCalculator, FaSave, FaCheckCircle, FaEdit, FaUndo } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
 interface EdadBiofisicaTestViewProps {
@@ -49,7 +49,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   const router = useRouter();
   const [boards, setBoards] = useState<BoardWithRanges[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false); // Estado unificado para 'calculating' y 'saving'
+  const [processing, setProcessing] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); 
   const [isSaved, setIsSaved] = useState(false);
 
@@ -86,6 +86,10 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   };
 
   const handleInputChange = (key: string, value: number | undefined, dimension?: 'high' | 'long' | 'width') => {
+    // Si el formulario estaba guardado, cualquier cambio lo "desbloquea"
+    if (isSaved) {
+      setIsSaved(false);
+    }
     setFormValues(prev => {
       const formKey = key as keyof FormValues;
       if (dimension && (formKey === 'digitalReflexes' || formKey === 'staticBalance')) {
@@ -96,7 +100,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     });
   };
 
-  // --- NUEVA FUNCIÓN UNIFICADA PARA CALCULAR Y GUARDAR ---
+  // --- Función unificada para Calcular y Guardar ---
   const handleCalculateAndSave = async () => {
     setProcessing(true);
 
@@ -175,7 +179,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     }
   };
   
-  // --- NUEVA FUNCIÓN PARA HABILITAR LA EDICIÓN ---
+  // --- Función para Habilitar la Edición ---
   const handleEdit = () => {
     setIsSaved(false);
     toast.info("El formulario ha sido habilitado para edición.");
