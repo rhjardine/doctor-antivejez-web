@@ -6,7 +6,7 @@ import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, Parti
 import { getBiophysicsBoardsAndRanges, saveBiophysicsTest } from '@/lib/actions/biophysics.actions';
 import { calculateBiofisicaResults, getAgeStatus, getStatusColor } from '@/utils/biofisica-calculations';
 import { toast } from 'sonner';
-import { FaArrowLeft, FaCalculator, FaSave, FaCheckCircle, FaEdit, FaUndo } from 'react-icons/fa';
+import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
 interface EdadBiofisicaTestViewProps {
@@ -52,6 +52,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   const [processing, setProcessing] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); 
   const [isSaved, setIsSaved] = useState(false);
+  const [calculated, setCalculated] = useState(false);
 
   const [formValues, setFormValues] = useState<FormValues>({
     fatPercentage: undefined,
@@ -86,10 +87,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   };
 
   const handleInputChange = (key: string, value: number | undefined, dimension?: 'high' | 'long' | 'width') => {
-    // Si el formulario estaba guardado, cualquier cambio lo "desbloquea"
-    if (isSaved) {
-      setIsSaved(false);
-    }
     setFormValues(prev => {
       const formKey = key as keyof FormValues;
       if (dimension && (formKey === 'digitalReflexes' || formKey === 'staticBalance')) {
@@ -98,6 +95,9 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       }
       return { ...prev, [formKey]: value };
     });
+    // Cualquier cambio en el input, resetea los estados de calculado y guardado
+    setCalculated(false);
+    setIsSaved(false);
   };
 
   // --- Función unificada para Calcular y Guardar ---
@@ -132,6 +132,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       const isAthlete = patient.gender.includes('DEPORTIVO');
       calculationResult = calculateBiofisicaResults(boards, formValues, patient.chronologicalAge, patient.gender, isAthlete);
       setResults(calculationResult);
+      setCalculated(true); // Marca como calculado
     } catch (error: any) {
       toast.error(`Error de cálculo: ${error.message}`);
       setProcessing(false);
@@ -182,6 +183,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   // --- Función para Habilitar la Edición ---
   const handleEdit = () => {
     setIsSaved(false);
+    setCalculated(false); // Forzar un nuevo cálculo
     toast.info("El formulario ha sido habilitado para edición.");
   };
 
@@ -240,15 +242,15 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
                   {item.hasDimensions ? (
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')} className="input-test" disabled={isSaved} />
-                      <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')} className="input-test" disabled={isSaved} />
-                      <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')} className="input-test" disabled={isSaved} />
+                      <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')} className="input-test" />
+                      <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')} className="input-test" />
+                      <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')} className="input-test" />
                     </div>
                   ) : (
-                    <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))} className="input-test w-full" disabled={isSaved} />
+                    <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))} className="input-test w-full" />
                   )}
 
-                  {isSaved && (
+                  {calculated && (
                     <div className="mt-2 text-sm">
                       <span className="opacity-70">Edad Calculada: </span>
                       <span className="font-medium">
@@ -300,15 +302,15 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Edad Biofísica</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {isSaved ? `${results.biologicalAge} años` : '--'}
+                  {calculated ? `${results.biologicalAge} años` : '--'}
                 </p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Edad Diferencial</p>
                 <p
-                  className={`text-3xl font-bold ${isSaved ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-gray-900'}`}
+                  className={`text-3xl font-bold ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-gray-900'}`}
                 >
-                  {isSaved ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge} años` : '--'}
+                  {calculated ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge} años` : '--'}
                 </p>
               </div>
             </div>
@@ -331,7 +333,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                   <div
                     key={item.key}
                     className={`rounded-lg p-4 text-white transition-all ${
-                      isSaved ? statusColor : 'bg-gray-300'
+                      calculated ? statusColor : 'bg-gray-300'
                     }`}
                   >
                     <h4 className="font-medium mb-2">{item.label}</h4>
@@ -339,18 +341,18 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                       <div className="flex justify-between">
                         <span className="opacity-80">Edad Calculada:</span>
                         <span className="font-medium">
-                          {isSaved && partialAge !== undefined ? `${partialAge.toFixed(1)} años` : '--'}
+                          {calculated && partialAge !== undefined ? `${partialAge.toFixed(1)} años` : '--'}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="opacity-80">Diferencia:</span>
                         <span className="font-medium">
-                          {isSaved && partialAge !== undefined ? `${(partialAge - patient.chronologicalAge).toFixed(1)} años` : '--'}
+                          {calculated && partialAge !== undefined ? `${(partialAge - patient.chronologicalAge).toFixed(1)} años` : '--'}
                         </span>
                       </div>
                       <div className="mt-2 pt-2 border-t border-white/20">
                         <span className="text-xs uppercase tracking-wide">
-                          {isSaved ? status.replace(/_/g, ' ') : 'SIN CALCULAR'}
+                          {calculated ? status.replace(/_/g, ' ') : 'SIN CALCULAR'}
                         </span>
                       </div>
                     </div>
