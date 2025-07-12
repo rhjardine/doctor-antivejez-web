@@ -142,28 +142,22 @@ function interpolateAge(board: BoardWithRanges, inputValue: number): number {
 
   if (minValue === maxValue) return minAge;
 
-  // Determina si el rango de la métrica es decreciente (un valor más alto es "mejor").
-  // Ejemplo: Reflejos Digitales, donde 50 es peor que 45.
-  const isDecreasingMetric = minValue > maxValue;
-
   // Para los baremos marcados como 'inverse' (ej. tensión baja),
   // un valor bajo en la métrica corresponde a una edad mayor.
   // Invertimos el rango de edad para la interpolación.
   const y1 = inverse ? maxAge : minAge;
   const y2 = inverse ? minAge : maxAge;
 
-  // Para los baremos con métrica decreciente (como Reflejos y Balance),
-  // un valor de métrica ALTO (peor) debe corresponder a una edad ALTA.
-  // Por lo tanto, invertimos la asignación de edades a los puntos de la métrica.
-  const agePoint1 = isDecreasingMetric ? maxAge : y1;
-  const agePoint2 = isDecreasingMetric ? minAge : y2;
-  
-  // Fórmula de interpolación lineal estándar: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+  // La fórmula de interpolación lineal estándar es: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+  // Esta fórmula maneja matemáticamente tanto los rangos crecientes (minValue < maxValue) 
+  // como los decrecientes (minValue > maxValue) de forma natural y precisa.
   const proportion = (inputValue - minValue) / (maxValue - minValue);
-  const partialAge = agePoint1 + (proportion * (agePoint2 - agePoint1));
+  const partialAge = y1 + (proportion * (y2 - y1));
 
-  // Se usa Math.round() para coincidir con la lógica del sistema legado.
-  return Math.round(partialAge);
+  // La clave final: el sistema legado parece truncar el resultado en lugar de redondearlo.
+  // Math.trunc() elimina los decimales, coincidiendo con el comportamiento observado.
+  // Ejemplo: 48.538 se convierte en 48.
+  return Math.trunc(partialAge);
 }
 
 
