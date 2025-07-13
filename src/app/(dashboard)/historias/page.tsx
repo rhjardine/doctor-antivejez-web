@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList, FaHistory, FaFileMedicalAlt } from 'react-icons/fa';
-import { getAllPatients, deletePatient, searchPatients } from '@/lib/actions/patients.actions';
+// ===== INICIO DE LA CORRECCIÓN: ACTUALIZAR IMPORTACIÓN =====
+import { getPaginatedPatients, deletePatient, searchPatients } from '@/lib/actions/patients.actions';
+// ===== FIN DE LA CORRECCIÓN =====
 import { formatDate } from '@/utils/date';
 import { formatIdentification } from '@/utils/format';
 import { toast } from 'sonner';
@@ -22,7 +24,6 @@ export default function HistoriasPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
 
-  // --- Estados para paginación ---
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -33,7 +34,9 @@ export default function HistoriasPage() {
   const loadPatients = async (page: number) => {
     setLoading(true);
     try {
-      const result = await getAllPatients({ page, limit: ITEMS_PER_PAGE });
+      // ===== INICIO DE LA CORRECCIÓN: USAR LA NUEVA FUNCIÓN =====
+      const result = await getPaginatedPatients({ page, limit: ITEMS_PER_PAGE });
+      // ===== FIN DE LA CORRECCIÓN =====
       if (result.success && result.patients) {
         setPatients(result.patients as Patient[]);
         setTotalPages(result.totalPages || 0);
@@ -46,12 +49,14 @@ export default function HistoriasPage() {
   };
 
   const handleSearch = async () => {
-    setCurrentPage(1); // Reset page to 1 on new search
+    setCurrentPage(1);
     setLoading(true);
     try {
       const result = searchQuery.trim()
         ? await searchPatients({ query: searchQuery, page: 1, limit: ITEMS_PER_PAGE })
-        : await getAllPatients({ page: 1, limit: ITEMS_PER_PAGE });
+        // ===== INICIO DE LA CORRECCIÓN: USAR LA NUEVA FUNCIÓN AQUÍ TAMBIÉN =====
+        : await getPaginatedPatients({ page: 1, limit: ITEMS_PER_PAGE });
+        // ===== FIN DE LA CORRECCIÓN =====
 
       if (result.success && result.patients) {
         setPatients(result.patients as Patient[]);
@@ -71,7 +76,7 @@ export default function HistoriasPage() {
       const result = await deletePatient(patientToDelete);
       if (result.success) {
         toast.success('Paciente eliminado exitosamente');
-        loadPatients(currentPage); // Recargar la página actual
+        loadPatients(currentPage);
       } else {
         toast.error(result.error || 'Error al eliminar paciente');
       }
@@ -204,7 +209,6 @@ export default function HistoriasPage() {
         <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto custom-scrollbar-tabs">
             <table className="w-full">
-              {/* ===== INICIO DE LA MODIFICACIÓN: ESTILO DE CABECERA ===== */}
               <thead className="bg-primary-dark">
                 <tr>
                   <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">PACIENTE</th>
@@ -216,7 +220,6 @@ export default function HistoriasPage() {
                   <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">ACCIONES</th>
                 </tr>
               </thead>
-              {/* ===== FIN DE LA MODIFICACIÓN ===== */}
               <tbody className="divide-y divide-gray-200 bg-white">
                 {patients.map((patient) => {
                   const isMale = patient.gender.startsWith('MASCULINO');
@@ -263,7 +266,6 @@ export default function HistoriasPage() {
         </div>
       )}
 
-      {/* --- Controles de Paginación --- */}
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mt-6">
           <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border rounded-md disabled:opacity-50 hover:bg-gray-100 transition-colors">&laquo;</button>
@@ -274,7 +276,6 @@ export default function HistoriasPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
