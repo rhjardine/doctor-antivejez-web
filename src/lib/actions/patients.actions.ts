@@ -1,6 +1,8 @@
 'use server';
 
-import { prisma } from '@/lib/db';
+// ===== INICIO DE LA CORRECCIÓN: Importar 'Prisma' para el tipado =====
+import { prisma, Prisma } from '@/lib/db';
+// ===== FIN DE LA CORRECCIÓN =====
 import { Patient } from '@prisma/client';
 import { PatientFormData, patientSchema } from '@/utils/validation';
 import { calculateAge } from '@/utils/date';
@@ -57,7 +59,6 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
 
 export async function deletePatient(id: string) {
   try {
-    // Usar una transacción para asegurar la integridad de los datos
     await prisma.$transaction([
       prisma.biophysicsTest.deleteMany({ where: { patientId: id } }),
       prisma.patient.delete({ where: { id } }),
@@ -98,7 +99,6 @@ export async function getPatientWithTests(id: string) {
   }
 }
 
-// ===== INICIO DE LA CORRECCIÓN: RENOMBRAR FUNCIÓN =====
 export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { page?: number; limit?: number; userId?: string } = {}) {
   try {
     const skip = (page - 1) * limit;
@@ -138,7 +138,9 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
 export async function searchPatients({ query, page = 1, limit = 10 }: { query: string; page?: number; limit?: number; }) {
   try {
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
-    const whereClause = {
+    
+    // ===== INICIO DE LA CORRECCIÓN: Tipar explícitamente la cláusula 'where' =====
+    const whereClause: Prisma.PatientWhereInput = {
       OR: [
         { firstName: { contains: query, mode: 'insensitive' } },
         { lastName: { contains: query, mode: 'insensitive' } },
@@ -147,6 +149,8 @@ export async function searchPatients({ query, page = 1, limit = 10 }: { query: s
         ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
       ],
     };
+    // ===== FIN DE LA CORRECCIÓN =====
+
     const skip = (page - 1) * limit;
 
     const [patients, totalPatients] = await prisma.$transaction([
@@ -179,4 +183,3 @@ export async function searchPatients({ query, page = 1, limit = 10 }: { query: s
     return { success: false, error: 'Error al buscar pacientes', patients: [], totalPages: 0, currentPage: 1 };
   }
 }
-// ===== FIN DE LA CORRECCIÓN =====
