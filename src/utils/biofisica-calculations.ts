@@ -37,7 +37,7 @@ const PARTIAL_AGE_KEYS_MAP: Record<typeof BIOPHYSICS_KEYS[number], keyof Partial
   diastolicPressure: 'diastolicAge',
 };
 
-// --- Lógica de Cálculo Principal (Sin cambios) ---
+// --- Lógica de Cálculo Principal ---
 export function calculateBiofisicaResults(
   boards: BoardWithRanges[],
   formValues: FormValues,
@@ -75,6 +75,7 @@ export function calculateBiofisicaResults(
     agesSum += partialAge;
   }
 
+  // El promedio de las edades parciales (ya truncadas) se redondea al final.
   const biologicalAge = Math.round(agesSum / BIOPHYSICS_KEYS.length);
   const differentialAge = biologicalAge - cronoAge;
 
@@ -85,7 +86,7 @@ export function calculateBiofisicaResults(
   };
 }
 
-// --- Funciones de Soporte (Sin cambios) ---
+// --- Funciones de Soporte ---
 function validateAllMetricsPresent(formValues: FormValues) {
   for (const key of BIOPHYSICS_KEYS) {
     const value = formValues[key as keyof FormValues];
@@ -134,44 +135,41 @@ function calculatePartialAge(
 }
 
 
-// ===== INICIO DE LA CORRECCIÓN: LÓGICA DE INTERPOLACIÓN CALIBRADA =====
+// ===== INICIO DE LA CORRECCIÓN: LÓGICA DE INTERPOLACIÓN Y TRUNCADO =====
 /**
- * Calcula la edad parcial utilizando una interpolación lineal estándar, que maneja
- * correctamente tanto rangos ascendentes como descendentes.
+ * Calcula la edad parcial utilizando una interpolación lineal estándar y trunca el resultado.
+ * Esta es la clave para coincidir con la precisión del sistema legado.
  * @param board El baremo aplicable que contiene los rangos de valores y edades.
  * @param inputValue El valor medido para el ítem biofísico.
- * @returns La edad parcial calculada y redondeada.
+ * @returns La edad parcial calculada como un entero (truncado).
  */
 function interpolateAge(board: BoardWithRanges, inputValue: number): number {
-  const { minValue, maxValue, range, inverse } = board;
+  const { minValue, maxValue, range } = board;
   
-  // Si el rango de valores es un punto único, no hay nada que interpolar.
   if (minValue === maxValue) return range.minAge;
 
-  // Para los baremos marcados como 'inverse', un valor bajo en la métrica
-  // corresponde a una edad mayor. Invertimos el rango de edad para la interpolación.
-  const y1 = inverse ? range.maxAge : range.minAge;
-  const y2 = inverse ? range.minAge : range.maxAge;
+  const y1 = range.minAge;
+  const y2 = range.maxAge;
   
-  // Fórmula de interpolación lineal: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
-  // Esta fórmula maneja matemáticamente tanto los rangos crecientes (minValue < maxValue) 
-  // como los decrecientes (minValue > maxValue) de forma natural y precisa.
-  const proportion = (inputValue - minValue) / (maxValue - minValue);
-  const partialAge = y1 + (proportion * (y2 - y1));
+  const x1 = minValue;
+  const x2 = maxValue;
+  
+  const partialAge = y1 + (inputValue - x1) * (y2 - y1) / (x2 - x1);
 
-  // Se redondea al entero más cercano para obtener la edad final.
-  return Math.round(partialAge);
+  // La clave es truncar el resultado (eliminar decimales) en lugar de redondear.
+  // Esto replica el comportamiento de `parseInt` del sistema legado sobre el resultado.
+  return Math.trunc(partialAge);
 }
 // ===== FIN DE LA CORRECCIÓN =====
 
 
 // ===== INICIO DE LA CORRECCIÓN: AJUSTE DE UMBRALES DE ESTADO =====
 export function getAgeStatus(ageDifference: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
-    // Un diferencial de -2 o menos se considera rejuvenecido.
-    if (ageDifference <= -2) return 'REJUVENECIDO';
+    // Un diferencial de -3 o menos se considera rejuvenecido.
+    if (ageDifference <= -3) return 'REJUVENECIDO';
     // Un diferencial de +3 o más se considera envejecido.
     if (ageDifference >= 3) return 'ENVEJECIDO';
-    // Cualquier valor entre -1 y +2 (inclusive) se considera normal.
+    // Cualquier valor entre -2 y +2 (inclusive) se considera normal.
     return 'NORMAL';
 }
 // ===== FIN DE LA CORRECCIÓN =====
