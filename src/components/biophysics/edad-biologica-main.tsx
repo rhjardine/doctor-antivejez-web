@@ -33,7 +33,7 @@ export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistry
       // ===== INICIO DE LA MODIFICACIÓN: Hacer la card clickeable y cambiar color =====
       isClickable: true,
       onClick: onBiochemistryTestClick,
-      color: 'bg-green-600', // Un color diferente para distinguirlo
+      color: 'bg-primary', // 
       // ===== FIN DE LA MODIFICACIÓN =====
     },
     {
