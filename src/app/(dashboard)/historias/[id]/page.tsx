@@ -21,12 +21,17 @@ import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-v
 import BiophysicsHistoryView from '@/components/biophysics/biophysics-history-view';
 import PatientEditForm from '@/components/patients/PatientEditForm';
 import PatientGuide from '@/components/patient-guide/PatientGuide';
-import ClinicalSummary from '@/components/patients/ClinicalSummary'; // <-- 1. Importar el nuevo componente
+import ClinicalSummary from '@/components/patients/ClinicalSummary';
+// ===== INICIO DE LA MODIFICACIÓN: Importar el nuevo componente =====
+import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
+// ===== FIN DE LA MODIFICACIÓN =====
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
-type BiofisicaView = 'main' | 'test' | 'history';
+// ===== INICIO DE LA MODIFICACIÓN: Generalizar el estado de la vista =====
+type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'history';
+// ===== FIN DE LA MODIFICACIÓN =====
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -37,7 +42,9 @@ export default function PatientDetailPage() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('resumen');
-  const [biofisicaView, setBiofisicaView] = useState<BiofisicaView>('main');
+  // ===== INICIO DE LA MODIFICACIÓN: Usar el nuevo estado de vista =====
+  const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
+  // ===== FIN DE LA MODIFICACIÓN =====
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -47,7 +54,7 @@ export default function PatientDetailPage() {
       setActiveTab(tab as TabId);
     }
     if (tab === 'biofisica' && view === 'history') {
-      setBiofisicaView('history');
+      setActiveTestView('history');
     }
   }, [searchParams]);
 
@@ -101,8 +108,42 @@ export default function PatientDetailPage() {
 
   const handleTabClick = (tabId: TabId) => {
     setActiveTab(tabId);
-    setBiofisicaView('main');
+    // ===== INICIO DE LA MODIFICACIÓN: Resetear la vista al cambiar de pestaña =====
+    setActiveTestView('main');
+    // ===== FIN DE LA MODIFICACIÓN =====
     router.push(`/historias/${patientId}?tab=${tabId}`, { scroll: false });
+  }
+
+  const renderBiofisicaContent = () => {
+    switch (activeTestView) {
+      case 'main':
+        return (
+          <div className="relative">
+            <button 
+              onClick={() => setActiveTestView('history')}
+              className="absolute top-0 right-0 flex items-center space-x-2 px-3 py-1.5 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm disabled:opacity-50"
+              disabled={!patient.biophysicsTests || patient.biophysicsTests.length === 0}
+              title="Ver Historial de Tests"
+            >
+              <FaHistory />
+              <span>Ver Historial</span>
+            </button>
+            <EdadBiologicaMain 
+              patient={patient} 
+              onTestClick={() => setActiveTestView('biofisica')} 
+              onBiochemistryTestClick={() => setActiveTestView('bioquimica')}
+            />
+          </div>
+        );
+      case 'biofisica':
+        return <EdadBiofisicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={loadPatient} />;
+      case 'bioquimica':
+        return <EdadBioquimicaTestView patient={patient} onBack={() => setActiveTestView('main')} />;
+      case 'history':
+        return <BiophysicsHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={loadPatient} />;
+      default:
+        return null;
+    }
   }
 
   return (
@@ -155,9 +196,7 @@ export default function PatientDetailPage() {
 
       {/* Contenido de las Pestañas */}
       <div className="min-h-[400px] mt-6">
-        {/* ▼▼▼ 2. Reemplazar el placeholder por el nuevo componente ▼▼▼ */}
         {activeTab === 'resumen' && <ClinicalSummary patient={patient} />}
-        {/* ▲▲▲ Fin del reemplazo ▲▲▲ */}
         
         {activeTab === 'historia' && (
           isEditing ? (
@@ -210,34 +249,9 @@ export default function PatientDetailPage() {
           )
         )}
         
-        {activeTab === 'biofisica' && (
-          <>
-            {biofisicaView === 'main' && (
-              <div className="relative">
-                <button 
-                  onClick={() => setBiofisicaView('history')}
-                  className="absolute top-0 right-0 flex items-center space-x-2 px-3 py-1.5 text-sm text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm disabled:opacity-50"
-                  disabled={!patient.biophysicsTests || patient.biophysicsTests.length === 0}
-                  title="Ver Historial de Tests"
-                >
-                  <FaHistory />
-                  <span>Ver Historial</span>
-                </button>
-                <EdadBiologicaMain patient={patient} onTestClick={() => setBiofisicaView('test')} />
-              </div>
-            )}
-            {biofisicaView === 'test' && (
-              <EdadBiofisicaTestView patient={patient} onBack={() => setBiofisicaView('main')} onTestComplete={loadPatient} />
-            )}
-            {biofisicaView === 'history' && (
-              <BiophysicsHistoryView 
-                patient={patient} 
-                onBack={() => setBiofisicaView('main')} 
-                onHistoryChange={loadPatient} 
-              />
-            )}
-          </>
-        )}
+        {/* ===== INICIO DE LA MODIFICACIÓN: Usar el nuevo renderizado condicional ===== */}
+        {activeTab === 'biofisica' && renderBiofisicaContent()}
+        {/* ===== FIN DE LA MODIFICACIÓN ===== */}
 
         {activeTab === 'guia' && (
           <PatientGuide patient={patient} />

@@ -1,17 +1,16 @@
-import { PatientWithDetails } from '@/types'; // Se formaliza la importación del tipo correcto
+import { PatientWithDetails } from '@/types';
 import { FaHeartbeat, FaFlask, FaDna, FaAtom } from 'react-icons/fa';
 
 // Definición de las propiedades que espera el componente.
 interface EdadBiologicaMainProps {
-  // Se especifica que la prop 'patient' debe cumplir con el contrato 'PatientWithDetails',
-  // que incluye la relación con los tests biofísicos.
   patient: PatientWithDetails;
   onTestClick: () => void;
+  // ===== INICIO DE LA MODIFICACIÓN: Añadir prop para el nuevo test =====
+  onBiochemistryTestClick: () => void;
+  // ===== FIN DE LA MODIFICACIÓN =====
 }
 
-export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologicaMainProps) {
-  // Ahora TypeScript sabe que 'patient.biophysicsTests' es una propiedad válida.
-  // El encadenamiento opcional (?.) sigue siendo una buena práctica por si el array está vacío.
+export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistryTestClick }: EdadBiologicaMainProps) {
   const lastBiophysicsTest = patient.biophysicsTests?.[0];
 
   const testCards = [
@@ -20,16 +19,22 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
       title: 'EDAD BIOFÍSICA',
       icon: FaHeartbeat,
       value: lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge) : '--',
+      // ===== INICIO DE LA MODIFICACIÓN: Hacer la card clickeable =====
       isClickable: true,
+      onClick: onTestClick,
       color: 'bg-primary',
+      // ===== FIN DE LA MODIFICACIÓN =====
     },
     {
       id: 'bioquimica',
       title: 'EDAD BIOQUÍMICA',
       icon: FaFlask,
       value: '--',
-      isClickable: false,
-      color: 'bg-gray-400',
+      // ===== INICIO DE LA MODIFICACIÓN: Hacer la card clickeable y cambiar color =====
+      isClickable: true,
+      onClick: onBiochemistryTestClick,
+      color: 'bg-green-600', // Un color diferente para distinguirlo
+      // ===== FIN DE LA MODIFICACIÓN =====
     },
     {
       id: 'orthomolecular',
@@ -37,6 +42,7 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
       icon: FaAtom,
       value: '--',
       isClickable: false,
+      onClick: undefined,
       color: 'bg-gray-400',
     },
     {
@@ -45,17 +51,17 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
       icon: FaDna,
       value: '--',
       isClickable: false,
+      onClick: undefined,
       color: 'bg-gray-400',
     },
   ];
 
-  // Función para determinar el color del medidor según la diferencia
   const getGaugeColor = (diff: number): string => {
     if (diff <= -7) return 'text-status-green';
     if (diff >= -2 && diff <= 3) return 'text-status-yellow';
     return 'text-status-red';
   };
-  // Datos para los medidores del perfil multidimensional
+  
   const profileData = [
     {
       title: 'Perfil Cardiovascular',
@@ -86,7 +92,6 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
 
   return (
     <div className="space-y-8">
-      {/* Sección Superior: Edad Cronológica vs Edad Biológica */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Edad Cronológica Vs Edad Biológica</h2>
 
@@ -97,7 +102,7 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
             return (
               <div
                 key={card.id}
-                onClick={card.isClickable ? onTestClick : undefined}
+                onClick={card.onClick}
                 className={`${card.color} rounded-xl p-6 text-white transition-all ${
                   card.isClickable
                     ? 'cursor-pointer hover:shadow-lg hover:scale-105'
@@ -117,7 +122,7 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
                   {card.value !== '--' ? `${card.value} años` : card.value}
                 </p>
 
-                {card.isClickable && lastBiophysicsTest && (
+                {card.id === 'biofisica' && lastBiophysicsTest && (
                   <p className="text-sm mt-2 opacity-80">
                     Diferencia: {lastBiophysicsTest.differentialAge > 0 ? '+' : ''}{Math.round(lastBiophysicsTest.differentialAge)} años
                   </p>
@@ -128,7 +133,6 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
         </div>
       </div>
 
-      {/* Sección Inferior: Perfil Multidimensional */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Perfil Multidimensional de Envejecimiento</h2>
 
@@ -151,7 +155,6 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
                   <span className={`font-medium ${colorClass}`}>{profile.testAge} años</span>
                 </div>
 
-                {/* Visual Gauge */}
                 <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className={`absolute left-0 top-0 h-full rounded-full transition-all ${
@@ -174,7 +177,6 @@ export default function EdadBiologicaMain({ patient, onTestClick }: EdadBiologic
         </div>
       </div>
 
-      {/* Mensaje si no hay tests */}
       {!lastBiophysicsTest && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
           <p className="text-blue-700">
