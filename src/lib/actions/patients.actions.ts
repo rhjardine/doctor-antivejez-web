@@ -1,9 +1,9 @@
 'use server';
 
-// ===== INICIO DE LA CORRECCIÓN: Importar 'Prisma' para el tipado =====
-import { prisma, Prisma } from '@/lib/db';
+import { prisma } from '@/lib/db';
+// ===== INICIO DE LA CORRECCIÓN: Importar 'Prisma' desde @prisma/client =====
+import { Prisma, Patient } from '@prisma/client';
 // ===== FIN DE LA CORRECCIÓN =====
-import { Patient } from '@prisma/client';
 import { PatientFormData, patientSchema } from '@/utils/validation';
 import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
@@ -139,7 +139,6 @@ export async function searchPatients({ query, page = 1, limit = 10 }: { query: s
   try {
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
     
-    // ===== INICIO DE LA CORRECCIÓN: Tipar explícitamente la cláusula 'where' =====
     const whereClause: Prisma.PatientWhereInput = {
       OR: [
         { firstName: { contains: query, mode: 'insensitive' } },
@@ -149,7 +148,6 @@ export async function searchPatients({ query, page = 1, limit = 10 }: { query: s
         ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
       ],
     };
-    // ===== FIN DE LA CORRECCIÓN =====
 
     const skip = (page - 1) * limit;
 
