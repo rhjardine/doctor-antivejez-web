@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
+const ITEMS_PER_PAGE = 10;
 
 export default function HistoriasPage() {
   const router = useRouter();
@@ -21,15 +22,21 @@ export default function HistoriasPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadPatients();
-  }, []);
+  // --- Estados para paginación ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const loadPatients = async () => {
+  useEffect(() => {
+    loadPatients(currentPage);
+  }, [currentPage]);
+
+  const loadPatients = async (page: number) => {
+    setLoading(true);
     try {
-      const result = await getAllPatients();
+      const result = await getAllPatients({ page, limit: ITEMS_PER_PAGE });
       if (result.success && result.patients) {
         setPatients(result.patients as Patient[]);
+        setTotalPages(result.totalPages || 0);
       }
     } catch (error) {
       toast.error('Error al cargar pacientes');
@@ -39,16 +46,16 @@ export default function HistoriasPage() {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      loadPatients();
-      return;
-    }
-
+    setCurrentPage(1); // Reset page to 1 on new search
     setLoading(true);
     try {
-      const result = await searchPatients(searchQuery);
+      const result = searchQuery.trim()
+        ? await searchPatients({ query: searchQuery, page: 1, limit: ITEMS_PER_PAGE })
+        : await getAllPatients({ page: 1, limit: ITEMS_PER_PAGE });
+
       if (result.success && result.patients) {
         setPatients(result.patients as Patient[]);
+        setTotalPages(result.totalPages || 0);
       }
     } catch (error) {
       toast.error('Error al buscar pacientes');
@@ -56,7 +63,7 @@ export default function HistoriasPage() {
       setLoading(false);
     }
   };
-
+  
   const handleDelete = async () => {
     if (!patientToDelete) return;
 
@@ -64,7 +71,7 @@ export default function HistoriasPage() {
       const result = await deletePatient(patientToDelete);
       if (result.success) {
         toast.success('Paciente eliminado exitosamente');
-        loadPatients();
+        loadPatients(currentPage); // Recargar la página actual
       } else {
         toast.error(result.error || 'Error al eliminar paciente');
       }
@@ -181,7 +188,6 @@ export default function HistoriasPage() {
                   </div>
                 </div>
 
-                {/* ===== INICIO DE LA CORRECCIÓN (GRID VIEW) ===== */}
                 <div className="mt-4 flex justify-end space-x-2">
                   <button onClick={() => router.push(`/historias/${patient.id}?tab=resumen`)} className="p-2 text-green-600 hover:bg-green-50 rounded" title="Ver Resumen Clínico"><FaFileMedicalAlt /></button>
                   <button onClick={() => router.push(`/historias/${patient.id}?tab=historia`)} className="p-2 text-cyan-600 hover:bg-cyan-50 rounded" title="Ver Historia Médica"><FaEdit /></button>
@@ -189,35 +195,36 @@ export default function HistoriasPage() {
                   <button onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)} className="p-2 text-purple-600 hover:bg-purple-50 rounded" title="Ver Historial de Tests"><FaHistory /></button>
                   <button onClick={() => { setPatientToDelete(patient.id); setDeleteModalOpen(true); }} className="p-2 text-red-600 hover:bg-red-50 rounded" title="Eliminar Registro de Paciente"><FaTrash /></button>
                 </div>
-                {/* ===== FIN DE LA CORRECCIÓN (GRID VIEW) ===== */}
               </div>
             );
           })}
         </div>
       ) : (
         /* List View */
-        <div className="card overflow-hidden">
+        <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto custom-scrollbar-tabs">
             <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">PACIENTE</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">N° CONTROL</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">IDENTIFICACIÓN</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">EDAD</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">PROFESIONAL</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">FECHA REGISTRO</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">ACCIONES</th>
+              {/* ===== INICIO DE LA MODIFICACIÓN: ESTILO DE CABECERA ===== */}
+              <thead className="bg-primary-dark">
+                <tr>
+                  <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">PACIENTE</th>
+                  <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">N° CONTROL</th>
+                  <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">IDENTIFICACIÓN</th>
+                  <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">EDAD</th>
+                  <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">PROFESIONAL</th>
+                  <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">FECHA REGISTRO</th>
+                  <th className="text-left py-3 px-4 font-medium text-white uppercase tracking-wider">ACCIONES</th>
                 </tr>
               </thead>
-              <tbody>
+              {/* ===== FIN DE LA MODIFICACIÓN ===== */}
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {patients.map((patient) => {
                   const isMale = patient.gender.startsWith('MASCULINO');
                   const iconBgColor = isMale ? 'bg-blue-100' : 'bg-pink-100';
                   const iconTextColor = isMale ? 'text-blue-600' : 'text-pink-600';
 
                   return (
-                    <tr key={patient.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <tr key={patient.id} className="hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-3">
                           <div className={`w-10 h-10 rounded-full ${iconBgColor} flex items-center justify-center flex-shrink-0`}>
@@ -239,7 +246,6 @@ export default function HistoriasPage() {
                       <td className="py-3 px-4 text-gray-700">Dr. Admin</td>
                       <td className="py-3 px-4 text-gray-700">{formatDate(patient.createdAt)}</td>
                       <td className="py-3 px-4">
-                        {/* ===== INICIO DE LA CORRECCIÓN (LIST VIEW) ===== */}
                         <div className="flex items-center space-x-2">
                           <button onClick={() => router.push(`/historias/${patient.id}?tab=resumen`)} className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Ver Resumen Clínico"><FaFileMedicalAlt /></button>
                           <button onClick={() => router.push(`/historias/${patient.id}?tab=historia`)} className="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded" title="Ver Historia Médica"><FaEdit /></button>
@@ -247,7 +253,6 @@ export default function HistoriasPage() {
                           <button onClick={() => router.push(`/historias/${patient.id}?tab=biofisica&view=history`)} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Ver Historial de Tests"><FaHistory /></button>
                           <button onClick={() => { setPatientToDelete(patient.id); setDeleteModalOpen(true); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar Registro de Paciente"><FaTrash /></button>
                         </div>
-                        {/* ===== FIN DE LA CORRECCIÓN (LIST VIEW) ===== */}
                       </td>
                     </tr>
                   );
@@ -255,6 +260,17 @@ export default function HistoriasPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* --- Controles de Paginación --- */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-6">
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border rounded-md disabled:opacity-50 hover:bg-gray-100 transition-colors">&laquo;</button>
+          <span className="text-sm text-gray-600">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border rounded-md disabled:opacity-50 hover:bg-gray-100 transition-colors">&raquo;</button>
         </div>
       )}
 

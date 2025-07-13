@@ -98,61 +98,83 @@ export async function getPatientWithTests(id: string) {
   }
 }
 
-export async function getAllPatients(userId?: string) {
+// ===== INICIO DE LA MODIFICACIÓN: PAGINACIÓN =====
+export async function getAllPatients({ page = 1, limit = 10 }: { page?: number, limit?: number } = {}) {
   try {
-    const where = userId ? { userId } : {};
-    const patients = await prisma.patient.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    const skip = (page - 1) * limit;
+
+    const [patients, totalPatients] = await prisma.$transaction([
+      prisma.patient.findMany({
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          biophysicsTests: {
+            orderBy: { testDate: 'desc' },
+            take: 1,
           },
         },
-        biophysicsTests: {
-          orderBy: { testDate: 'desc' },
-          take: 1,
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { success: true, patients };
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.patient.count(),
+    ]);
+
+    const totalPages = Math.ceil(totalPatients / limit);
+    return { success: true, patients, totalPages, currentPage: page };
   } catch (error) {
     console.error('Error obteniendo pacientes:', error);
-    return { success: false, error: 'Error al obtener los pacientes', patients: [] };
+    return { success: false, error: 'Error al obtener los pacientes', patients: [], totalPages: 0 };
   }
 }
 
-export async function searchPatients(query: string) {
+export async function searchPatients({ query, page = 1, limit = 10 }: { query: string, page?: number, limit?: number }) {
   try {
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
+    const whereClause = {
+      OR: [
+        { firstName: { contains: query, mode: 'insensitive' } },
+        { lastName: { contains: query, mode: 'insensitive' } },
+        { identification: { contains: query, mode: 'insensitive' } },
+        { email: { contains: query, mode: 'insensitive' } },
+        ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
+      ],
+    };
+    const skip = (page - 1) * limit;
+
+    const [patients, totalPatients] = await prisma.$transaction([
+        prisma.patient.findMany({
+            where: whereClause,
+            skip,
+            take: limit,
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                 biophysicsTests: {
+                  orderBy: { testDate: 'desc' },
+                  take: 1,
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        }),
+        prisma.patient.count({ where: whereClause })
+    ]);
     
-    const patients = await prisma.patient.findMany({
-      where: {
-        OR: [
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
-          { identification: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-          ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
-        ],
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { success: true, patients };
+    const totalPages = Math.ceil(totalPatients / limit);
+    return { success: true, patients, totalPages, currentPage: page };
   } catch (error) {
     console.error('Error buscando pacientes:', error);
-    return { success: false, error: 'Error al buscar pacientes', patients: [] };
+    return { success: false, error: 'Error al buscar pacientes', patients: [], totalPages: 0 };
   }
 }
+// ===== FIN DE LA MODIFICACIÓN =====
