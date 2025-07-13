@@ -1,7 +1,8 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { Patient } from '@prisma/client';
+// Importar 'Prisma' para acceder a los tipos generados
+import { Patient, Prisma } from '@prisma/client';
 import { PatientFormData, patientSchema } from '@/utils/validation';
 import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
@@ -22,6 +23,7 @@ export async function createPatient(formData: PatientFormData & { userId: string
     });
 
     revalidatePath('/historias');
+    revalidatePath('/dashboard'); // Revalidar dashboard al crear un paciente
     return { success: true, patient };
   } catch (error) {
     console.error('Error creando paciente:', error);
@@ -63,6 +65,7 @@ export async function deletePatient(id: string) {
       prisma.patient.delete({ where: { id } }),
     ]);
     revalidatePath('/historias');
+    revalidatePath('/dashboard'); // Revalidar dashboard al eliminar un paciente
     return { success: true };
   } catch (error) {
     console.error('Error eliminando paciente:', error);
@@ -98,83 +101,66 @@ export async function getPatientWithTests(id: string) {
   }
 }
 
-// ===== INICIO DE LA MODIFICACIÓN: PAGINACIÓN =====
-export async function getAllPatients({ page = 1, limit = 10 }: { page?: number, limit?: number } = {}) {
+export async function getAllPatients(userId?: string) {
   try {
-    const skip = (page - 1) * limit;
-
-    const [patients, totalPatients] = await prisma.$transaction([
-      prisma.patient.findMany({
-        skip,
-        take: limit,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          biophysicsTests: {
-            orderBy: { testDate: 'desc' },
-            take: 1,
+    const where = userId ? { userId } : {};
+    const patients = await prisma.patient.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.patient.count(),
-    ]);
-
-    const totalPages = Math.ceil(totalPatients / limit);
-    return { success: true, patients, totalPages, currentPage: page };
+        biophysicsTests: {
+          orderBy: { testDate: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, patients };
   } catch (error) {
     console.error('Error obteniendo pacientes:', error);
-    return { success: false, error: 'Error al obtener los pacientes', patients: [], totalPages: 0 };
+    return { success: false, error: 'Error al obtener los pacientes', patients: [] };
   }
 }
 
-export async function searchPatients({ query, page = 1, limit = 10 }: { query: string, page?: number, limit?: number }) {
+// --- FUNCIÓN CORREGIDA ---
+export async function searchPatients(query: string) {
   try {
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
-    const whereClause = {
+    
+    // Se define explícitamente el tipo de la cláusula 'where' para satisfacer a TypeScript
+    const whereClause: Prisma.PatientWhereInput = {
       OR: [
         { firstName: { contains: query, mode: 'insensitive' } },
         { lastName: { contains: query, mode: 'insensitive' } },
         { identification: { contains: query, mode: 'insensitive' } },
         { email: { contains: query, mode: 'insensitive' } },
+        // El operador 'spread' condicional se mantiene igual
         ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
       ],
     };
-    const skip = (page - 1) * limit;
 
-    const [patients, totalPatients] = await prisma.$transaction([
-        prisma.patient.findMany({
-            where: whereClause,
-            skip,
-            take: limit,
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                 biophysicsTests: {
-                  orderBy: { testDate: 'desc' },
-                  take: 1,
-                },
-            },
-            orderBy: { createdAt: 'desc' },
-        }),
-        prisma.patient.count({ where: whereClause })
-    ]);
-    
-    const totalPages = Math.ceil(totalPatients / limit);
-    return { success: true, patients, totalPages, currentPage: page };
+    const patients = await prisma.patient.findMany({
+      where: whereClause, // Se usa la cláusula tipada
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, patients };
   } catch (error) {
     console.error('Error buscando pacientes:', error);
-    return { success: false, error: 'Error al buscar pacientes', patients: [], totalPages: 0 };
+    return { success: false, error: 'Error al buscar pacientes', patients: [] };
   }
 }
-// ===== FIN DE LA MODIFICACIÓN =====
