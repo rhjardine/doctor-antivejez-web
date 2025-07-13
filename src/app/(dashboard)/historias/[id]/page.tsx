@@ -21,6 +21,7 @@ import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-v
 import BiophysicsHistoryView from '@/components/biophysics/biophysics-history-view';
 import PatientEditForm from '@/components/patients/PatientEditForm';
 import PatientGuide from '@/components/patient-guide/PatientGuide';
+import ClinicalSummary from '@/components/patients/ClinicalSummary'; // <-- 1. Importar el nuevo componente
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
@@ -57,7 +58,6 @@ export default function PatientDetailPage() {
   }, [patientId]);
 
   const loadPatient = async () => {
-    // Para evitar un parpadeo, no activamos el loading en recargas, solo en la carga inicial.
     if (!patient) {
         setLoading(true);
     }
@@ -155,7 +155,9 @@ export default function PatientDetailPage() {
 
       {/* Contenido de las Pestañas */}
       <div className="min-h-[400px] mt-6">
-        {activeTab === 'resumen' && <div className="card text-center py-12"><FaFileMedicalAlt className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Resumen Clínico</h3><p className="text-gray-500">Esta sección mostrará un resumen inteligente del estado del paciente. Próximamente.</p></div>}
+        {/* ▼▼▼ 2. Reemplazar el placeholder por el nuevo componente ▼▼▼ */}
+        {activeTab === 'resumen' && <ClinicalSummary patient={patient} />}
+        {/* ▲▲▲ Fin del reemplazo ▲▲▲ */}
         
         {activeTab === 'historia' && (
           isEditing ? (
