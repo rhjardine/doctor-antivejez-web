@@ -6,7 +6,7 @@ import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, Parti
 import { getBiophysicsBoardsAndRanges, saveBiophysicsTest } from '@/lib/actions/biophysics.actions';
 import { calculateBiofisicaResults, getAgeStatus, getStatusColor } from '@/utils/biofisica-calculations';
 import { toast } from 'sonner';
-import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle, FaUndo, FaSave } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
 interface EdadBiofisicaTestViewProps {
@@ -100,11 +100,9 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     setIsSaved(false);
   };
 
-  // --- Función unificada para Calcular y Guardar ---
   const handleCalculateAndSave = async () => {
     setProcessing(true);
 
-    // 1. Validación
     const invalidFields = [];
     for (const item of BIOPHYSICS_ITEMS) {
       const value = formValues[item.key];
@@ -126,20 +124,18 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       return;
     }
 
-    // 2. Cálculo
     let calculationResult: CalculationResult;
     try {
       const isAthlete = patient.gender.includes('DEPORTIVO');
       calculationResult = calculateBiofisicaResults(boards, formValues, patient.chronologicalAge, patient.gender, isAthlete);
       setResults(calculationResult);
-      setCalculated(true); // Marca como calculado
+      setCalculated(true);
     } catch (error: any) {
       toast.error(`Error de cálculo: ${error.message}`);
       setProcessing(false);
       return;
     }
 
-    // 3. Guardado
     try {
       const testData = {
         patientId: patient.id,
@@ -180,10 +176,9 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     }
   };
   
-  // --- Función para Habilitar la Edición ---
   const handleEdit = () => {
     setIsSaved(false);
-    setCalculated(false); // Forzar un nuevo cálculo
+    setCalculated(false);
     toast.info("El formulario ha sido habilitado para edición.");
   };
 
@@ -242,12 +237,12 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
                   {item.hasDimensions ? (
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')} className="input-test" />
-                      <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')} className="input-test" />
-                      <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')} className="input-test" />
+                      <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')} className="input" disabled={isSaved || processing} />
+                      <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')} className="input" disabled={isSaved || processing} />
+                      <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')} className="input" disabled={isSaved || processing} />
                     </div>
                   ) : (
-                    <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))} className="input-test w-full" />
+                    <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))} className="input w-full" disabled={isSaved || processing} />
                   )}
 
                   {calculated && (
@@ -263,7 +258,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
             })}
           </div>
 
-          {/* --- BOTONES ACTUALIZADOS --- */}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button
               type="button"
@@ -271,25 +265,27 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
               disabled={processing || isSaved}
               className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
-              <FaCalculator />
-              <span>{processing ? 'Procesando...' : 'Calcular Test'}</span>
+              <FaSave />
+              <span>{processing ? 'Procesando...' : 'Calcular y Guardar'}</span>
             </button>
 
             <button
               type="button"
               onClick={handleEdit}
-              disabled={!isSaved}
+              disabled={!isSaved || processing}
               className="w-full bg-yellow-500 text-white font-medium py-3 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               <FaEdit />
-              <span>Editar Test</span>
+              <span>Editar</span>
             </button>
 
             <button
               type="button"
               onClick={onBack}
-              className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors"
+              disabled={processing}
+              className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              <FaUndo />
               <span>Volver</span>
             </button>
           </div>
