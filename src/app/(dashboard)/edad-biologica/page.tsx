@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // CAMBIO AQUI: Importar useRouter
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getAllPatients } from '@/lib/actions/patients.actions';
+// ===== INICIO DE LA CORRECCIÓN: Usar la función renombrada =====
+import { getPaginatedPatients } from '@/lib/actions/patients.actions';
+// ===== FIN DE LA CORRECCIÓN =====
 import { toast } from 'sonner';
 import {
   FaArrowLeft,
@@ -19,7 +21,7 @@ import { formatDate } from '@/utils/date';
 import type { Patient, PatientWithDetails } from '@/types';
 
 export default function EdadBiologicaPage() {
-  const router = useRouter(); // CAMBIO AQUI: Inicializar el hook useRouter
+  const router = useRouter();
   const [patients, setPatients] = useState<PatientWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,9 +29,12 @@ export default function EdadBiologicaPage() {
   useEffect(() => {
     const loadPatients = async () => {
       try {
-        const result = await getAllPatients();
-        if (result.success) {
-          const patientsWithTests = (result.patients || []).filter(
+        // ===== INICIO DE LA CORRECCIÓN: Llamar a la función correcta =====
+        // Llamamos a la función con paginación sin argumentos para obtener la primera página por defecto.
+        const result = await getPaginatedPatients();
+        // ===== FIN DE LA CORRECCIÓN =====
+        if (result.success && result.patients) {
+          const patientsWithTests = (result.patients as PatientWithDetails[]).filter(
             (patient: PatientWithDetails) => patient.biophysicsTests && patient.biophysicsTests.length > 0
           );
           setPatients(patientsWithTests);
@@ -258,7 +263,7 @@ export default function EdadBiologicaPage() {
                   {/* Acciones */}
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => router.push(`/edad-biologica/${patient.id}`)}
+                      onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)}
                       className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
                     >
                       <FaEye />
@@ -266,7 +271,7 @@ export default function EdadBiologicaPage() {
                     </button>
 
                     <button
-                      onClick={() => router.push(`/edad-biologica/${patient.id}/nuevo-test`)}
+                      onClick={() => router.push(`/historias/${patient.id}?tab=biofisica`)}
                       className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                       title="Nuevo Test"
                     >
