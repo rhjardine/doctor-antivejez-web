@@ -26,16 +26,18 @@ const BIOPHYSICS_KEYS = [
   'staticBalance', 'skinHydration', 'systolicPressure', 'diastolicPressure'
 ] as const;
 
+// ===== INICIO DE LA CORRECCIÓN: Corregir claves del mapa =====
 const PARTIAL_AGE_KEYS_MAP: Record<typeof BIOPHYSICS_KEYS[number], keyof PartialAges> = {
   fatPercentage: 'fatAge',
   bmi: 'bmiAge',
   digitalReflexes: 'reflexesAge',
   visualAccommodation: 'visualAge',
-  balanceAge: 'balanceAge',
+  staticBalance: 'balanceAge',
   skinHydration: 'hydrationAge',
-  systolicAge: 'systolicAge',
-  diastolicAge: 'diastolicAge',
+  systolicPressure: 'systolicAge',
+  diastolicPressure: 'diastolicAge',
 };
+// ===== FIN DE LA CORRECCIÓN =====
 
 // --- Lógica de Cálculo Principal (Sin cambios) ---
 export function calculateBiofisicaResults(
@@ -137,7 +139,7 @@ function calculatePartialAge(
 }
 
 
-// ===== INICIO DE LA CORRECCIÓN: LÓGICA DE INTERPOLACIÓN CALIBRADA =====
+// ===== LÓGICA DE INTERPOLACIÓN CALIBRADA =====
 /**
  * Calcula la edad parcial replicando la fórmula de interpolación escalonada del sistema legado.
  * @param board El baremo aplicable que contiene los rangos de valores y edades.
@@ -207,7 +209,6 @@ function interpolateAge(board: BoardWithRanges, inputValue: number): number {
 
   return calculatedAge;
 }
-// ===== FIN DE LA CORRECCIÓN =====
 
 
 // --- Funciones de Estado y Color (Sin cambios) ---
