@@ -9,14 +9,17 @@ import { AGE_DIFF_RANGES } from '@/lib/constants';
 // ===================================================================================
 
 class LegacyBiophysicalAgeCalculator {
-    private ageRanges: number[];
+    private ageRanges: number[][]; // CORRECCIÓN: Ahora es un array de pares [min, max]
     private ranges: Record<string, number[][]>;
 
     constructor() {
-        // Define los puntos de inicio de cada rango de edad.
-        this.ageRanges = [21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 91, 98, 105, 112];
+        // CORRECCIÓN: Definir los rangos de edad completos para evitar errores de cálculo en los extremos.
+        this.ageRanges = [
+            [21, 28], [28, 35], [35, 42], [42, 49], [49, 56], [56, 63], [63, 70], 
+            [70, 77], [77, 84], [84, 91], [91, 98], [98, 105], [105, 112], [112, 120]
+        ];
         
-        // Tablas de rangos para cada parámetro, extraídas del documento de fórmulas.
+        // Tablas de rangos para cada parámetro (sin cambios, ya eran correctas).
         this.ranges = {
             bodyFatFemale: [[18, 22], [22, 26], [26, 29], [29, 32], [32, 35], [35, 38], [38, 41], [41, 44], [44, 47], [47, 50], [50, 53], [53, 56], [56, 59], [59, 62]],
             bodyFatMale: [[10, 14], [14, 18], [18, 21], [21, 24], [24, 27], [27, 30], [30, 33], [33, 36], [36, 39], [39, 42], [42, 45], [45, 48], [48, 51], [51, 54]],
@@ -33,7 +36,8 @@ class LegacyBiophysicalAgeCalculator {
     private interpolate(value: number, range1: number, range2: number, age1: number, age2: number): number {
         if (range1 === range2) return age1;
         const result = age1 + (value - range1) * (age2 - age1) / (range2 - range1);
-        return Math.trunc(result); // Truncar para coincidir con el sistema legado
+        // CORRECCIÓN: Usar Math.ceil() para redondear hacia arriba, que coincide con los resultados esperados.
+        return Math.ceil(result);
     }
     
     private getAgeFromRanges(value: number, parameter: string): number {
@@ -46,12 +50,12 @@ class LegacyBiophysicalAgeCalculator {
             const upper = Math.max(min, max);
 
             if (value >= lower && value <= upper) {
-                const age1 = this.ageRanges[i];
-                const age2 = i + 1 < this.ageRanges.length ? this.ageRanges[i+1] : age1;
+                // CORRECCIÓN: Obtener el rango de edad completo [minAge, maxAge]
+                const [age1, age2] = this.ageRanges[i];
                 return this.interpolate(value, min, max, age1, age2);
             }
         }
-        return 0; // Fallback si no se encuentra el rango
+        return 0; // Fallback
     }
     
     public calculate(params: any) {
