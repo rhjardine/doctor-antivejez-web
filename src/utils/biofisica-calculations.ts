@@ -1,196 +1,172 @@
-// test-biofisica-calculations.js
-// Archivo de prueba para verificar los cálculos de edad biofísica
+// src/utils/biofisica-calculations.ts
+import type { BoardWithRanges, FormValues, PartialAges, CalculationResult } from '@/types/biophysics';
+import { AGE_DIFF_RANGES, STATUS_COLORS } from '@/lib/constants';
 
-// Simulación de los datos del ejemplo
-const testData = {
-  // Paciente femenino de 73 años
-  cronoAge: 73,
-  gender: 'FEMENINO',
-  isAthlete: false,
-
-  formValues: {
-    fatPercentage: 34.5,        // Debe dar 55 años
-    bmi: 34.5,                  // Debe dar 31 años  
-    digitalReflexes: {          // 4-3-2 promedio = 3, debe dar 98 años
-      high: 4,
-      long: 3, 
-      width: 2
-    },
-    visualAccommodation: 35,    // Debe dar 81 años
-    staticBalance: {            // 1-1-1 promedio = 1, debe dar 112 años
-      high: 1,
-      long: 1,
-      width: 1
-    },
-    skinHydration: 120,         // Debe dar 120 años
-    systolicPressure: 152,      // Debe dar 58 años
-    diastolicPressure: 80       // Debe dar 49 años
-  }
-};
-
-// Simulación de los rangos de edad
-const mockRanges = [
-  { id: 1, minAge: 21, maxAge: 28 }, { id: 2, minAge: 28, maxAge: 35 },
-  { id: 3, minAge: 35, maxAge: 42 }, { id: 4, minAge: 42, maxAge: 49 },
-  { id: 5, minAge: 49, maxAge: 56 }, { id: 6, minAge: 56, maxAge: 63 },
-  { id: 7, minAge: 63, maxAge: 70 }, { id: 8, minAge: 70, maxAge: 77 },
-  { id: 9, minAge: 77, maxAge: 84 }, { id: 10, minAge: 84, maxAge: 91 },
-  { id: 11, minAge: 91, maxAge: 98 }, { id: 12, minAge: 98, maxAge: 105 },
-  { id: 13, minAge: 105, maxAge: 112 }, { id: 14, minAge: 112, maxAge: 120 }
-];
-
-// Simulación de los baremos (boards) corregidos
-const mockBoards = [
-  // % Grasa Femenino - 34.5% debe estar en rango 5 (32-35) = 49-56 años
-  { name: 'female_fat', minValue: 32, maxValue: 35, range: { minAge: 49, maxAge: 56 }, inverse: false },
-
-  // IMC - 34.5 debe estar en rango 6 (33-36) = 56-63 años  
-  { name: 'body_mass', minValue: 33, maxValue: 36, range: { minAge: 56, maxAge: 63 }, inverse: false },
-
-  // Reflejos Digitales - promedio 3 debe estar en rango 12 (2-3) = 98-105 años
-  { name: 'digital_reflections', minValue: 2, maxValue: 3, range: { minAge: 98, maxAge: 105 }, inverse: false },
-
-  // Acomodación Visual - 35 debe estar en rango 9 (33-37) = 77-84 años
-  { name: 'visual_accommodation', minValue: 33, maxValue: 37, range: { minAge: 77, maxAge: 84 }, inverse: false },
-
-  // Balance Estático - promedio 1 debe estar en rango 14 (0-1) = 112-120 años
-  { name: 'static_balance', minValue: 0, maxValue: 1, range: { minAge: 112, maxAge: 120 }, inverse: false },
-
-  // Hidratación Cutánea - 120 debe estar en rango 14 (112-120) = 112-120 años
-  { name: 'quaten_hydration', minValue: 112, maxValue: 120, range: { minAge: 112, maxAge: 120 }, inverse: false },
-
-  // Sistólica - 152 debe estar en rango 6 (150-160) = 56-63 años
-  { name: 'systolic_blood_pressure', minValue: 150, maxValue: 160, range: { minAge: 56, maxAge: 63 }, inverse: false },
-
-  // Diastólica - 80 debe estar en rango 5 (80-85) = 49-56 años
-  { name: 'diastolic_blood_pressure', minValue: 80, maxValue: 85, range: { minAge: 49, maxAge: 56 }, inverse: false }
-];
-
-// Función de interpolación lineal
-function interpolateAge(board, inputValue) {
+/**
+ * Interpola la edad biofísica basándose en el valor de entrada y un baremo (board) específico.
+ * @param board - El baremo que contiene los rangos de valores y edades.
+ * @param inputValue - El valor del test del paciente.
+ * @returns La edad biofísica calculada.
+ */
+function interpolateAge(board: BoardWithRanges, inputValue: number): number {
   const { minValue, maxValue, range, inverse } = board;
   const { minAge, maxAge } = range;
 
-  if (minValue === maxValue) return minAge;
-
-  if (inverse) {
-    const proportion = (inputValue - minValue) / (maxValue - minValue);
-    const calculatedAge = maxAge - (proportion * (maxAge - minAge));
-    return Math.round(calculatedAge);
-  } else {
-    const proportion = (inputValue - minValue) / (maxValue - minValue);
-    const calculatedAge = minAge + (proportion * (maxAge - minAge));
-    return Math.round(calculatedAge);
+  // Si el rango de valores es un punto único, devuelve la edad mínima del rango.
+  if (minValue === maxValue) {
+    return minAge;
   }
+
+  // Asegura que el valor de entrada no se salga de los límites del baremo.
+  const clampedValue = Math.max(minValue, Math.min(maxValue, inputValue));
+
+  // Calcula la proporción del valor dentro del rango (de 0 a 1).
+  const proportion = (clampedValue - minValue) / (maxValue - minValue);
+
+  // Aplica la interpolación.
+  let calculatedAge: number;
+  if (inverse) {
+    // Para valores inversos, una mayor entrada resulta en una menor edad.
+    calculatedAge = maxAge - (proportion * (maxAge - minAge));
+  } else {
+    // Para valores directos, una mayor entrada resulta en una mayor edad.
+    calculatedAge = minAge + (proportion * (maxAge - minAge));
+  }
+
+  return calculatedAge; // Se devuelve sin redondear para mayor precisión en el cálculo final.
 }
 
-// Función para calcular promedio de dimensiones
-function calculateDimensionsAverage(dimensions) {
+/**
+ * Calcula el promedio de las tres dimensiones (alto, largo, ancho).
+ * @param dimensions - Objeto con las tres dimensiones.
+ * @returns El promedio.
+ */
+function calculateDimensionsAverage(dimensions: { high: number; long: number; width: number }): number {
   return (dimensions.high + dimensions.long + dimensions.width) / 3;
 }
 
-// Función principal de prueba
-function testBiofisicaCalculations() {
-  console.log('=== PRUEBA DE CÁLCULOS BIOFÍSICOS ===\n');
-  console.log('Paciente: Femenino, 73 años\n');
+/**
+ * Encuentra el baremo (board) correcto para un valor y parámetro dados.
+ * @param boards - Lista de todos los baremos disponibles.
+ * @param boardName - Nombre del parámetro (ej. 'female_fat').
+ * @param value - El valor del test del paciente.
+ * @returns El baremo correspondiente.
+ * @throws Un error si no se encuentra un baremo adecuado.
+ */
+function findBoardForValue(boards: BoardWithRanges[], boardName: string, value: number): BoardWithRanges {
+    const matchingBoards = boards
+        .filter(b => b.name === boardName)
+        .find(b => value >= b.minValue && value <= b.maxValue);
 
-  const results = {};
-  let totalAge = 0;
+    if (matchingBoards) {
+        return matchingBoards;
+    }
 
-  // % Grasa (34.5)
-  const fatBoard = mockBoards.find(b => b.name === 'female_fat');
-  const fatAge = interpolateAge(fatBoard, testData.formValues.fatPercentage);
-  results.fatAge = fatAge;
-  totalAge += fatAge;
-  console.log(`% Grasa: ${testData.formValues.fatPercentage}% → ${fatAge} años (esperado: 55)`);
+    // Si no se encuentra un rango exacto, busca el más cercano.
+    const sortedBoards = boards
+        .filter(b => b.name === boardName)
+        .sort((a, b) => a.minValue - b.minValue);
 
-  // IMC (34.5)
-  const bmiBoard = mockBoards.find(b => b.name === 'body_mass');
-  const bmiAge = interpolateAge(bmiBoard, testData.formValues.bmi);
-  results.bmiAge = bmiAge;
-  totalAge += bmiAge;
-  console.log(`IMC: ${testData.formValues.bmi} → ${bmiAge} años (esperado: 31)`);
-
-  // Reflejos Digitales (promedio 4-3-2 = 3)
-  const reflexAvg = calculateDimensionsAverage(testData.formValues.digitalReflexes);
-  const reflexBoard = mockBoards.find(b => b.name === 'digital_reflections');
-  const reflexAge = interpolateAge(reflexBoard, reflexAvg);
-  results.reflexesAge = reflexAge;
-  totalAge += reflexAge;
-  console.log(`Reflejos: ${reflexAvg} → ${reflexAge} años (esperado: 98)`);
-
-  // Acomodación Visual (35)
-  const visualBoard = mockBoards.find(b => b.name === 'visual_accommodation');
-  const visualAge = interpolateAge(visualBoard, testData.formValues.visualAccommodation);
-  results.visualAge = visualAge;
-  totalAge += visualAge;
-  console.log(`Acomodación: ${testData.formValues.visualAccommodation} → ${visualAge} años (esperado: 81)`);
-
-  // Balance Estático (promedio 1-1-1 = 1)
-  const balanceAvg = calculateDimensionsAverage(testData.formValues.staticBalance);
-  const balanceBoard = mockBoards.find(b => b.name === 'static_balance');
-  const balanceAge = interpolateAge(balanceBoard, balanceAvg);
-  results.balanceAge = balanceAge;
-  totalAge += balanceAge;
-  console.log(`Balance: ${balanceAvg} → ${balanceAge} años (esperado: 112)`);
-
-  // Hidratación (120)
-  const hydrationBoard = mockBoards.find(b => b.name === 'quaten_hydration');
-  const hydrationAge = interpolateAge(hydrationBoard, testData.formValues.skinHydration);
-  results.hydrationAge = hydrationAge;
-  totalAge += hydrationAge;
-  console.log(`Hidratación: ${testData.formValues.skinHydration} → ${hydrationAge} años (esperado: 120)`);
-
-  // Sistólica (152)
-  const systolicBoard = mockBoards.find(b => b.name === 'systolic_blood_pressure');
-  const systolicAge = interpolateAge(systolicBoard, testData.formValues.systolicPressure);
-  results.systolicAge = systolicAge;
-  totalAge += systolicAge;
-  console.log(`Sistólica: ${testData.formValues.systolicPressure} → ${systolicAge} años (esperado: 58)`);
-
-  // Diastólica (80)
-  const diastolicBoard = mockBoards.find(b => b.name === 'diastolic_blood_pressure');
-  const diastolicAge = interpolateAge(diastolicBoard, testData.formValues.diastolicPressure);
-  results.diastolicAge = diastolicAge;
-  totalAge += diastolicAge;
-  console.log(`Diastólica: ${testData.formValues.diastolicPressure} → ${diastolicAge} años (esperado: 49)`);
-
-  // Cálculo final
-  const biologicalAge = Math.round(totalAge / 8);
-  const differentialAge = biologicalAge - testData.cronoAge;
-
-  console.log('\n=== RESULTADOS FINALES ===');
-  console.log(`Suma total de edades: ${totalAge}`);
-  console.log(`Edad biológica: ${biologicalAge} años (esperado: 76)`);
-  console.log(`Edad cronológica: ${testData.cronoAge} años`);
-  console.log(`Diferencia: ${differentialAge} años (esperado: 3)`);
-
-  console.log('\n=== ANÁLISIS DE CORRECCIONES NECESARIAS ===');
-  console.log('Para que el resultado sea 76 años (diferencia de 3), necesitamos:');
-  console.log('- Suma total: 608 años (76 × 8)');
-  console.log(`- Suma actual: ${totalAge} años`);
-  console.log(`- Diferencia a corregir: ${608 - totalAge} años`);
-
-  return {
-    biologicalAge,
-    differentialAge,
-    partialAges: results,
-    expectedBiologicalAge: 76,
-    expectedDifferentialAge: 3
-  };
+    if (value < sortedBoards[0].minValue) {
+        return sortedBoards[0];
+    }
+    if (value > sortedBoards[sortedBoards.length - 1].maxValue) {
+        return sortedBoards[sortedBoards.length - 1];
+    }
+    
+    throw new Error(`No se encontró un baremo para ${boardName} con el valor ${value}`);
 }
 
-// Ejecutar la prueba
-const testResults = testBiofisicaCalculations();
 
-console.log('\n=== CORRECCIONES ESPECÍFICAS REQUERIDAS ===');
-console.log('Según el sistema legado, los valores correctos deberían ser:');
-console.log('- % Grasa 34.5% → 55 años');
-console.log('- IMC 34.5 → 31 años'); 
-console.log('- Reflejos 4-3-2 → 98 años');
-console.log('- Acomodación 35 → 81 años');
-console.log('- Balance 1-1-1 → 112 años');
-console.log('- Hidratación 120 → 120 años');
-console.log('- Sistólica 152 → 58 años');
-console.log('- Diastólica 80 → 49 años');
-console.log('- TOTAL: 604 años → Edad biológica: 76 años');
+/**
+ * Calcula la edad biológica completa y las edades parciales a partir de los valores del formulario.
+ * @param boards - La lista completa de baremos de la base de datos.
+ * @param formValues - Los valores introducidos por el usuario en el formulario.
+ * @param chronologicalAge - La edad cronológica del paciente.
+ * @param gender - El género del paciente ('MASCULINO', 'FEMENINO', etc.).
+ * @param isAthlete - Si el paciente es deportista.
+ * @returns Un objeto con la edad biológica, diferencial y las edades parciales.
+ */
+export function calculateBiofisicaResults(
+  boards: BoardWithRanges[],
+  formValues: FormValues,
+  chronologicalAge: number,
+  gender: 'MASCULINO' | 'FEMENINO' | 'MASCULINO_DEPORTIVO' | 'FEMENINO_DEPORTIVO',
+  isAthlete: boolean
+): CalculationResult {
+  const partialAges: PartialAges = {};
+  let totalAge = 0;
+  let itemCount = 0;
+
+  const getBoardName = (baseName: string): string => {
+    if (baseName === 'fat') {
+      return gender.startsWith('FEMENINO') ? 'female_fat' : 'male_fat';
+    }
+    return baseName;
+  };
+  
+  // Mapeo de claves de formulario a nombres de baremos y si son dimensionales
+  const parameters = [
+    { key: 'fatPercentage', boardBase: 'fat', isDim: false },
+    { key: 'bmi', boardBase: 'body_mass', isDim: false },
+    { key: 'digitalReflexes', boardBase: 'digital_reflections', isDim: true },
+    { key: 'visualAccommodation', boardBase: 'visual_accommodation', isDim: false },
+    { key: 'staticBalance', boardBase: 'static_balance', isDim: true },
+    { key: 'skinHydration', boardBase: 'quaten_hydration', isDim: false },
+    { key: 'systolicPressure', boardBase: 'systolic_blood_pressure', isDim: false },
+    { key: 'diastolicPressure', boardBase: 'diastolic_blood_pressure', isDim: false },
+  ] as const;
+
+  for (const param of parameters) {
+    const formValue = formValues[param.key];
+    if (formValue === undefined) continue;
+
+    let valueToCalculate: number;
+    if (param.isDim) {
+      valueToCalculate = calculateDimensionsAverage(formValue as { high: number; long: number; width: number });
+    } else {
+      valueToCalculate = formValue as number;
+    }
+
+    if (isNaN(valueToCalculate)) continue;
+
+    const boardName = getBoardName(param.boardBase);
+    const board = findBoardForValue(boards, boardName, valueToCalculate);
+    
+    const age = interpolateAge(board, valueToCalculate);
+    
+    // Asignar edad parcial
+    const partialAgeKey = `${param.boardBase.split('_')[0]}Age` as keyof PartialAges;
+    partialAges[partialAgeKey] = age;
+    
+    totalAge += age;
+    itemCount++;
+  }
+
+  if (itemCount === 0) {
+    return { biologicalAge: 0, differentialAge: 0, partialAges: {} };
+  }
+
+  const biologicalAge = Math.round(totalAge / itemCount);
+  const differentialAge = biologicalAge - chronologicalAge;
+
+  return { biologicalAge, differentialAge, partialAges };
+}
+
+
+// --- FUNCIONES DE ESTADO Y COLOR (SIN CAMBIOS) ---
+
+export function getAgeStatus(differentialAge: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
+  if (differentialAge <= AGE_DIFF_RANGES.NORMAL_MIN) return 'REJUVENECIDO';
+  if (differentialAge > AGE_DIFF_RANGES.NORMAL_MIN && differentialAge < AGE_DIFF_RANGES.NORMAL_MAX) return 'NORMAL';
+  return 'ENVEJECIDO';
+}
+
+export function getStatusColor(status: 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO'): string {
+  const colorMap = {
+    REJUVENECIDO: 'text-status-green',
+    NORMAL: 'text-status-yellow',
+    ENVEJECIDO: 'text-status-red',
+  };
+  return colorMap[status];
+}
