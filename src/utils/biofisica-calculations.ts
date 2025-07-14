@@ -26,7 +26,6 @@ const BIOPHYSICS_KEYS = [
   'staticBalance', 'skinHydration', 'systolicPressure', 'diastolicPressure'
 ] as const;
 
-// ===== INICIO DE LA CORRECCIÓN: Corregir claves del mapa =====
 const PARTIAL_AGE_KEYS_MAP: Record<typeof BIOPHYSICS_KEYS[number], keyof PartialAges> = {
   fatPercentage: 'fatAge',
   bmi: 'bmiAge',
@@ -37,9 +36,8 @@ const PARTIAL_AGE_KEYS_MAP: Record<typeof BIOPHYSICS_KEYS[number], keyof Partial
   systolicPressure: 'systolicAge',
   diastolicPressure: 'diastolicAge',
 };
-// ===== FIN DE LA CORRECCIÓN =====
 
-// --- Lógica de Cálculo Principal (Sin cambios) ---
+// --- Lógica de Cálculo Principal ---
 export function calculateBiofisicaResults(
   boards: BoardWithRanges[],
   formValues: FormValues,
@@ -87,7 +85,7 @@ export function calculateBiofisicaResults(
   };
 }
 
-// --- Funciones de Soporte (Sin cambios) ---
+// --- Funciones de Soporte ---
 function validateAllMetricsPresent(formValues: FormValues) {
   for (const key of BIOPHYSICS_KEYS) {
     const value = formValues[key as keyof FormValues];
@@ -119,16 +117,13 @@ function calculatePartialAge(
   }
 
   const applicableBoard = metricBoards.find(board => {
-    // Determinar si el valor de entrada está dentro del rango del baremo actual
     const min = Math.min(board.minValue, board.maxValue);
     const max = Math.max(board.minValue, board.maxValue);
-    // Usamos un pequeño épsilon para manejar imprecisiones de punto flotante en los bordes
     const epsilon = 1e-9; 
     return inputValue >= (min - epsilon) && inputValue <= (max + epsilon);
   });
 
   if (!applicableBoard) {
-    // Si no se encuentra un baremo, el valor está fuera de rango.
     const sortedBoards = metricBoards.sort((a,b) => Math.min(a.minValue, a.maxValue) - Math.min(b.minValue, b.maxValue));
     const minRange = Math.min(sortedBoards[0].minValue, sortedBoards[0].maxValue);
     const maxRange = Math.max(sortedBoards[sortedBoards.length - 1].minValue, sortedBoards[sortedBoards.length - 1].maxValue);
@@ -139,84 +134,43 @@ function calculatePartialAge(
 }
 
 
-// ===== LÓGICA DE INTERPOLACIÓN CALIBRADA =====
+// ===== INICIO DE LA CORRECCIÓN: LÓGICA DE INTERPOLACIÓN Y TRUNCADO DEFINITIVA =====
 /**
  * Calcula la edad parcial replicando la fórmula de interpolación escalonada del sistema legado.
  * @param board El baremo aplicable que contiene los rangos de valores y edades.
  * @param inputValue El valor medido para el ítem biofísico.
- * @returns La edad parcial calculada.
+ * @returns La edad parcial calculada como un entero (truncado).
  */
 function interpolateAge(board: BoardWithRanges, inputValue: number): number {
-  const { minValue, maxValue, range, inverse } = board;
-  const { minAge, maxAge } = range;
-
-  // Si el rango de valores es un punto único, devuelve la edad mínima del rango.
-  if (minValue === maxValue) return minAge;
-
-  // Determina el rango de edad y de valores.
-  const ageSpan = Math.abs(maxAge - minAge);
-  const valueSpan = Math.abs(maxValue - minValue);
-
-  // Calcula el "paso" o la proporción de cambio de edad por unidad de valor.
-  const step = valueSpan / ageSpan;
-
-  // Genera un array de edades dentro del rango (ej: [70, 71, 72, ..., 77])
-  const ageRange: number[] = [];
-  for (let i = minAge; i <= maxAge; i++) {
-    ageRange.push(i);
-  }
-
-  // Para los baremos inversos (ej. reflejos), se invierte el array de edades.
-  if (inverse) {
-    ageRange.reverse();
-  }
+  const { minValue, maxValue, range } = board;
   
-  // Construye un mapa de correspondencia entre cada edad y su valor de corte en el baremo.
-  let accumulatedStep = 0;
-  const ageToValueMap = ageRange.map((age, index) => {
-    if (index > 0) {
-      accumulatedStep += step;
-    }
-    // El valor de corte para una edad se calcula sumando los pasos acumulados al valor mínimo.
-    // Esto crea los "escalones" de la tabla de baremos.
-    return {
-      age: age,
-      valueThreshold: minValue + accumulatedStep,
-    };
-  });
+  if (minValue === maxValue) return range.minAge;
 
-  // Determina si el baremo es ascendente o descendente.
-  const isAscending = maxValue > minValue;
+  const y1 = range.minAge;
+  const y2 = range.maxAge;
+  
+  const x1 = minValue;
+  const x2 = maxValue;
+  
+  const partialAge = y1 + (inputValue - x1) * (y2 - y1) / (x2 - x1);
 
-  let calculatedAge = ageToValueMap[ageToValueMap.length - 1].age; // Edad por defecto si no se encuentra
-
-  // Busca la edad correspondiente al valor de entrada.
-  for (const mapping of ageToValueMap) {
-    if (isAscending) {
-      // Si el baremo es ascendente, la primera edad cuyo umbral es >= al valor de entrada es la correcta.
-      if (inputValue <= mapping.valueThreshold) {
-        calculatedAge = mapping.age;
-        break;
-      }
-    } else {
-      // Si el baremo es descendente, la primera edad cuyo umbral es <= al valor de entrada es la correcta.
-      if (inputValue >= mapping.valueThreshold) {
-        calculatedAge = mapping.age;
-        break;
-      }
-    }
-  }
-
-  return calculatedAge;
+  // La clave es truncar el resultado (eliminar decimales) en lugar de redondear.
+  // Esto replica el comportamiento de `parseInt` del sistema legado sobre el resultado.
+  return Math.trunc(partialAge);
 }
+// ===== FIN DE LA CORRECCIÓN =====
 
 
-// --- Funciones de Estado y Color (Sin cambios) ---
+// ===== INICIO DE LA CORRECCIÓN: AJUSTE DE UMBRALES DE ESTADO =====
 export function getAgeStatus(ageDifference: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
-    if (ageDifference < -2) return 'REJUVENECIDO';
-    if (ageDifference > 2) return 'ENVEJECIDO';
+    // Un diferencial de -3 o menos se considera rejuvenecido.
+    if (ageDifference <= -3) return 'REJUVENECIDO';
+    // Un diferencial de +3 o más se considera envejecido.
+    if (ageDifference >= 3) return 'ENVEJECIDO';
+    // Cualquier valor entre -2 y +2 (inclusive) se considera normal.
     return 'NORMAL';
 }
+// ===== FIN DE LA CORRECCIÓN =====
   
 export function getStatusColor(status: 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO'): string {
     switch (status) {
