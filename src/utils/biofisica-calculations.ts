@@ -1,11 +1,11 @@
 // src/utils/biofisica-calculations.ts
-
-import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/types/biophysics';
+import type { BoardWithRanges, FormValues, PartialAges, CalculationResult } from '@/types/biophysics';
+import { AGE_DIFF_RANGES } from '@/lib/constants';
 
 // ===================================================================================
-// INICIO: Adaptación directa de la lógica de cálculo del sistema legado
-// Esta clase interna contiene la lógica exacta proporcionada por el usuario para asegurar la precisión.
-// No se exporta ni se usa directamente en otros lugares de la aplicación.
+// INICIO: Lógica de cálculo 1:1 con el sistema legado
+// Esta clase interna contiene la lógica exacta y las tablas de baremos
+// para asegurar una precisión total y replicar los resultados del sistema original.
 // ===================================================================================
 
 class LegacyBiophysicalAgeCalculator {
@@ -13,10 +13,10 @@ class LegacyBiophysicalAgeCalculator {
     private ranges: Record<string, number[][]>;
 
     constructor() {
-        // Rangos de edad para cada parámetro según la tabla
+        // Define los puntos de inicio de cada rango de edad.
         this.ageRanges = [21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 91, 98, 105, 112];
         
-        // Tablas de rangos para cada parámetro (hardcoded para replicar la lógica exacta)
+        // Tablas de rangos para cada parámetro, extraídas del documento de fórmulas.
         this.ranges = {
             bodyFatFemale: [[18, 22], [22, 26], [26, 29], [29, 32], [32, 35], [35, 38], [38, 41], [41, 44], [44, 47], [47, 50], [50, 53], [53, 56], [56, 59], [59, 62]],
             bodyFatMale: [[10, 14], [14, 18], [18, 21], [21, 24], [24, 27], [27, 30], [30, 33], [33, 36], [36, 39], [39, 42], [42, 45], [45, 48], [48, 51], [51, 54]],
@@ -51,7 +51,7 @@ class LegacyBiophysicalAgeCalculator {
                 return this.interpolate(value, min, max, age1, age2);
             }
         }
-        return 0; // Fallback
+        return 0; // Fallback si no se encuentra el rango
     }
     
     public calculate(params: any) {
@@ -82,15 +82,22 @@ class LegacyBiophysicalAgeCalculator {
 }
 
 // ===================================================================================
-// FIN: Adaptación de la lógica de cálculo
+// FIN: Lógica de cálculo del sistema legado
 // ===================================================================================
 
 
+const BIOPHYSICS_KEYS = [
+  'fatPercentage', 'bmi', 'digitalReflexes', 'visualAccommodation', 
+  'staticBalance', 'skinHydration', 'systolicPressure', 'diastolicPressure'
+] as const;
+
+
 // --- Función de Interfaz Pública ---
+// Esta función actúa como un puente entre el formulario y la lógica de cálculo del sistema legado.
 export function calculateBiofisicaResults(
-  boards: BoardWithRanges[], // Se mantiene para la firma, pero la lógica interna no la usa
+  boards: BoardWithRanges[], // Se mantiene para compatibilidad de firma, pero no se usa.
   formValues: FormValues,
-  cronoAge: number,
+  chronologicalAge: number,
   gender: string,
   isAthlete: boolean
 ): CalculationResult {
@@ -124,7 +131,7 @@ export function calculateBiofisicaResults(
       diastolicAge: result.individualAges.diastolic,
   };
 
-  const differentialAge = result.biophysicalAge - cronoAge;
+  const differentialAge = result.biophysicalAge - chronologicalAge;
 
   return {
     biologicalAge: result.biophysicalAge,
@@ -134,7 +141,7 @@ export function calculateBiofisicaResults(
 }
 
 
-// --- Funciones de Soporte (Sin cambios) ---
+// --- Funciones de Soporte ---
 function validateAllMetricsPresent(formValues: FormValues) {
   for (const key of BIOPHYSICS_KEYS) {
     const value = formValues[key as keyof FormValues];
@@ -143,23 +150,23 @@ function validateAllMetricsPresent(formValues: FormValues) {
     }
     if (typeof value === 'object' && 'high' in value) {
       if (value.high === undefined || value.long === undefined || value.width === undefined || isNaN(value.high) || isNaN(value.long) || isNaN(value.width)) {
-         throw new Error(`Las tres dimensiones del ítem "${key}" son obligatorias.`);
+          throw new Error(`Las tres dimensiones del ítem "${key}" son obligatorias.`);
       }
     }
   }
 }
 
-export function getAgeStatus(ageDifference: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
-    if (ageDifference <= -3) return 'REJUVENECIDO';
-    if (ageDifference >= 3) return 'ENVEJECIDO';
-    return 'NORMAL';
+export function getAgeStatus(differentialAge: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
+    if (differentialAge <= AGE_DIFF_RANGES.NORMAL_MIN) return 'REJUVENECIDO';
+    if (differentialAge > AGE_DIFF_RANGES.NORMAL_MIN && differentialAge < AGE_DIFF_RANGES.NORMAL_MAX) return 'NORMAL';
+    return 'ENVEJECIDO';
 }
   
 export function getStatusColor(status: 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO'): string {
-    switch (status) {
-      case 'REJUVENECIDO': return 'text-status-green';
-      case 'NORMAL': return 'text-status-yellow';
-      case 'ENVEJECIDO': return 'text-status-red';
-      default: return 'text-gray-900';
-    }
+    const colorMap = {
+      REJUVENECIDO: 'text-status-green',
+      NORMAL: 'text-status-yellow',
+      ENVEJECIDO: 'text-status-red',
+    };
+    return colorMap[status];
 }
