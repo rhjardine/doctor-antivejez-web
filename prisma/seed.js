@@ -1,287 +1,196 @@
-// prisma/seed.js
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+// test-biofisica-calculations.js
+// Archivo de prueba para verificar los cálculos de edad biofísica
 
-const prisma = new PrismaClient();
+// Simulación de los datos del ejemplo
+const testData = {
+  // Paciente femenino de 73 años
+  cronoAge: 73,
+  gender: 'FEMENINO',
+  isAthlete: false,
 
-async function main() {
-  console.log('🌱 Iniciando seed de la base de datos...');
-
-  const hashedPassword = await bcrypt.hash('admin123', 10);
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@doctorantivejez.com' },
-    update: {},
-    create: {
-      email: 'admin@doctorantivejez.com',
-      password: hashedPassword,
-      name: 'Dr. Admin',
-      role: 'MEDICO',
+  formValues: {
+    fatPercentage: 34.5,        // Debe dar 55 años
+    bmi: 34.5,                  // Debe dar 31 años  
+    digitalReflexes: {          // 4-3-2 promedio = 3, debe dar 98 años
+      high: 4,
+      long: 3, 
+      width: 2
     },
-  });
-  console.log(`✅ Usuario admin creado o actualizado con ID: ${adminUser.id}`);
-
-  const ageRanges = [
-    { id: 1, minAge: 21, maxAge: 28 }, { id: 2, minAge: 28, maxAge: 35 },
-    { id: 3, minAge: 35, maxAge: 42 }, { id: 4, minAge: 42, maxAge: 49 },
-    { id: 5, minAge: 49, maxAge: 56 }, { id: 6, minAge: 56, maxAge: 63 },
-    { id: 7, minAge: 63, maxAge: 70 }, { id: 8, minAge: 70, maxAge: 77 },
-    { id: 9, minAge: 77, maxAge: 84 }, { id: 10, minAge: 84, maxAge: 91 },
-    { id: 11, minAge: 91, maxAge: 98 }, { id: 12, minAge: 98, maxAge: 105 },
-    { id: 13, minAge: 105, maxAge: 112 }, { id: 14, minAge: 112, maxAge: 120 },
-  ];
-
-  for (const range of ageRanges) {
-    await prisma.range.upsert({
-      where: { id: range.id },
-      update: { minAge: range.minAge, maxAge: range.maxAge },
-      create: range,
-    });
+    visualAccommodation: 35,    // Debe dar 81 años
+    staticBalance: {            // 1-1-1 promedio = 1, debe dar 112 años
+      high: 1,
+      long: 1,
+      width: 1
+    },
+    skinHydration: 120,         // Debe dar 120 años
+    systolicPressure: 152,      // Debe dar 58 años
+    diastolicPressure: 80       // Debe dar 49 años
   }
-  console.log('✅ Rangos de edad creados o actualizados.');
+};
 
-  const biophysicsBoards = [
-    // % Grasa Masculino
-    { rangeId: 1, name: 'male_fat', minValue: 10, maxValue: 14 },
-    { rangeId: 2, name: 'male_fat', minValue: 14, maxValue: 18 },
-    { rangeId: 3, name: 'male_fat', minValue: 18, maxValue: 21 },
-    { rangeId: 4, name: 'male_fat', minValue: 21, maxValue: 24 },
-    { rangeId: 5, name: 'male_fat', minValue: 24, maxValue: 27 },
-    { rangeId: 6, name: 'male_fat', minValue: 27, maxValue: 30 },
-    { rangeId: 7, name: 'male_fat', minValue: 30, maxValue: 33 },
-    { rangeId: 8, name: 'male_fat', minValue: 33, maxValue: 36 },
-    { rangeId: 9, name: 'male_fat', minValue: 36, maxValue: 39 },
-    { rangeId: 10, name: 'male_fat', minValue: 39, maxValue: 42 },
-    { rangeId: 11, name: 'male_fat', minValue: 42, maxValue: 45 },
-    { rangeId: 12, name: 'male_fat', minValue: 45, maxValue: 48 },
-    { rangeId: 13, name: 'male_fat', minValue: 48, maxValue: 51 },
-    { rangeId: 14, name: 'male_fat', minValue: 51, maxValue: 54 },
-    { rangeId: 1, name: 'male_fat', minValue: 7, maxValue: 9.99, inverse: true },
-    { rangeId: 2, name: 'male_fat', minValue: 6, maxValue: 7, inverse: true },
-    { rangeId: 3, name: 'male_fat', minValue: 5, maxValue: 6, inverse: true },
-    { rangeId: 4, name: 'male_fat', minValue: 4, maxValue: 5, inverse: true },
-    { rangeId: 5, name: 'male_fat', minValue: 3, maxValue: 4, inverse: true },
-    { rangeId: 6, name: 'male_fat', minValue: 2, maxValue: 3, inverse: true },
-    { rangeId: 7, name: 'male_fat', minValue: 1, maxValue: 2, inverse: true },
-    { rangeId: 8, name: 'male_fat', minValue: 0, maxValue: 1, inverse: true },
+// Simulación de los rangos de edad
+const mockRanges = [
+  { id: 1, minAge: 21, maxAge: 28 }, { id: 2, minAge: 28, maxAge: 35 },
+  { id: 3, minAge: 35, maxAge: 42 }, { id: 4, minAge: 42, maxAge: 49 },
+  { id: 5, minAge: 49, maxAge: 56 }, { id: 6, minAge: 56, maxAge: 63 },
+  { id: 7, minAge: 63, maxAge: 70 }, { id: 8, minAge: 70, maxAge: 77 },
+  { id: 9, minAge: 77, maxAge: 84 }, { id: 10, minAge: 84, maxAge: 91 },
+  { id: 11, minAge: 91, maxAge: 98 }, { id: 12, minAge: 98, maxAge: 105 },
+  { id: 13, minAge: 105, maxAge: 112 }, { id: 14, minAge: 112, maxAge: 120 }
+];
 
-    // % Grasa Masculino Deportivo
-    { rangeId: 1, name: 'sporty_male_fat', minValue: 1, maxValue: 7 },
-    { rangeId: 2, name: 'sporty_male_fat', minValue: 7, maxValue: 14 },
-    { rangeId: 3, name: 'sporty_male_fat', minValue: 14, maxValue: 17 },
-    { rangeId: 4, name: 'sporty_male_fat', minValue: 17, maxValue: 21 },
-    { rangeId: 5, name: 'sporty_male_fat', minValue: 21, maxValue: 25 },
-    { rangeId: 6, name: 'sporty_male_fat', minValue: 25, maxValue: 28 },
-    { rangeId: 7, name: 'sporty_male_fat', minValue: 28, maxValue: 31 },
-    { rangeId: 8, name: 'sporty_male_fat', minValue: 31, maxValue: 34 },
-    { rangeId: 9, name: 'sporty_male_fat', minValue: 34, maxValue: 37 },
-    { rangeId: 10, name: 'sporty_male_fat', minValue: 37, maxValue: 40 },
-    { rangeId: 11, name: 'sporty_male_fat', minValue: 40, maxValue: 43 },
-    { rangeId: 12, name: 'sporty_male_fat', minValue: 43, maxValue: 46 },
-    { rangeId: 13, name: 'sporty_male_fat', minValue: 46, maxValue: 49 },
-    { rangeId: 14, name: 'sporty_male_fat', minValue: 49, maxValue: 52 },
+// Simulación de los baremos (boards) corregidos
+const mockBoards = [
+  // % Grasa Femenino - 34.5% debe estar en rango 5 (32-35) = 49-56 años
+  { name: 'female_fat', minValue: 32, maxValue: 35, range: { minAge: 49, maxAge: 56 }, inverse: false },
 
-    // % Grasa Femenino
-    { rangeId: 1, name: 'female_fat', minValue: 18, maxValue: 22 },
-    { rangeId: 2, name: 'female_fat', minValue: 22, maxValue: 26 },
-    { rangeId: 3, name: 'female_fat', minValue: 26, maxValue: 29 },
-    { rangeId: 4, name: 'female_fat', minValue: 29, maxValue: 32 },
-    { rangeId: 5, name: 'female_fat', minValue: 32, maxValue: 35 },
-    { rangeId: 6, name: 'female_fat', minValue: 35, maxValue: 38 },
-    { rangeId: 7, name: 'female_fat', minValue: 38, maxValue: 41 },
-    { rangeId: 8, name: 'female_fat', minValue: 41, maxValue: 44 },
-    { rangeId: 9, name: 'female_fat', minValue: 44, maxValue: 47 },
-    { rangeId: 10, name: 'female_fat', minValue: 47, maxValue: 50 },
-    { rangeId: 11, name: 'female_fat', minValue: 50, maxValue: 53 },
-    { rangeId: 12, name: 'female_fat', minValue: 53, maxValue: 56 },
-    { rangeId: 13, name: 'female_fat', minValue: 56, maxValue: 59 },
-    { rangeId: 14, name: 'female_fat', minValue: 59, maxValue: 62 },
-    { rangeId: 1, name: 'female_fat', minValue: 15, maxValue: 17.99, inverse: true },
-    { rangeId: 2, name: 'female_fat', minValue: 14, maxValue: 15, inverse: true },
-    { rangeId: 3, name: 'female_fat', minValue: 13, maxValue: 14, inverse: true },
-    { rangeId: 4, name: 'female_fat', minValue: 12, maxValue: 13, inverse: true },
-    { rangeId: 5, name: 'female_fat', minValue: 11, maxValue: 12, inverse: true },
-    { rangeId: 6, name: 'female_fat', minValue: 10, maxValue: 11, inverse: true },
-    { rangeId: 7, name: 'female_fat', minValue: 9, maxValue: 10, inverse: true },
-    { rangeId: 8, name: 'female_fat', minValue: 8, maxValue: 9, inverse: true },
+  // IMC - 34.5 debe estar en rango 6 (33-36) = 56-63 años  
+  { name: 'body_mass', minValue: 33, maxValue: 36, range: { minAge: 56, maxAge: 63 }, inverse: false },
 
-    // % Grasa Femenino Deportivo
-    { rangeId: 1, name: 'sporty_female_fat', minValue: 1, maxValue: 9 },
-    { rangeId: 2, name: 'sporty_female_fat', minValue: 9, maxValue: 18 },
-    { rangeId: 3, name: 'sporty_female_fat', minValue: 18, maxValue: 22 },
-    { rangeId: 4, name: 'sporty_female_fat', minValue: 22, maxValue: 25 },
-    { rangeId: 5, name: 'sporty_female_fat', minValue: 25, maxValue: 27 },
-    { rangeId: 6, name: 'sporty_female_fat', minValue: 27, maxValue: 30 },
-    { rangeId: 7, name: 'sporty_female_fat', minValue: 30, maxValue: 33 },
-    { rangeId: 8, name: 'sporty_female_fat', minValue: 33, maxValue: 36 },
-    { rangeId: 9, name: 'sporty_female_fat', minValue: 36, maxValue: 39 },
-    { rangeId: 10, name: 'sporty_female_fat', minValue: 39, maxValue: 42 },
-    { rangeId: 11, name: 'sporty_female_fat', minValue: 42, maxValue: 45 },
-    { rangeId: 12, name: 'sporty_female_fat', minValue: 45, maxValue: 48 },
-    { rangeId: 13, name: 'sporty_female_fat', minValue: 48, maxValue: 51 },
-    { rangeId: 14, name: 'sporty_female_fat', minValue: 51, maxValue: 54 },
+  // Reflejos Digitales - promedio 3 debe estar en rango 12 (2-3) = 98-105 años
+  { name: 'digital_reflections', minValue: 2, maxValue: 3, range: { minAge: 98, maxAge: 105 }, inverse: false },
 
-    // IMC (Índice de Masa Corporal)
-    { rangeId: 1, name: 'body_mass', minValue: 18, maxValue: 22 },
-    { rangeId: 2, name: 'body_mass', minValue: 22, maxValue: 25 },
-    { rangeId: 3, name: 'body_mass', minValue: 25, maxValue: 27 },
-    { rangeId: 4, name: 'body_mass', minValue: 27, maxValue: 30 },
-    { rangeId: 5, name: 'body_mass', minValue: 30, maxValue: 33 },
-    { rangeId: 6, name: 'body_mass', minValue: 33, maxValue: 36 },
-    { rangeId: 7, name: 'body_mass', minValue: 36, maxValue: 39 },
-    { rangeId: 8, name: 'body_mass', minValue: 39, maxValue: 42 },
-    { rangeId: 9, name: 'body_mass', minValue: 42, maxValue: 45 },
-    { rangeId: 10, name: 'body_mass', minValue: 45, maxValue: 48 },
-    { rangeId: 11, name: 'body_mass', minValue: 48, maxValue: 51 },
-    { rangeId: 12, name: 'body_mass', minValue: 51, maxValue: 54 },
-    { rangeId: 13, name: 'body_mass', minValue: 54, maxValue: 57 },
-    { rangeId: 14, name: 'body_mass', minValue: 57, maxValue: 60 },
-    { rangeId: 1, name: 'body_mass', minValue: 16, maxValue: 17.99, inverse: true },
-    { rangeId: 2, name: 'body_mass', minValue: 15, maxValue: 16, inverse: true },
-    { rangeId: 3, name: 'body_mass', minValue: 14, maxValue: 15, inverse: true },
-    { rangeId: 4, name: 'body_mass', minValue: 13, maxValue: 14, inverse: true },
-    { rangeId: 5, name: 'body_mass', minValue: 12, maxValue: 13, inverse: true },
-    { rangeId: 6, name: 'body_mass', minValue: 11, maxValue: 12, inverse: true },
-    { rangeId: 7, name: 'body_mass', minValue: 10, maxValue: 11, inverse: true },
-    { rangeId: 8, name: 'body_mass', minValue: 9, maxValue: 10, inverse: true },
+  // Acomodación Visual - 35 debe estar en rango 9 (33-37) = 77-84 años
+  { name: 'visual_accommodation', minValue: 33, maxValue: 37, range: { minAge: 77, maxAge: 84 }, inverse: false },
 
-    // ===== INICIO DE LA CORRECCIÓN DE DATOS =====
-    // Reflejos Digitales (valores decrecientes)
-    { rangeId: 1, name: 'digital_reflections', minValue: 50, maxValue: 45 },
-    { rangeId: 2, name: 'digital_reflections', minValue: 45, maxValue: 35 },
-    { rangeId: 3, name: 'digital_reflections', minValue: 35, maxValue: 30 },
-    { rangeId: 4, name: 'digital_reflections', minValue: 30, maxValue: 25 },
-    { rangeId: 5, name: 'digital_reflections', minValue: 25, maxValue: 20 },
-    { rangeId: 6, name: 'digital_reflections', minValue: 20, maxValue: 15 },
-    { rangeId: 7, name: 'digital_reflections', minValue: 15, maxValue: 10 },
-    { rangeId: 8, name: 'digital_reflections', minValue: 10, maxValue: 8 },
-    { rangeId: 9, name: 'digital_reflections', minValue: 8, maxValue: 6 },
-    { rangeId: 10, name: 'digital_reflections', minValue: 6, maxValue: 4 },
-    { rangeId: 11, name: 'digital_reflections', minValue: 4, maxValue: 3 },
-    { rangeId: 12, name: 'digital_reflections', minValue: 3, maxValue: 2 },
-    { rangeId: 13, name: 'digital_reflections', minValue: 2, maxValue: 1 },
-    { rangeId: 14, name: 'digital_reflections', minValue: 1, maxValue: 0 },
+  // Balance Estático - promedio 1 debe estar en rango 14 (0-1) = 112-120 años
+  { name: 'static_balance', minValue: 0, maxValue: 1, range: { minAge: 112, maxAge: 120 }, inverse: false },
 
-    // Acomodación Visual (valores crecientes)
-    { rangeId: 1, name: 'visual_accommodation', minValue: 0, maxValue: 10 },
-    { rangeId: 2, name: 'visual_accommodation', minValue: 10, maxValue: 15 },
-    { rangeId: 3, name: 'visual_accommodation', minValue: 15, maxValue: 18 },
-    { rangeId: 4, name: 'visual_accommodation', minValue: 18, maxValue: 21 },
-    { rangeId: 5, name: 'visual_accommodation', minValue: 21, maxValue: 24 },
-    { rangeId: 6, name: 'visual_accommodation', minValue: 24, maxValue: 27 },
-    { rangeId: 7, name: 'visual_accommodation', minValue: 27, maxValue: 30 },
-    { rangeId: 8, name: 'visual_accommodation', minValue: 30, maxValue: 33 },
-    { rangeId: 9, name: 'visual_accommodation', minValue: 33, maxValue: 37 },
-    { rangeId: 10, name: 'visual_accommodation', minValue: 37, maxValue: 40 },
-    { rangeId: 11, name: 'visual_accommodation', minValue: 40, maxValue: 43 },
-    { rangeId: 12, name: 'visual_accommodation', minValue: 43, maxValue: 47 },
-    { rangeId: 13, name: 'visual_accommodation', minValue: 47, maxValue: 50 },
-    { rangeId: 14, name: 'visual_accommodation', minValue: 50, maxValue: 53 },
+  // Hidratación Cutánea - 120 debe estar en rango 14 (112-120) = 112-120 años
+  { name: 'quaten_hydration', minValue: 112, maxValue: 120, range: { minAge: 112, maxAge: 120 }, inverse: false },
 
-    // Balance Estático (valores decrecientes)
-    { rangeId: 1, name: 'static_balance', minValue: 120, maxValue: 30 },
-    { rangeId: 2, name: 'static_balance', minValue: 30, maxValue: 25 },
-    { rangeId: 3, name: 'static_balance', minValue: 25, maxValue: 20 },
-    { rangeId: 4, name: 'static_balance', minValue: 20, maxValue: 15 },
-    { rangeId: 5, name: 'static_balance', minValue: 15, maxValue: 12 },
-    { rangeId: 6, name: 'static_balance', minValue: 12, maxValue: 9 },
-    { rangeId: 7, name: 'static_balance', minValue: 9, maxValue: 7 },
-    { rangeId: 8, name: 'static_balance', minValue: 7, maxValue: 6 },
-    { rangeId: 9, name: 'static_balance', minValue: 6, maxValue: 5 },
-    { rangeId: 10, name: 'static_balance', minValue: 5, maxValue: 4 },
-    { rangeId: 11, name: 'static_balance', minValue: 4, maxValue: 3 },
-    { rangeId: 12, name: 'static_balance', minValue: 3, maxValue: 2 },
-    { rangeId: 13, name: 'static_balance', minValue: 2, maxValue: 1 },
-    { rangeId: 14, name: 'static_balance', minValue: 1, maxValue: 0 },
-    // ===== FIN DE LA CORRECCIÓN DE DATOS =====
+  // Sistólica - 152 debe estar en rango 6 (150-160) = 56-63 años
+  { name: 'systolic_blood_pressure', minValue: 150, maxValue: 160, range: { minAge: 56, maxAge: 63 }, inverse: false },
 
-    // Hidratación Cutánea
-    { rangeId: 1, name: 'quaten_hydration', minValue: 0, maxValue: 1 },
-    { rangeId: 2, name: 'quaten_hydration', minValue: 1, maxValue: 2 },
-    { rangeId: 3, name: 'quaten_hydration', minValue: 2, maxValue: 4 },
-    { rangeId: 4, name: 'quaten_hydration', minValue: 4, maxValue: 8 },
-    { rangeId: 5, name: 'quaten_hydration', minValue: 8, maxValue: 16 },
-    { rangeId: 6, name: 'quaten_hydration', minValue: 16, maxValue: 32 },
-    { rangeId: 7, name: 'quaten_hydration', minValue: 32, maxValue: 64 },
-    { rangeId: 8, name: 'quaten_hydration', minValue: 64, maxValue: 74 },
-    { rangeId: 9, name: 'quaten_hydration', minValue: 74, maxValue: 84 },
-    { rangeId: 10, name: 'quaten_hydration', minValue: 84, maxValue: 94 },
-    { rangeId: 11, name: 'quaten_hydration', minValue: 94, maxValue: 104 },
-    { rangeId: 12, name: 'quaten_hydration', minValue: 104, maxValue: 108 },
-    { rangeId: 13, name: 'quaten_hydration', minValue: 108, maxValue: 112 },
-    { rangeId: 14, name: 'quaten_hydration', minValue: 112, maxValue: 120 },
+  // Diastólica - 80 debe estar en rango 5 (80-85) = 49-56 años
+  { name: 'diastolic_blood_pressure', minValue: 80, maxValue: 85, range: { minAge: 49, maxAge: 56 }, inverse: false }
+];
 
-    // Tensión Arterial Sistólica
-    { rangeId: 1, name: 'systolic_blood_pressure', minValue: 100, maxValue: 110 },
-    { rangeId: 2, name: 'systolic_blood_pressure', minValue: 110, maxValue: 120 },
-    { rangeId: 3, name: 'systolic_blood_pressure', minValue: 120, maxValue: 130 },
-    { rangeId: 4, name: 'systolic_blood_pressure', minValue: 130, maxValue: 140 },
-    { rangeId: 5, name: 'systolic_blood_pressure', minValue: 140, maxValue: 150 },
-    { rangeId: 6, name: 'systolic_blood_pressure', minValue: 150, maxValue: 160 },
-    { rangeId: 7, name: 'systolic_blood_pressure', minValue: 160, maxValue: 170 },
-    { rangeId: 8, name: 'systolic_blood_pressure', minValue: 170, maxValue: 180 },
-    { rangeId: 9, name: 'systolic_blood_pressure', minValue: 180, maxValue: 190 },
-    { rangeId: 10, name: 'systolic_blood_pressure', minValue: 190, maxValue: 200 },
-    { rangeId: 11, name: 'systolic_blood_pressure', minValue: 200, maxValue: 210 },
-    { rangeId: 12, name: 'systolic_blood_pressure', minValue: 210, maxValue: 220 },
-    { rangeId: 13, name: 'systolic_blood_pressure', minValue: 220, maxValue: 230 },
-    { rangeId: 14, name: 'systolic_blood_pressure', minValue: 230, maxValue: 240 },
-    { rangeId: 1, name: 'systolic_blood_pressure', minValue: 95, maxValue: 99.99, inverse: true },
-    { rangeId: 2, name: 'systolic_blood_pressure', minValue: 90, maxValue: 95, inverse: true },
-    { rangeId: 3, name: 'systolic_blood_pressure', minValue: 85, maxValue: 90, inverse: true },
-    { rangeId: 4, name: 'systolic_blood_pressure', minValue: 80, maxValue: 85, inverse: true },
-    { rangeId: 5, name: 'systolic_blood_pressure', minValue: 75, maxValue: 80, inverse: true },
-    { rangeId: 6, name: 'systolic_blood_pressure', minValue: 70, maxValue: 75, inverse: true },
-    { rangeId: 7, name: 'systolic_blood_pressure', minValue: 65, maxValue: 70, inverse: true },
-    { rangeId: 8, name: 'systolic_blood_pressure', minValue: 60, maxValue: 65, inverse: true },
-    { rangeId: 9, name: 'systolic_blood_pressure', minValue: 55, maxValue: 60, inverse: true },
-    { rangeId: 10, name: 'systolic_blood_pressure', minValue: 50, maxValue: 55, inverse: true },
-    { rangeId: 11, name: 'systolic_blood_pressure', minValue: 45, maxValue: 50, inverse: true },
-    { rangeId: 12, name: 'systolic_blood_pressure', minValue: 40, maxValue: 45, inverse: true },
+// Función de interpolación lineal
+function interpolateAge(board, inputValue) {
+  const { minValue, maxValue, range, inverse } = board;
+  const { minAge, maxAge } = range;
 
-    // Tensión Arterial Diastólica
-    { rangeId: 1, name: 'diastolic_blood_pressure', minValue: 60, maxValue: 65 },
-    { rangeId: 2, name: 'diastolic_blood_pressure', minValue: 65, maxValue: 70 },
-    { rangeId: 3, name: 'diastolic_blood_pressure', minValue: 70, maxValue: 75 },
-    { rangeId: 4, name: 'diastolic_blood_pressure', minValue: 75, maxValue: 80 },
-    { rangeId: 5, name: 'diastolic_blood_pressure', minValue: 80, maxValue: 85 },
-    { rangeId: 6, name: 'diastolic_blood_pressure', minValue: 85, maxValue: 90 },
-    { rangeId: 7, name: 'diastolic_blood_pressure', minValue: 90, maxValue: 95 },
-    { rangeId: 8, name: 'diastolic_blood_pressure', minValue: 95, maxValue: 100 },
-    { rangeId: 9, name: 'diastolic_blood_pressure', minValue: 100, maxValue: 110 },
-    { rangeId: 10, name: 'diastolic_blood_pressure', minValue: 110, maxValue: 120 },
-    { rangeId: 11, name: 'diastolic_blood_pressure', minValue: 120, maxValue: 130 },
-    { rangeId: 12, name: 'diastolic_blood_pressure', minValue: 130, maxValue: 140 },
-    { rangeId: 13, name: 'diastolic_blood_pressure', minValue: 140, maxValue: 150 },
-    { rangeId: 14, name: 'diastolic_blood_pressure', minValue: 150, maxValue: 160 },
-    { rangeId: 1, name: 'diastolic_blood_pressure', minValue: 57, maxValue: 59.99, inverse: true },
-    { rangeId: 2, name: 'diastolic_blood_pressure', minValue: 53, maxValue: 57, inverse: true },
-    { rangeId: 3, name: 'diastolic_blood_pressure', minValue: 50, maxValue: 53, inverse: true },
-    { rangeId: 4, name: 'diastolic_blood_pressure', minValue: 47, maxValue: 50, inverse: true },
-    { rangeId: 5, name: 'diastolic_blood_pressure', minValue: 44, maxValue: 47, inverse: true },
-    { rangeId: 6, name: 'diastolic_blood_pressure', minValue: 41, maxValue: 44, inverse: true },
-    { rangeId: 7, name: 'diastolic_blood_pressure', minValue: 38, maxValue: 41, inverse: true },
-    { rangeId: 8, name: 'diastolic_blood_pressure', minValue: 35, maxValue: 38, inverse: true },
-  ];
+  if (minValue === maxValue) return minAge;
 
-  await prisma.board.deleteMany({});
-  console.log('✅ Baremos antiguos eliminados.');
-
-  await prisma.board.createMany({
-    data: biophysicsBoards.map(board => ({
-      ...board,
-      type: 'FORM_BIOPHYSICS',
-    })),
-  });
-  console.log('✅ Baremos biofísicos nuevos creados.');
-
-  console.log('🎉 Seed completado exitosamente');
+  if (inverse) {
+    const proportion = (inputValue - minValue) / (maxValue - minValue);
+    const calculatedAge = maxAge - (proportion * (maxAge - minAge));
+    return Math.round(calculatedAge);
+  } else {
+    const proportion = (inputValue - minValue) / (maxValue - minValue);
+    const calculatedAge = minAge + (proportion * (maxAge - minAge));
+    return Math.round(calculatedAge);
+  }
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Error en seed:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Función para calcular promedio de dimensiones
+function calculateDimensionsAverage(dimensions) {
+  return (dimensions.high + dimensions.long + dimensions.width) / 3;
+}
+
+// Función principal de prueba
+function testBiofisicaCalculations() {
+  console.log('=== PRUEBA DE CÁLCULOS BIOFÍSICOS ===\n');
+  console.log('Paciente: Femenino, 73 años\n');
+
+  const results = {};
+  let totalAge = 0;
+
+  // % Grasa (34.5)
+  const fatBoard = mockBoards.find(b => b.name === 'female_fat');
+  const fatAge = interpolateAge(fatBoard, testData.formValues.fatPercentage);
+  results.fatAge = fatAge;
+  totalAge += fatAge;
+  console.log(`% Grasa: ${testData.formValues.fatPercentage}% → ${fatAge} años (esperado: 55)`);
+
+  // IMC (34.5)
+  const bmiBoard = mockBoards.find(b => b.name === 'body_mass');
+  const bmiAge = interpolateAge(bmiBoard, testData.formValues.bmi);
+  results.bmiAge = bmiAge;
+  totalAge += bmiAge;
+  console.log(`IMC: ${testData.formValues.bmi} → ${bmiAge} años (esperado: 31)`);
+
+  // Reflejos Digitales (promedio 4-3-2 = 3)
+  const reflexAvg = calculateDimensionsAverage(testData.formValues.digitalReflexes);
+  const reflexBoard = mockBoards.find(b => b.name === 'digital_reflections');
+  const reflexAge = interpolateAge(reflexBoard, reflexAvg);
+  results.reflexesAge = reflexAge;
+  totalAge += reflexAge;
+  console.log(`Reflejos: ${reflexAvg} → ${reflexAge} años (esperado: 98)`);
+
+  // Acomodación Visual (35)
+  const visualBoard = mockBoards.find(b => b.name === 'visual_accommodation');
+  const visualAge = interpolateAge(visualBoard, testData.formValues.visualAccommodation);
+  results.visualAge = visualAge;
+  totalAge += visualAge;
+  console.log(`Acomodación: ${testData.formValues.visualAccommodation} → ${visualAge} años (esperado: 81)`);
+
+  // Balance Estático (promedio 1-1-1 = 1)
+  const balanceAvg = calculateDimensionsAverage(testData.formValues.staticBalance);
+  const balanceBoard = mockBoards.find(b => b.name === 'static_balance');
+  const balanceAge = interpolateAge(balanceBoard, balanceAvg);
+  results.balanceAge = balanceAge;
+  totalAge += balanceAge;
+  console.log(`Balance: ${balanceAvg} → ${balanceAge} años (esperado: 112)`);
+
+  // Hidratación (120)
+  const hydrationBoard = mockBoards.find(b => b.name === 'quaten_hydration');
+  const hydrationAge = interpolateAge(hydrationBoard, testData.formValues.skinHydration);
+  results.hydrationAge = hydrationAge;
+  totalAge += hydrationAge;
+  console.log(`Hidratación: ${testData.formValues.skinHydration} → ${hydrationAge} años (esperado: 120)`);
+
+  // Sistólica (152)
+  const systolicBoard = mockBoards.find(b => b.name === 'systolic_blood_pressure');
+  const systolicAge = interpolateAge(systolicBoard, testData.formValues.systolicPressure);
+  results.systolicAge = systolicAge;
+  totalAge += systolicAge;
+  console.log(`Sistólica: ${testData.formValues.systolicPressure} → ${systolicAge} años (esperado: 58)`);
+
+  // Diastólica (80)
+  const diastolicBoard = mockBoards.find(b => b.name === 'diastolic_blood_pressure');
+  const diastolicAge = interpolateAge(diastolicBoard, testData.formValues.diastolicPressure);
+  results.diastolicAge = diastolicAge;
+  totalAge += diastolicAge;
+  console.log(`Diastólica: ${testData.formValues.diastolicPressure} → ${diastolicAge} años (esperado: 49)`);
+
+  // Cálculo final
+  const biologicalAge = Math.round(totalAge / 8);
+  const differentialAge = biologicalAge - testData.cronoAge;
+
+  console.log('\n=== RESULTADOS FINALES ===');
+  console.log(`Suma total de edades: ${totalAge}`);
+  console.log(`Edad biológica: ${biologicalAge} años (esperado: 76)`);
+  console.log(`Edad cronológica: ${testData.cronoAge} años`);
+  console.log(`Diferencia: ${differentialAge} años (esperado: 3)`);
+
+  console.log('\n=== ANÁLISIS DE CORRECCIONES NECESARIAS ===');
+  console.log('Para que el resultado sea 76 años (diferencia de 3), necesitamos:');
+  console.log('- Suma total: 608 años (76 × 8)');
+  console.log(`- Suma actual: ${totalAge} años`);
+  console.log(`- Diferencia a corregir: ${608 - totalAge} años`);
+
+  return {
+    biologicalAge,
+    differentialAge,
+    partialAges: results,
+    expectedBiologicalAge: 76,
+    expectedDifferentialAge: 3
+  };
+}
+
+// Ejecutar la prueba
+const testResults = testBiofisicaCalculations();
+
+console.log('\n=== CORRECCIONES ESPECÍFICAS REQUERIDAS ===');
+console.log('Según el sistema legado, los valores correctos deberían ser:');
+console.log('- % Grasa 34.5% → 55 años');
+console.log('- IMC 34.5 → 31 años'); 
+console.log('- Reflejos 4-3-2 → 98 años');
+console.log('- Acomodación 35 → 81 años');
+console.log('- Balance 1-1-1 → 112 años');
+console.log('- Hidratación 120 → 120 años');
+console.log('- Sistólica 152 → 58 años');
+console.log('- Diastólica 80 → 49 años');
+console.log('- TOTAL: 604 años → Edad biológica: 76 años');

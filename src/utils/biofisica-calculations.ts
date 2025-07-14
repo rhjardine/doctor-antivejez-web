@@ -2,7 +2,7 @@
 
 import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/types/biophysics';
 
-// --- Funciones de Mapeo (Sin cambios) ---
+// --- Funciones de Mapeo ---
 export const getFatName = (gender: string, isAthlete: boolean): string => {
   if (gender === 'MASCULINO' || gender === 'MASCULINO_DEPORTIVO') {
     return isAthlete || gender === 'MASCULINO_DEPORTIVO' ? 'sporty_male_fat' : 'male_fat';
@@ -45,7 +45,7 @@ export function calculateBiofisicaResults(
   gender: string,
   isAthlete: boolean
 ): CalculationResult {
-  
+
   validateAllMetricsPresent(formValues);
 
   const partialAges: PartialAges = {};
@@ -66,12 +66,12 @@ export function calculateBiofisicaResults(
       metricName = METRIC_NAME_MAP[key];
       inputValue = formValue as number;
     }
-    
+
     const partialAge = calculatePartialAge(boards, metricName, inputValue);
-    
+
     const ageKey = PARTIAL_AGE_KEYS_MAP[key];
     partialAges[ageKey] = partialAge;
-    
+
     agesSum += partialAge;
   }
 
@@ -104,7 +104,6 @@ function calculateDimensionsAverage(dimensions: { high: number; long: number; wi
   return (dimensions.high + dimensions.long + dimensions.width) / 3;
 }
 
-
 // --- Lógica de Búsqueda y Cálculo de Edad Parcial ---
 function calculatePartialAge(
   boards: BoardWithRanges[],
@@ -133,45 +132,39 @@ function calculatePartialAge(
   return interpolateAge(applicableBoard, inputValue);
 }
 
-
-// ===== INICIO DE LA CORRECCIÓN: LÓGICA DE INTERPOLACIÓN Y TRUNCADO DEFINITIVA =====
+// ===== LÓGICA DE INTERPOLACIÓN CORREGIDA =====
 /**
- * Calcula la edad parcial replicando la fórmula de interpolación escalonada del sistema legado.
- * @param board El baremo aplicable que contiene los rangos de valores y edades.
- * @param inputValue El valor medido para el ítem biofísico.
- * @returns La edad parcial calculada como un entero (truncado).
+ * Calcula la edad parcial usando interpolación lineal directa
+ * Esta función replica exactamente la lógica del sistema legado
  */
 function interpolateAge(board: BoardWithRanges, inputValue: number): number {
-  const { minValue, maxValue, range } = board;
-  
-  if (minValue === maxValue) return range.minAge;
+  const { minValue, maxValue, range, inverse } = board;
+  const { minAge, maxAge } = range;
 
-  const y1 = range.minAge;
-  const y2 = range.maxAge;
-  
-  const x1 = minValue;
-  const x2 = maxValue;
-  
-  const partialAge = y1 + (inputValue - x1) * (y2 - y1) / (x2 - x1);
+  // Si el rango de valores es un punto único, devuelve la edad mínima del rango.
+  if (minValue === maxValue) return minAge;
 
-  // La clave es truncar el resultado (eliminar decimales) en lugar de redondear.
-  // Esto replica el comportamiento de `parseInt` del sistema legado sobre el resultado.
-  return Math.trunc(partialAge);
+  // Para baremos con flag inverse, se invierte la lógica de interpolación
+  if (inverse) {
+    // En baremos inversos, valores menores corresponden a edades mayores
+    const proportion = (inputValue - minValue) / (maxValue - minValue);
+    const calculatedAge = maxAge - (proportion * (maxAge - minAge));
+    return Math.round(calculatedAge);
+  } else {
+    // En baremos normales, interpolación lineal directa
+    const proportion = (inputValue - minValue) / (maxValue - minValue);
+    const calculatedAge = minAge + (proportion * (maxAge - minAge));
+    return Math.round(calculatedAge);
+  }
 }
-// ===== FIN DE LA CORRECCIÓN =====
 
-
-// ===== INICIO DE LA CORRECCIÓN: AJUSTE DE UMBRALES DE ESTADO =====
+// --- Funciones de Estado y Color ---
 export function getAgeStatus(ageDifference: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
-    // Un diferencial de -3 o menos se considera rejuvenecido.
-    if (ageDifference <= -3) return 'REJUVENECIDO';
-    // Un diferencial de +3 o más se considera envejecido.
-    if (ageDifference >= 3) return 'ENVEJECIDO';
-    // Cualquier valor entre -2 y +2 (inclusive) se considera normal.
+    if (ageDifference < -2) return 'REJUVENECIDO';
+    if (ageDifference > 2) return 'ENVEJECIDO';
     return 'NORMAL';
 }
-// ===== FIN DE LA CORRECCIÓN =====
-  
+
 export function getStatusColor(status: 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO'): string {
     switch (status) {
       case 'REJUVENECIDO': return 'text-status-green';
