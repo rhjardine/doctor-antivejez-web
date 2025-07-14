@@ -51,7 +51,7 @@ const mockAppointment: Appointment = {
 };
 
 const mockMedications: Medication[] = [
-  { id: 1, name: 'Metformina', dosage: '500mg, 1 vez al día' },
+  { id: 1, name: 'Magnesio', dosage: '500mg, 1 vez al día' },
   { id: 2, name: 'Omega-3', dosage: '1000mg, 2 veces al día' },
   { id: 3, name: 'Vitamina D', dosage: '2000 UI, 1 vez al día' },
 ];
@@ -60,7 +60,7 @@ const mockHistory: HistoryEvent[] = [
   {
     id: 1,
     date: '15/05/2024',
-    title: 'Revisión trimestral',
+    title: 'Evolución Mensual',
     description: 'Paciente presenta mejora en marcadores metabólicos. Se ajusta tratamiento para optimizar resultados.',
   },
   {
@@ -154,7 +154,7 @@ const CurrentTreatmentCard = ({ medications }: { medications: Medication[] }) =>
   <div className="card">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-        <FaPills className="text-primary" /> Medicación Actual
+        <FaPills className="text-primary" /> Tratamiento Actual
       </h3>
       <button className="text-sm text-primary hover:underline">Ver todos</button>
     </div>
