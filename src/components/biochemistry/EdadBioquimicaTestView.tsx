@@ -1,3 +1,4 @@
+// src/components/biochemistry/EdadBioquimicaTestView.tsx
 'use client';
 
 import { useState } from 'react';

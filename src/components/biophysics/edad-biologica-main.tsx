@@ -1,3 +1,4 @@
+// src/components/biophysics/edad-biologica-main.tsx
 import { PatientWithDetails } from '@/types';
 import { FaHeartbeat, FaFlask, FaDna, FaAtom } from 'react-icons/fa';
 

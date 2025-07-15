@@ -1,3 +1,4 @@
+// src/app/(dashboard)/historias/[id]/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';

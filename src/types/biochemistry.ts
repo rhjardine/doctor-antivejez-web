@@ -1,5 +1,4 @@
 // src/types/biochemistry.ts
-
 /**
  * Define la estructura de los valores del formulario para el test bioquímico.
  * Los campos son opcionales para permitir un llenado progresivo.
