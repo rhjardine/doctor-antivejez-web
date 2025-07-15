@@ -3,15 +3,27 @@
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-import { BiochemistryFormValues } from '@/types/biochemistry';
 
-// Tipo combinado para los datos que se guardarán en la base de datos.
-type BiochemistryTestData = Partial<BiochemistryFormValues> & {
+// ===== INICIO DE LA MODIFICACIÓN: Corregir el tipo de dato esperado =====
+// Se define explícitamente el tipo para que coincida con lo que se guarda en la base de datos.
+// `boneDensitometry` ahora es `number | undefined`, no un objeto.
+type BiochemistryTestData = {
   patientId: string;
   chronologicalAge: number;
   biochemicalAge: number;
   differentialAge: number;
+  somatomedin?: number;
+  hba1c?: number;
+  insulin?: number;
+  postPrandial?: number;
+  tgHdlRatio?: number;
+  dhea?: number;
+  homocysteine?: number;
+  psa?: number;
+  fsh?: number;
+  boneDensitometry?: number;
 };
+// ===== FIN DE LA MODIFICACIÓN =====
 
 /**
  * Guarda un nuevo registro de test bioquímico en la base de datos.
@@ -30,19 +42,8 @@ export async function saveBiochemistryTest(data: BiochemistryTestData) {
       data: {
         patientId: patientId,
         testDate: new Date(),
-        chronologicalAge: data.chronologicalAge,
-        biochemicalAge: data.biochemicalAge,
-        differentialAge: data.differentialAge,
-        somatomedin: data.somatomedin,
-        hba1c: data.hba1c,
-        insulin: data.insulin,
-        postPrandial: data.postPrandial,
-        tgHdlRatio: data.tgHdlRatio,
-        dhea: data.dhea,
-        homocysteine: data.homocysteine,
-        psa: data.psa,
-        fsh: data.fsh,
-        boneDensitometry: data.boneDensitometry,
+        // El resto de los datos ya coinciden con el esquema
+        ...testData,
       },
     });
 
