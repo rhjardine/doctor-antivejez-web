@@ -1,18 +1,27 @@
-// src/components/biophysics/edad-biologica-main.tsx
-import { PatientWithDetails } from '@/types';
-import { FaHeartbeat, FaFlask, FaDna, FaAtom } from 'react-icons/fa';
+'use client';
 
-// Definición de las propiedades que espera el componente.
+import { PatientWithDetails } from '@/types';
+import { FaHeartbeat, FaFlask, FaDna, FaAtom, FaHistory } from 'react-icons/fa';
+
+// ===== INICIO DE LA MODIFICACIÓN: Definición de props actualizada =====
 interface EdadBiologicaMainProps {
   patient: PatientWithDetails;
   onTestClick: () => void;
-  // ===== INICIO DE LA MODIFICACIÓN: Añadir prop para el nuevo test =====
   onBiochemistryTestClick: () => void;
-  // ===== FIN DE LA MODIFICACIÓN =====
+  onHistoryClick: () => void;
+  onBiochemistryHistoryClick: () => void;
 }
+// ===== FIN DE LA MODIFICACIÓN =====
 
-export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistryTestClick }: EdadBiologicaMainProps) {
+export default function EdadBiologicaMain({
+  patient,
+  onTestClick,
+  onBiochemistryTestClick,
+  onHistoryClick,
+  onBiochemistryHistoryClick,
+}: EdadBiologicaMainProps) {
   const lastBiophysicsTest = patient.biophysicsTests?.[0];
+  const lastBiochemistryTest = patient.biochemistryTests?.[0];
 
   const testCards = [
     {
@@ -20,22 +29,22 @@ export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistry
       title: 'EDAD BIOFÍSICA',
       icon: FaHeartbeat,
       value: lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge) : '--',
-      // ===== INICIO DE LA MODIFICACIÓN: Hacer la card clickeable =====
       isClickable: true,
       onClick: onTestClick,
       color: 'bg-primary',
-      // ===== FIN DE LA MODIFICACIÓN =====
+      hasHistory: patient.biophysicsTests && patient.biophysicsTests.length > 0,
+      onHistoryClick: onHistoryClick,
     },
     {
       id: 'bioquimica',
       title: 'EDAD BIOQUÍMICA',
       icon: FaFlask,
-      value: '--',
-      // ===== INICIO DE LA MODIFICACIÓN: Hacer la card clickeable y cambiar color =====
+      value: lastBiochemistryTest?.biochemicalAge ? Math.round(lastBiochemistryTest.biochemicalAge) : '--',
       isClickable: true,
       onClick: onBiochemistryTestClick,
-      color: 'bg-primary', // 
-      // ===== FIN DE LA MODIFICACIÓN =====
+      color: 'bg-primary',
+      hasHistory: patient.biochemistryTests && patient.biochemistryTests.length > 0,
+      onHistoryClick: onBiochemistryHistoryClick,
     },
     {
       id: 'orthomolecular',
@@ -45,6 +54,8 @@ export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistry
       isClickable: false,
       onClick: undefined,
       color: 'bg-gray-400',
+      hasHistory: false,
+      onHistoryClick: undefined,
     },
     {
       id: 'genetica',
@@ -54,6 +65,8 @@ export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistry
       isClickable: false,
       onClick: undefined,
       color: 'bg-gray-400',
+      hasHistory: false,
+      onHistoryClick: undefined,
     },
   ];
 
@@ -99,34 +112,41 @@ export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistry
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {testCards.map((card) => {
             const Icon = card.icon;
-
             return (
-              <div
-                key={card.id}
-                onClick={card.onClick}
-                className={`${card.color} rounded-xl p-6 text-white transition-all ${
-                  card.isClickable
-                    ? 'cursor-pointer hover:shadow-lg hover:scale-105'
-                    : 'cursor-not-allowed opacity-80'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <Icon className="text-4xl opacity-80" />
-                  {!card.isClickable && (
-                    <span className="text-xs bg-white/20 px-2 py-1 rounded">En desarrollo</span>
+              <div key={card.id} className={`${card.color} rounded-xl p-6 text-white flex flex-col justify-between transition-all duration-300`}>
+                <div onClick={card.onClick} className={card.isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}>
+                  <div className="flex items-center justify-between mb-4">
+                    <Icon className="text-4xl opacity-80" />
+                    {!card.isClickable && (
+                      <span className="text-xs bg-white/20 px-2 py-1 rounded">En desarrollo</span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-medium mb-2 opacity-90">{card.title}</h3>
+                  <p className="text-3xl font-bold">
+                    {card.value !== '--' ? `${card.value} años` : card.value}
+                  </p>
+                  {card.id === 'biofisica' && lastBiophysicsTest && (
+                    <p className="text-sm mt-2 opacity-80">
+                      Diferencia: {lastBiophysicsTest.differentialAge > 0 ? '+' : ''}{Math.round(lastBiophysicsTest.differentialAge)} años
+                    </p>
+                  )}
+                  {card.id === 'bioquimica' && lastBiochemistryTest && (
+                    <p className="text-sm mt-2 opacity-80">
+                      Diferencia: {lastBiochemistryTest.differentialAge > 0 ? '+' : ''}{Math.round(lastBiochemistryTest.differentialAge)} años
+                    </p>
                   )}
                 </div>
-
-                <h3 className="text-sm font-medium mb-2 opacity-90">{card.title}</h3>
-
-                <p className="text-3xl font-bold">
-                  {card.value !== '--' ? `${card.value} años` : card.value}
-                </p>
-
-                {card.id === 'biofisica' && lastBiophysicsTest && (
-                  <p className="text-sm mt-2 opacity-80">
-                    Diferencia: {lastBiophysicsTest.differentialAge > 0 ? '+' : ''}{Math.round(lastBiophysicsTest.differentialAge)} años
-                  </p>
+                {card.hasHistory && card.onHistoryClick && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      card.onHistoryClick!();
+                    }}
+                    className="mt-4 w-full text-center py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-xs font-semibold flex items-center justify-center gap-2"
+                  >
+                    <FaHistory />
+                    Ver Historial
+                  </button>
                 )}
               </div>
             );
@@ -136,26 +156,21 @@ export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistry
 
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Perfil Multidimensional de Envejecimiento</h2>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {profileData.map((profile, index) => {
             const difference = profile.testAge - profile.chronoAge;
             const colorClass = getGaugeColor(difference);
-
             return (
               <div key={index} className="card">
                 <h3 className="font-medium text-gray-700 mb-4">{profile.title}</h3>
-
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-500">Edad Cronológica</span>
                   <span className="font-medium">{profile.chronoAge} años</span>
                 </div>
-
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm text-gray-500">Edad del Perfil</span>
                   <span className={`font-medium ${colorClass}`}>{profile.testAge} años</span>
                 </div>
-
                 <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className={`absolute left-0 top-0 h-full rounded-full transition-all ${
@@ -163,12 +178,9 @@ export default function EdadBiologicaMain({ patient, onTestClick, onBiochemistry
                       difference >= -2 && difference <= 3 ? 'bg-status-yellow' :
                       'bg-status-red'
                     }`}
-                    style={{
-                      width: `${Math.min(100, Math.max(0, 50 + (difference * 2)))}%`
-                    }}
+                    style={{ width: `${Math.min(100, Math.max(0, 50 + (difference * 2)))}%` }}
                   />
                 </div>
-
                 <p className={`text-xs mt-2 text-center ${colorClass}`}>
                   {difference > 0 ? '+' : ''}{difference} años
                 </p>
