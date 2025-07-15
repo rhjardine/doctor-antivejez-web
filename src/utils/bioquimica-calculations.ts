@@ -27,32 +27,16 @@ class LegacyBiochemicalAgeCalculator {
             homocysteine: [[0, 2.5], [2.5, 5], [5, 7.5], [7.5, 10], [10, 15], [15, 25], [25, 35], [35, 45], [45, 55], [55, 60], [60, 65], [65, 70], [70, 85], [85, 100]],
             psa: [[30, 25], [25, 20], [20, 18], [18, 15], [15, 13], [13, 11], [11, 10], [10, 9], [9, 8], [8, 7], [7, 6], [6, 5], [5, 4], [4, 2]],
             fsh: [[1, 5], [5, 10], [10, 15], [15, 20], [20, 30], [30, 40], [40, 50], [50, 60], [60, 70], [70, 80], [80, 100], [100, 120], [120, 140], [140, 160]],
-            boneDensitometry: [[1.41, 1.30], [1.30, 1.25], [1.25, 1.18], [1.18, 1.06], [1.06, 1.00], [1.00, 0.94], [0.94, 0.90], [0.90, 0.88], [0.88, 0.86], [0.86, 0.84], [0.84, 0.82], [0.82, 0.72], [0.72, 0.62], [0.62, 0.58]]
+            boneDensitometry: [[1.41, 1.30], [1.30, 1.25], [1.25, 1.18], [1.18, 1.06], [1.06, 1.00], [1.00, 0.94], [0.94, 0.90], [0.90, 0.88], [0.88, 0.86], [0.86, 0.84], [0.84, 0.82], [0.82, 0.72], [0.72, 0.62], [0.62, 0.58]],
         };
     }
 
-    /**
-     * Interpola un valor dentro de un rango de valores y un rango de edades.
-     * @param value El valor del paciente.
-     * @param range1 Límite inferior del rango de valores.
-     * @param range2 Límite superior del rango de valores.
-     * @param age1 Límite inferior del rango de edad.
-     * @param age2 Límite superior del rango de edad.
-     * @returns La edad interpolada y redondeada hacia arriba.
-     */
     private interpolate(value: number, range1: number, range2: number, age1: number, age2: number): number {
         if (range1 === range2) return age1;
         const result = age1 + (value - range1) * (age2 - age1) / (range2 - range1);
-        // CORRECCIÓN CLAVE: Usar Math.ceil() para redondear hacia arriba, replicando la lógica del sistema legado.
         return Math.ceil(result);
     }
     
-    /**
-     * Encuentra el rango de baremo correcto para un valor y calcula la edad.
-     * @param value El valor del paciente.
-     * @param parameter El nombre del parámetro a buscar en las tablas.
-     * @returns La edad calculada.
-     */
     private getAgeFromRanges(value: number, parameter: string): number {
         const ranges = this.ranges[parameter];
         if (!ranges) return 0;
@@ -70,11 +54,6 @@ class LegacyBiochemicalAgeCalculator {
         return 0; // Fallback si no se encuentra el rango.
     }
     
-    /**
-     * Calcula todas las edades parciales y la edad bioquímica final.
-     * @param params Objeto con todos los valores del formulario.
-     * @returns Un objeto con las edades parciales y la edad bioquímica final.
-     */
     public calculate(params: BiochemistryFormValues): BiochemistryCalculationResult {
         const boneDensitometryAvg = params.boneDensitometry ? (params.boneDensitometry.field1! + params.boneDensitometry.field2!) / 2 : 0;
 
@@ -97,7 +76,7 @@ class LegacyBiochemicalAgeCalculator {
         
         return {
             partialAges: ages,
-            biochemicalAge: Math.round(averageAge) // El promedio final se redondea al entero más cercano.
+            biochemicalAge: Math.round(averageAge)
         };
     }
 }
@@ -105,27 +84,6 @@ class LegacyBiochemicalAgeCalculator {
 // ===================================================================================
 // FIN: Lógica de cálculo del sistema legado
 // ===================================================================================
-
-const BIOCHEMISTRY_KEYS: (keyof BiochemistryFormValues)[] = [
-  'somatomedin', 'hba1c', 'insulin', 'postPrandial', 'tgHdlRatio', 
-  'dhea', 'homocysteine', 'psa', 'fsh', 'boneDensitometry'
-];
-
-function validateAllMetricsPresent(formValues: Partial<BiochemistryFormValues>) {
-    for (const key of BIOCHEMISTRY_KEYS) {
-        const value = formValues[key];
-        if (value === undefined || value === null) {
-            throw new Error(`El campo ${key} es obligatorio.`);
-        }
-        if (typeof value === 'object' && 'field1' in value) {
-            if (value.field1 === undefined || value.field2 === undefined || isNaN(value.field1) || isNaN(value.field2)) {
-                throw new Error(`Las dos dimensiones de Densitometría Ósea son obligatorias.`);
-            }
-        } else if (typeof value !== 'object' && isNaN(value as number)) {
-             throw new Error(`El campo ${key} debe ser un número.`);
-        }
-    }
-}
 
 /**
  * Función pública que sirve como puente entre la UI y la lógica de cálculo.
@@ -138,7 +96,7 @@ export function calculateBioquimicaResults(
   chronologicalAge: number
 ): { biochemicalAge: number; differentialAge: number; partialAges: BiochemistryPartialAges } {
   
-  validateAllMetricsPresent(formValues);
+  // Se elimina la validación estricta que impedía el cálculo con campos vacíos.
   
   const calculator = new LegacyBiochemicalAgeCalculator();
   const result = calculator.calculate(formValues as BiochemistryFormValues);
