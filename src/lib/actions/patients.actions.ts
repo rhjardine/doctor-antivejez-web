@@ -1,9 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-// ===== INICIO DE LA CORRECCIÓN: Importar 'Prisma' desde @prisma/client =====
 import { Prisma, Patient } from '@prisma/client';
-// ===== FIN DE LA CORRECCIÓN =====
 import { PatientFormData, patientSchema } from '@/utils/validation';
 import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
@@ -60,6 +58,8 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
 export async function deletePatient(id: string) {
   try {
     await prisma.$transaction([
+      prisma.appointment.deleteMany({ where: { patientId: id } }),
+      prisma.biochemistryTest.deleteMany({ where: { patientId: id } }),
       prisma.biophysicsTest.deleteMany({ where: { patientId: id } }),
       prisma.patient.delete({ where: { id } }),
     ]);
@@ -71,12 +71,15 @@ export async function deletePatient(id: string) {
   }
 }
 
-export async function getPatientWithTests(id: string) {
+export async function getPatientDetails(id: string) {
   try {
     const patient = await prisma.patient.findUnique({
       where: { id },
       include: {
         biophysicsTests: {
+          orderBy: { testDate: 'desc' },
+        },
+        biochemistryTests: {
           orderBy: { testDate: 'desc' },
         },
         user: {
@@ -86,6 +89,9 @@ export async function getPatientWithTests(id: string) {
             email: true,
           },
         },
+        appointments: {
+            orderBy: { date: 'asc' },
+        }
       },
     });
 
@@ -98,6 +104,7 @@ export async function getPatientWithTests(id: string) {
     return { success: false, error: 'Error al obtener el paciente' };
   }
 }
+
 
 export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { page?: number; limit?: number; userId?: string } = {}) {
   try {
@@ -121,6 +128,18 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
             orderBy: { testDate: 'desc' },
             take: 1,
           },
+          appointments: {
+            where: {
+                date: {
+                    gte: new Date()
+                },
+                status: 'SCHEDULED'
+            },
+            orderBy: {
+                date: 'asc'
+            },
+            take: 1
+          }
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -135,18 +154,26 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
   }
 }
 
-export async function searchPatients({ query, page = 1, limit = 10 }: { query: string; page?: number; limit?: number; }) {
+// ===== INICIO DE LA MODIFICACIÓN =====
+// Se añade el parámetro `userId` a la función y a la consulta.
+export async function searchPatients({ query, userId, page = 1, limit = 10 }: { query: string; userId: string; page?: number; limit?: number; }) {
   try {
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
     
+    // La cláusula `where` ahora requiere que el `userId` coincida Y que se cumpla una de las condiciones de búsqueda.
     const whereClause: Prisma.PatientWhereInput = {
-      OR: [
-        { firstName: { contains: query, mode: 'insensitive' } },
-        { lastName: { contains: query, mode: 'insensitive' } },
-        { identification: { contains: query, mode: 'insensitive' } },
-        { email: { contains: query, mode: 'insensitive' } },
-        ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
-      ],
+      AND: [
+        { userId: userId },
+        {
+          OR: [
+            { firstName: { contains: query, mode: 'insensitive' } },
+            { lastName: { contains: query, mode: 'insensitive' } },
+            { identification: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+            ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
+          ],
+        }
+      ]
     };
 
     const skip = (page - 1) * limit;
@@ -168,6 +195,18 @@ export async function searchPatients({ query, page = 1, limit = 10 }: { query: s
                   orderBy: { testDate: 'desc' },
                   take: 1,
                 },
+                appointments: {
+                    where: {
+                        date: {
+                            gte: new Date()
+                        },
+                        status: 'SCHEDULED'
+                    },
+                    orderBy: {
+                        date: 'asc'
+                    },
+                    take: 1
+                }
             },
             orderBy: { createdAt: 'desc' },
         }),

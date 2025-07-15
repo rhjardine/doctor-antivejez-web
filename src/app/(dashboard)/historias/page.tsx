@@ -50,13 +50,11 @@ export default function HistoriasPage() {
     }
   };
 
-  // ===== INICIO DE LA MODIFICACIÓN =====
   const handleSearch = async () => {
     if (!session?.user?.id) return;
     setCurrentPage(1);
     setLoading(true);
     try {
-      // Se pasa el userId a la función de búsqueda para que filtre correctamente.
       const result = searchQuery.trim()
         ? await searchPatients({ query: searchQuery, page: 1, limit: ITEMS_PER_PAGE, userId: session.user.id })
         : await getPaginatedPatients({ page: 1, limit: ITEMS_PER_PAGE, userId: session.user.id });
@@ -71,7 +69,6 @@ export default function HistoriasPage() {
       setLoading(false);
     }
   };
-  // ===== FIN DE LA MODIFICACIÓN =====
   
   const handleDelete = async () => {
     if (!patientToDelete || !session?.user?.id) return;
