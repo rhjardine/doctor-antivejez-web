@@ -64,7 +64,7 @@ export async function signIn(formData: z.infer<typeof signInSchema>) {
       return { success: false, error: 'Credenciales inválidas' };
     }
 
-    const passwordMatch = await bcrypt.compare(validatedData.password, user.password!);
+    const passwordMatch = await bcrypt.compare(validatedData.password, user.password);
 
     if (!passwordMatch) {
       return { success: false, error: 'Credenciales inválidas' };
@@ -89,8 +89,8 @@ export async function getUserById(id: string) {
         name: true,
         role: true,
         // ===== INICIO DE LA CORRECCIÓN =====
-        // Se cambia 'image' por 'avatar' para que coincida con el schema.prisma
-        avatar: true,
+        // Se cambia 'avatar' por 'image' para que coincida con el schema.prisma
+        image: true,
         // ===== FIN DE LA CORRECCIÓN =====
       },
     });
