@@ -10,11 +10,13 @@ class LegacyBiochemicalAgeCalculator {
     private ranges: Record<string, number[][]>;
 
     constructor() {
+        // Define los rangos de edad completos [min, max] para cada septenio.
         this.ageRanges = [
             [21, 28], [28, 35], [35, 42], [42, 49], [49, 56], [56, 63], [63, 70], 
             [70, 77], [77, 84], [84, 91], [91, 98], [98, 105], [105, 112], [112, 120]
         ];
         
+        // Tablas de baremos extraídas de la documentación.
         this.ranges = {
             somatomedin: [[350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80], [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]],
             hba1c: [[0, 0.5], [0.5, 1], [1, 1.5], [1.5, 3], [3, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14]],
@@ -29,12 +31,28 @@ class LegacyBiochemicalAgeCalculator {
         };
     }
 
+    /**
+     * Interpola un valor dentro de un rango de valores y un rango de edades.
+     * @param value El valor del paciente.
+     * @param range1 Límite inferior del rango de valores.
+     * @param range2 Límite superior del rango de valores.
+     * @param age1 Límite inferior del rango de edad.
+     * @param age2 Límite superior del rango de edad.
+     * @returns La edad interpolada y redondeada hacia arriba.
+     */
     private interpolate(value: number, range1: number, range2: number, age1: number, age2: number): number {
         if (range1 === range2) return age1;
         const result = age1 + (value - range1) * (age2 - age1) / (range2 - range1);
+        // CORRECCIÓN CLAVE: Usar Math.ceil() para redondear hacia arriba, replicando la lógica del sistema legado.
         return Math.ceil(result);
     }
     
+    /**
+     * Encuentra el rango de baremo correcto para un valor y calcula la edad.
+     * @param value El valor del paciente.
+     * @param parameter El nombre del parámetro a buscar en las tablas.
+     * @returns La edad calculada.
+     */
     private getAgeFromRanges(value: number, parameter: string): number {
         const ranges = this.ranges[parameter];
         if (!ranges) return 0;
@@ -49,11 +67,16 @@ class LegacyBiochemicalAgeCalculator {
                 return this.interpolate(value, min, max, age1, age2);
             }
         }
-        return 0;
+        return 0; // Fallback si no se encuentra el rango.
     }
     
+    /**
+     * Calcula todas las edades parciales y la edad bioquímica final.
+     * @param params Objeto con todos los valores del formulario.
+     * @returns Un objeto con las edades parciales y la edad bioquímica final.
+     */
     public calculate(params: BiochemistryFormValues): BiochemistryCalculationResult {
-        const boneDensitometryAvg = params.boneDensitometry ? (params.boneDensitometry.field1 + params.boneDensitometry.field2) / 2 : 0;
+        const boneDensitometryAvg = params.boneDensitometry ? (params.boneDensitometry.field1! + params.boneDensitometry.field2!) / 2 : 0;
 
         const ages: BiochemistryPartialAges = {
             somatomedinAge: this.getAgeFromRanges(params.somatomedin || 0, 'somatomedin'),
@@ -68,23 +91,27 @@ class LegacyBiochemicalAgeCalculator {
             boneDensitometryAge: this.getAgeFromRanges(boneDensitometryAvg, 'boneDensitometry'),
         };
         
-        const ageValues = Object.values(ages).filter(age => age > 0);
-        const totalAge = ageValues.reduce((sum, age) => sum + age, 0);
+        const ageValues = Object.values(ages).filter(age => age && age > 0);
+        const totalAge = ageValues.reduce((sum, age) => sum + (age || 0), 0);
         const averageAge = ageValues.length > 0 ? totalAge / ageValues.length : 0;
         
         return {
             partialAges: ages,
-            biochemicalAge: Math.round(averageAge)
+            biochemicalAge: Math.round(averageAge) // El promedio final se redondea al entero más cercano.
         };
     }
 }
+
+// ===================================================================================
+// FIN: Lógica de cálculo del sistema legado
+// ===================================================================================
 
 const BIOCHEMISTRY_KEYS: (keyof BiochemistryFormValues)[] = [
   'somatomedin', 'hba1c', 'insulin', 'postPrandial', 'tgHdlRatio', 
   'dhea', 'homocysteine', 'psa', 'fsh', 'boneDensitometry'
 ];
 
-function validateAllMetricsPresent(formValues: BiochemistryFormValues) {
+function validateAllMetricsPresent(formValues: Partial<BiochemistryFormValues>) {
     for (const key of BIOCHEMISTRY_KEYS) {
         const value = formValues[key];
         if (value === undefined || value === null) {
@@ -94,21 +121,27 @@ function validateAllMetricsPresent(formValues: BiochemistryFormValues) {
             if (value.field1 === undefined || value.field2 === undefined || isNaN(value.field1) || isNaN(value.field2)) {
                 throw new Error(`Las dos dimensiones de Densitometría Ósea son obligatorias.`);
             }
-        } else if (isNaN(value as number)) {
+        } else if (typeof value !== 'object' && isNaN(value as number)) {
              throw new Error(`El campo ${key} debe ser un número.`);
         }
     }
 }
 
+/**
+ * Función pública que sirve como puente entre la UI y la lógica de cálculo.
+ * @param formValues Los valores del formulario del test.
+ * @param chronologicalAge La edad cronológica del paciente.
+ * @returns El resultado completo del test bioquímico.
+ */
 export function calculateBioquimicaResults(
-  formValues: BiochemistryFormValues,
+  formValues: Partial<BiochemistryFormValues>,
   chronologicalAge: number
 ): { biochemicalAge: number; differentialAge: number; partialAges: BiochemistryPartialAges } {
   
   validateAllMetricsPresent(formValues);
   
   const calculator = new LegacyBiochemicalAgeCalculator();
-  const result = calculator.calculate(formValues);
+  const result = calculator.calculate(formValues as BiochemistryFormValues);
 
   const differentialAge = result.biochemicalAge - chronologicalAge;
 
