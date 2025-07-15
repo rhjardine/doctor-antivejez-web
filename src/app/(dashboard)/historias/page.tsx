@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaVial, FaTh, FaList, FaHistory, FaFileMedicalAlt } from 'react-icons/fa';
-// ===== INICIO DE LA CORRECCIÓN: ACTUALIZAR IMPORTACIÓN =====
 import { getPaginatedPatients, deletePatient, searchPatients } from '@/lib/actions/patients.actions';
-// ===== FIN DE LA CORRECCIÓN =====
 import { formatDate } from '@/utils/date';
 import { formatIdentification } from '@/utils/format';
 import { toast } from 'sonner';
@@ -17,10 +16,11 @@ const ITEMS_PER_PAGE = 10;
 
 export default function HistoriasPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'list'>('list');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
 
@@ -28,15 +28,17 @@ export default function HistoriasPage() {
   const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
-    loadPatients(currentPage);
-  }, [currentPage]);
+    if (status === 'authenticated' && session?.user?.id) {
+      loadPatients(currentPage, session.user.id);
+    } else if (status === 'unauthenticated') {
+        setLoading(false);
+    }
+  }, [currentPage, session, status]);
 
-  const loadPatients = async (page: number) => {
+  const loadPatients = async (page: number, userId: string) => {
     setLoading(true);
     try {
-      // ===== INICIO DE LA CORRECCIÓN: USAR LA NUEVA FUNCIÓN =====
-      const result = await getPaginatedPatients({ page, limit: ITEMS_PER_PAGE });
-      // ===== FIN DE LA CORRECCIÓN =====
+      const result = await getPaginatedPatients({ page, limit: ITEMS_PER_PAGE, userId });
       if (result.success && result.patients) {
         setPatients(result.patients as Patient[]);
         setTotalPages(result.totalPages || 0);
@@ -48,15 +50,16 @@ export default function HistoriasPage() {
     }
   };
 
+  // ===== INICIO DE LA MODIFICACIÓN =====
   const handleSearch = async () => {
+    if (!session?.user?.id) return;
     setCurrentPage(1);
     setLoading(true);
     try {
+      // Se pasa el userId a la función de búsqueda para que filtre correctamente.
       const result = searchQuery.trim()
-        ? await searchPatients({ query: searchQuery, page: 1, limit: ITEMS_PER_PAGE })
-        // ===== INICIO DE LA CORRECCIÓN: USAR LA NUEVA FUNCIÓN AQUÍ TAMBIÉN =====
-        : await getPaginatedPatients({ page: 1, limit: ITEMS_PER_PAGE });
-        // ===== FIN DE LA CORRECCIÓN =====
+        ? await searchPatients({ query: searchQuery, page: 1, limit: ITEMS_PER_PAGE, userId: session.user.id })
+        : await getPaginatedPatients({ page: 1, limit: ITEMS_PER_PAGE, userId: session.user.id });
 
       if (result.success && result.patients) {
         setPatients(result.patients as Patient[]);
@@ -68,15 +71,16 @@ export default function HistoriasPage() {
       setLoading(false);
     }
   };
+  // ===== FIN DE LA MODIFICACIÓN =====
   
   const handleDelete = async () => {
-    if (!patientToDelete) return;
+    if (!patientToDelete || !session?.user?.id) return;
 
     try {
       const result = await deletePatient(patientToDelete);
       if (result.success) {
         toast.success('Paciente eliminado exitosamente');
-        loadPatients(currentPage);
+        loadPatients(currentPage, session.user.id);
       } else {
         toast.error(result.error || 'Error al eliminar paciente');
       }
@@ -88,7 +92,7 @@ export default function HistoriasPage() {
     }
   };
 
-  if (loading) {
+  if (loading || status === 'loading') {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="loader"></div>
@@ -149,7 +153,7 @@ export default function HistoriasPage() {
       {/* Patients View */}
       {patients.length === 0 ? (
         <div className="card text-center py-12">
-          <p className="text-gray-500">No se encontraron pacientes</p>
+          <p className="text-gray-500">No se encontraron pacientes para tu usuario</p>
           <Link href="/historias/nuevo" className="btn-primary mt-4 inline-block">
             Registrar primer paciente
           </Link>
