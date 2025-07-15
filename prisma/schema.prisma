@@ -1,84 +1,47 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  role          Role      @default(MEDICO)
-  image         String?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  emailVerified DateTime?
-
-  patients Patient[]
-
-  @@map("users")
-}
+// ... (otros modelos como User, Account, etc.)
 
 model Patient {
-  id            String   @id @default(cuid())
-  // ===== INICIO DEL CAMBIO =====
-  controlNumber Int      @unique @default(autoincrement())
-  // ===== FIN DEL CAMBIO =====
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  userId            String
+  photo             String?
+  nationality       String
+  identification    String    @unique
+  historyDate       DateTime
+  lastName          String
+  firstName         String
+  birthDate         DateTime
+  chronologicalAge  Int
+  gender            Gender
+  birthPlace        String
+  phone             String
+  maritalStatus     String
+  profession        String
+  country           String
+  state             String
+  city              String
+  address           String
+  bloodType         String
+  email             String
+  observations      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  controlNumber     Int       @default(autoincrement())
 
-  // Información Personal
-  photo         String?
-  nationality   String
-  identification String   @unique
-  historyDate   DateTime
-  lastName      String
-  firstName     String
-  birthDate     DateTime
-  chronologicalAge Int
-  gender        Gender
-  birthPlace    String
-  phone         String
-  maritalStatus String
-  profession    String
-  country       String
-  state         String
-  city          String
-  address       String
-  bloodType     String
-  email         String
-  observations  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relación con tests biofísicos
-  biophysicsTests BiophysicsTest[]
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  biophysicsTests   BiophysicsTest[]
+  biochemistryTests BiochemistryTest[] // <-- AÑADIR ESTA LÍNEA
 
   @@map("patients")
 }
 
 model BiophysicsTest {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   patientId           String
-  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
   chronologicalAge    Float
   biologicalAge       Float
   differentialAge     Float
   gender              String
-  isAthlete           Boolean  @default(false)
-
-  // Resultados de las 8 métricas
+  isAthlete           Boolean   @default(false)
   fatPercentage       Float?
   fatAge              Float?
   bmi                 Float?
@@ -95,50 +58,39 @@ model BiophysicsTest {
   systolicAge         Float?
   diastolicPressure   Float?
   diastolicAge        Float?
+  testDate            DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  testDate  DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  patient             Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@map("biophysics_tests")
 }
 
-model Board {
-  id        String   @id @default(cuid())
-  rangeId   Int
-  range     Range    @relation(fields: [rangeId], references: [id], onDelete: Cascade)
-  type      String   @default("FORM_BIOPHYSICS")
-  name      String
-  minValue  Float
-  maxValue  Float
-  inverse   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// AÑADIR ESTE NUEVO MODELO COMPLETO
+model BiochemistryTest {
+  id                String    @id @default(cuid())
+  patientId         String
+  testDate          DateTime  @default(now())
+  chronologicalAge  Float
+  biochemicalAge    Float
+  differentialAge   Float
+  somatomedin       Float?
+  hba1c             Float?
+  insulin           Float?
+  postPrandial      Float?
+  tgHdlRatio        Float?
+  dhea              Float?
+  homocysteine      Float?
+  psa               Float?
+  fsh               Float?
+  boneDensitometry  Float?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  @@map("boards")
+  patient           Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("biochemistry_tests")
 }
 
-model Range {
-  id        Int      @id @default(autoincrement())
-  minAge    Float
-  maxAge    Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  boards Board[]
-
-  @@map("ranges")
-}
-
-enum Role {
-  MEDICO
-  ADMINISTRATIVO
-  PACIENTE
-}
-
-enum Gender {
-  MASCULINO
-  FEMENINO
-  MASCULINO_DEPORTIVO
-  FEMENINO_DEPORTIVO
-}
+// ... (otros modelos como Board, Range, etc.)

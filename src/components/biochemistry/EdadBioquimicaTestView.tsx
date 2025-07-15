@@ -1,4 +1,3 @@
-// src/components/biochemistry/EdadBioquimicaTestView.tsx
 'use client';
 
 import { useState } from 'react';
@@ -56,14 +55,28 @@ export default function EdadBioquimicaTestView({ patient, onBack }: EdadBioquimi
       setFinalAge(result.biochemicalAge);
       setDifferentialAge(result.differentialAge);
 
-      await saveBiochemistryTest({
+      // CORRECCIÓN: Construir el objeto de datos explícitamente para evitar errores de tipo.
+      const dataToSave = {
         patientId: patient.id,
         chronologicalAge: patient.chronologicalAge,
         biochemicalAge: result.biochemicalAge,
         differentialAge: result.differentialAge,
-        ...formValues,
-        boneDensitometry: formValues.boneDensitometry ? (formValues.boneDensitometry.field1 + formValues.boneDensitometry.field2) / 2 : undefined,
-      });
+        somatomedin: formValues.somatomedin,
+        hba1c: formValues.hba1c,
+        insulin: formValues.insulin,
+        postPrandial: formValues.postPrandial,
+        tgHdlRatio: formValues.tgHdlRatio,
+        dhea: formValues.dhea,
+        homocysteine: formValues.homocysteine,
+        psa: formValues.psa,
+        fsh: formValues.fsh,
+        // Se calcula el promedio y se asegura de que los campos existan antes de sumar.
+        boneDensitometry: formValues.boneDensitometry?.field1 != null && formValues.boneDensitometry?.field2 != null
+          ? (formValues.boneDensitometry.field1 + formValues.boneDensitometry.field2) / 2
+          : undefined,
+      };
+
+      await saveBiochemistryTest(dataToSave);
 
       toast.success('Test Bioquímico guardado exitosamente.');
       setIsSaved(true);
