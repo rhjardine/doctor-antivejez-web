@@ -4,9 +4,7 @@ services:
     build: .
     # El comando que se ejecutará al iniciar: el servidor de desarrollo
     command: npm run dev
-    # ESTA ES LA CLAVE DEL ÉXITO:
     # Mapea tu código local a la carpeta /app del contenedor.
-    # Cualquier cambio en tu PC se refleja al instante.
     volumes:
       - .:/app
       # Excepción: no mapear node_modules para usar los del contenedor.
@@ -15,10 +13,8 @@ services:
       - "3001:3000"
     environment:
       DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
-      # ===== INICIO DEL CAMBIO =====
-      # Añadir DIRECT_URL para que Prisma pueda ejecutar migraciones dentro del contenedor
+      # DIRECT_URL es útil para que Prisma pueda ejecutar migraciones dentro del contenedor
       DIRECT_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
-      # ===== FIN DEL CAMBIO =====
       NEXTAUTH_URL: "http://localhost:3001"
       NEXTAUTH_SECRET: "n5bQGpiu3t03I8NOA3RfClMcQAfYvx6Hyo7yOTWEO1M="
     depends_on:
@@ -28,6 +24,12 @@ services:
   db:
     image: postgres:15
     restart: always
+    # ===== INICIO DE LA CORRECCIÓN =====
+    # Expone el puerto 5432 interno del contenedor al puerto 5433 de tu máquina local.
+    # Esto permite que herramientas locales como `prisma migrate` se conecten.
+    ports:
+      - "5433:5432"
+    # ===== FIN DE LA CORRECCIÓN =====
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -42,3 +44,4 @@ services:
 
 volumes:
   postgres_data:
+

@@ -51,7 +51,7 @@ const menuItems = [
   { 
     name: 'Reportes', 
     icon: FaChartBar, 
-    href: '/reportes',
+    href: '/reportes', // La ruta ya existe, solo nos aseguramos de que el componente sea funcional
     color: 'text-yellow-500'
   },
   { 
@@ -80,9 +80,9 @@ export function Sidebar() {
           <Image
             src="/images/logo.png"
             alt="Doctor AntiVejez Logo"
-            width={180} // Adjust width as needed, maintaining aspect ratio
-            height={40} // Start with a height like 40-50px
-            priority // Preload logo as it's likely LCP or important
+            width={180}
+            height={40}
+            priority
           />
         </Link>
       </div>
