@@ -15,8 +15,9 @@ export interface BiochemistryFormValues {
   psa?: number;
   fsh?: number;
   boneDensitometry?: {
-    field1: number;
-    field2: number;
+    // CORRECCIÓN: Se hacen los campos opcionales para evitar errores de tipo.
+    field1?: number;
+    field2?: number;
   };
 }
 
