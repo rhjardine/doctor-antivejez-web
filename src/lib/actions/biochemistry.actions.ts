@@ -1,46 +1,38 @@
+// src/lib/actions/biochemistry.actions.ts
 'use server';
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
+import { BiochemistryFormValues } from '@/types/biochemistry';
 
-// CORRECCIÓN: Se define un tipo específico para los datos que se guardan en la DB,
-// donde `boneDensitometry` es un número, no un objeto.
-type BiochemistryDbData = {
+// Tipo combinado para los datos que se guardarán en la base de datos.
+type BiochemistryTestData = Partial<BiochemistryFormValues> & {
   patientId: string;
   chronologicalAge: number;
   biochemicalAge: number;
   differentialAge: number;
-  somatomedin?: number;
-  hba1c?: number;
-  insulin?: number;
-  postPrandial?: number;
-  tgHdlRatio?: number;
-  dhea?: number;
-  homocysteine?: number;
-  psa?: number;
-  fsh?: number;
-  boneDensitometry?: number;
 };
 
 /**
  * Guarda un nuevo registro de test bioquímico en la base de datos.
- * @param data - Los datos completos del test, con el formato correcto para la DB.
+ * @param data - Los datos completos del test, incluyendo el ID del paciente y los resultados.
  * @returns Un objeto indicando si la operación fue exitosa y el registro creado.
  */
-export async function saveBiochemistryTest(data: Partial<BiochemistryDbData>) {
+export async function saveBiochemistryTest(data: BiochemistryTestData) {
   try {
     const { patientId, ...testData } = data;
     if (!patientId) {
       throw new Error('El ID del paciente es requerido para guardar el test.');
     }
 
+    // Crea el nuevo registro en la tabla 'BiochemistryTest'
     const test = await prisma.biochemistryTest.create({
       data: {
         patientId: patientId,
         testDate: new Date(),
-        chronologicalAge: data.chronologicalAge!,
-        biochemicalAge: data.biochemicalAge!,
-        differentialAge: data.differentialAge!,
+        chronologicalAge: data.chronologicalAge,
+        biochemicalAge: data.biochemicalAge,
+        differentialAge: data.differentialAge,
         somatomedin: data.somatomedin,
         hba1c: data.hba1c,
         insulin: data.insulin,
@@ -54,11 +46,34 @@ export async function saveBiochemistryTest(data: Partial<BiochemistryDbData>) {
       },
     });
 
+    // Revalida la ruta de la historia del paciente para que los datos se actualicen sin recargar la página.
     revalidatePath(`/historias/${patientId}`);
     
     return { success: true, test };
   } catch (error) {
     console.error('Error guardando test bioquímico:', error);
     return { success: false, error: 'Error al guardar el test bioquímico' };
+  }
+}
+
+/**
+ * Elimina un test bioquímico de la base de datos.
+ * @param testId - El ID del test a eliminar.
+ * @param patientId - El ID del paciente para revalidar la ruta.
+ * @returns Un objeto indicando si la operación fue exitosa.
+ */
+export async function deleteBiochemistryTest(testId: string, patientId: string) {
+  try {
+    await prisma.biochemistryTest.delete({
+      where: { id: testId },
+    });
+
+    revalidatePath(`/historias/${patientId}`);
+    revalidatePath('/dashboard');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error eliminando test bioquímico:', error);
+    return { success: false, error: 'Error al eliminar el test' };
   }
 }

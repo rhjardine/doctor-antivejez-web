@@ -6,66 +6,60 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
+// MODELS
+
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  role          Role      @default(MEDICO)
-  image         String?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  emailVerified DateTime?
-
-  patients Patient[]
-
-  @@map("users")
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      Role      @default(MEDICO)
+  avatar    String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  patients  Patient[]
 }
 
 model Patient {
-  id             String   @id @default(cuid())
-  controlNumber  Int      @unique @default(autoincrement())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  photo          String?
-  nationality    String
-  identification String   @unique
-  historyDate    DateTime
-  lastName       String
-  firstName      String
-  birthDate      DateTime
+  id               String             @id @default(cuid())
+  controlNumber    Int                @default(autoincrement())
+  userId           String
+  photo            String?
+  nationality      String
+  identification   String             @unique
+  historyDate      DateTime
+  lastName         String
+  firstName        String
+  birthDate        DateTime
   chronologicalAge Int
-  gender         Gender
-  birthPlace     String
-  phone          String
-  maritalStatus  String
-  profession     String
-  country        String
-  state          String
-  city           String
-  address        String
-  bloodType      String
-  email          String
-  observations   String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  biophysicsTests   BiophysicsTest[]
-  biochemistryTests BiochemistryTest[] // Relación con el nuevo modelo
-
-  @@map("patients")
+  gender           Gender
+  birthPlace       String
+  phone            String
+  maritalStatus    String
+  profession       String
+  country          String
+  state            String
+  city             String
+  address          String
+  bloodType        String
+  email            String
+  observations     String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  user             User               @relation(fields: [userId], references: [id])
+  biophysicsTests  BiophysicsTest[]
+  biochemistryTests BiochemistryTest[] // Relación añadida
+  appointments     Appointment[]      // Relación añadida
 }
 
 model BiophysicsTest {
   id                  String   @id @default(cuid())
   patientId           String
-  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   chronologicalAge    Float
   biologicalAge       Float
   differentialAge     Float
@@ -90,40 +84,56 @@ model BiophysicsTest {
   testDate            DateTime @default(now())
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-
-  @@map("biophysics_tests")
+  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
 
-// --- NUEVO MODELO PARA EL TEST BIOQUÍMICO ---
 model BiochemistryTest {
-  id                String   @id @default(cuid())
-  patientId         String
-  testDate          DateTime @default(now())
-  chronologicalAge  Float
-  biochemicalAge    Float
-  differentialAge   Float
-  somatomedin       Float?
-  hba1c             Float?
-  insulin           Float?
-  postPrandial      Float?
-  tgHdlRatio        Float?
-  dhea              Float?
-  homocysteine      Float?
-  psa               Float?
-  fsh               Float?
-  boneDensitometry  Float?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  patientId           String
+  testDate            DateTime @default(now())
+  chronologicalAge    Float
+  biochemicalAge      Float
+  differentialAge     Float
+  somatomedin         Float?
+  somatomedinAge      Float?
+  hba1c               Float?
+  hba1cAge            Float?
+  insulin             Float?
+  insulinAge          Float?
+  postPrandial        Float?
+  postPrandialAge     Float?
+  tgHdlRatio          Float?
+  tgHdlRatioAge       Float?
+  dhea                Float?
+  dheaAge             Float?
+  homocysteine        Float?
+  homocysteineAge     Float?
+  psa                 Float?
+  psaAge              Float?
+  fsh                 Float?
+  fshAge              Float?
+  boneDensitometry    Float?
+  boneDensitometryAge Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
 
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  @@map("biochemistry_tests")
+model Appointment {
+  id        String            @id @default(cuid())
+  patientId String
+  date      DateTime
+  reason    String
+  status    AppointmentStatus @default(SCHEDULED)
+  notes     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  patient   Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
 
 model Board {
   id        String   @id @default(cuid())
   rangeId   Int
-  range     Range    @relation(fields: [rangeId], references: [id], onDelete: Cascade)
   type      String   @default("FORM_BIOPHYSICS")
   name      String
   minValue  Float
@@ -131,8 +141,7 @@ model Board {
   inverse   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@map("boards")
+  range     Range    @relation(fields: [rangeId], references: [id])
 }
 
 model Range {
@@ -141,11 +150,10 @@ model Range {
   maxAge    Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  boards Board[]
-
-  @@map("ranges")
+  boards    Board[]
 }
+
+// ENUMS
 
 enum Role {
   MEDICO
@@ -158,4 +166,10 @@ enum Gender {
   FEMENINO
   MASCULINO_DEPORTIVO
   FEMENINO_DEPORTIVO
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
 }

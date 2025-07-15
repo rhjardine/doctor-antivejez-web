@@ -294,22 +294,33 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
         <div className="w-full md:w-1/2 space-y-6">
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Finales</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* INICIO DE LA MODIFICACIÓN: Cambiado a una cuadrícula de 3 columnas */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+              {/* Card para Edad Cronológica */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
+                <p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge}</p>
+              </div>
+
+              {/* Card para Edad Biofísica */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Edad Biofísica</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {calculated ? `${results.biologicalAge} años` : '--'}
+                <p className="text-3xl font-bold text-primary">
+                  {calculated ? `${results.biologicalAge}` : '--'}
                 </p>
               </div>
+
+              {/* Card para Edad Diferencial */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Edad Diferencial</p>
+                <p className="text-sm text-gray-600 mb-1">Diferencial</p>
                 <p
                   className={`text-3xl font-bold ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-gray-900'}`}
                 >
-                  {calculated ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge} años` : '--'}
+                  {calculated ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge}` : '--'}
                 </p>
               </div>
             </div>
+            {/* FIN DE LA MODIFICACIÓN */}
           </div>
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados por Ítem</h3>
