@@ -1,6 +1,6 @@
 // src/lib/auth.ts
 import { NextAuthOptions } from 'next-auth';
-import { PrismaAdapter } from '@auth/prisma-adapter';
+import { PrismaAdapter } from '@next-auth/prisma-adapter'; // <-- CORRECCIÓN: Importar desde '@next-auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/db';
 import { signIn } from '@/lib/actions/auth.actions';
