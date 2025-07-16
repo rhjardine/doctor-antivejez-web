@@ -1,28 +1,28 @@
-// En: src/middleware.ts
-import { getToken } from 'next-auth/jwt';
-import { NextRequest, NextResponse } from 'next/server';
+// src/middleware.ts
 
-export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  const { pathname } = req.nextUrl;
+// ===== INICIO DE LA MODIFICACIÓN =====
+// Se reemplaza el middleware manual por el helper `withAuth` de NextAuth.
+// Este es el método recomendado y más seguro para proteger rutas,
+// ya que está diseñado para no interferir con los archivos estáticos de Next.js.
+import { withAuth } from "next-auth/middleware"
 
-  const isPublicPath = pathname === '/login';
+export default withAuth({
+  pages: {
+    signIn: "/login",
+  },
+});
+// ===== FIN DE LA MODIFICACIÓN =====
 
-  if (!token && !isPublicPath) {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (token && isPublicPath) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
+export const config = { 
+  // Se especifican únicamente las rutas que se quieren proteger.
+  // Cualquier otra ruta (como las de imágenes o archivos de JS) será ignorada.
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    "/dashboard/:path*",
+    "/historias/:path*",
+    "/profesionales/:path*",
+    "/agente-ia/:path*",
+    "/edad-biologica/:path*",
+    "/reportes/:path*",
+    "/ajustes/:path*",
   ],
 };
