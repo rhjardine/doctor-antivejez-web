@@ -1,28 +1,40 @@
 // src/middleware.ts
+import { withAuth } from "next-auth/middleware"
+import { NextResponse } from 'next/server'
+
+export default withAuth(
+  // `withAuth` aumentará la solicitud con el token del usuario.
+  function middleware(req) {
+    // Puedes añadir lógica adicional aquí si es necesario,
+    // por ejemplo, redirecciones basadas en el rol del usuario.
+    return NextResponse.next()
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token
+    },
+    pages: {
+      signIn: "/login",
+    },
+  }
+)
 
 // ===== INICIO DE LA MODIFICACIÓN =====
-// Se reemplaza el middleware manual por el helper `withAuth` de NextAuth.
-// Este es el método recomendado y más seguro para proteger rutas,
-// ya que está diseñado para no interferir con los archivos estáticos de Next.js.
-import { withAuth } from "next-auth/middleware"
-
-export default withAuth({
-  pages: {
-    signIn: "/login",
-  },
-});
-// ===== FIN DE LA MODIFICACIÓN =====
-
+// Este es el cambio más importante. Usamos una expresión regular para
+// decirle al middleware que ignore todas las rutas que son para archivos
+// estáticos o para la API. De esta forma, solo protegerá las páginas reales
+// de la aplicación y no causará los errores 404.
 export const config = { 
-  // Se especifican únicamente las rutas que se quieren proteger.
-  // Cualquier otra ruta (como las de imágenes o archivos de JS) será ignorada.
   matcher: [
-    "/dashboard/:path*",
-    "/historias/:path*",
-    "/profesionales/:path*",
-    "/agente-ia/:path*",
-    "/edad-biologica/:path*",
-    "/reportes/:path*",
-    "/ajustes/:path*",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - images (our public images folder)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|images).*)',
   ],
-};
+}
+// ===== FIN DE LA MODIFICACIÓN =====
