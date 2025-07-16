@@ -1,63 +1,65 @@
 // src/lib/auth.ts
-import type { NextAuthOptions } from 'next-auth';
+import { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
-import { User } from '@prisma/client'; // Asegúrate de que esta importación sea correcta
+import { signIn } from '@/lib/actions/auth.actions';
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any, // <--- AÑADIDA AS ANY AQUÍ
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) {
-          throw new Error('Por favor, ingrese sus credenciales');
+        if (!credentials?.email || !credentials?.password) {
+          return null;
         }
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+
+        const result = await signIn({
+          email: credentials.email,
+          password: credentials.password,
         });
-        if (!user || !user.password) {
-          throw new Error('No se encontró un usuario con ese correo electrónico');
+
+        if (result.success && result.user) {
+          return {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            role: result.user.role,
+          };
         }
-        const isPasswordCorrect = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-        if (!isPasswordCorrect) {
-          throw new Error('La contraseña es incorrecta');
-        }
-        return user;
+
+        return null;
       },
     }),
   ],
-  pages: {
-    signIn: '/login',
-  },
-  debug: process.env.NODE_ENV === 'development',
   session: {
     strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as User).role;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (token) {
         session.user.id = token.id as string;
-        session.user.role = token.role as User['role'];
+        session.user.role = token.role as any;
       }
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
+  debug: process.env.NODE_ENV === 'development',
 };

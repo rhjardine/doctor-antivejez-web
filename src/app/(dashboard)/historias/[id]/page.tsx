@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getPatientDetails } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
@@ -23,12 +23,11 @@ import PatientEditForm from '@/components/patients/PatientEditForm';
 import PatientGuide from '@/components/patient-guide/PatientGuide';
 import ClinicalSummary from '@/components/patients/ClinicalSummary';
 import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
-// ===== INICIO DE LA MODIFICACIÓN =====
-// Se importa el componente que faltaba.
 import BiochemistryHistoryView from '@/components/biochemistry/BiochemistryHistoryView';
-import type { PatientWithDetails, TabId } from '@/types';
-// ===== FIN DE LA MODIFICACIÓN =====
+import type { PatientWithDetails } from '@/types';
 
+type Patient = PatientWithDetails;
+type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
 type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'biofisica_history' | 'bioquimica_history';
 
 export default function PatientDetailPage() {
@@ -37,11 +36,34 @@ export default function PatientDetailPage() {
   const router = useRouter();
   const patientId = params.id as string;
 
-  const [patient, setPatient] = useState<PatientWithDetails | null>(null);
+  const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('resumen');
   const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
   const [isEditing, setIsEditing] = useState(false);
+
+  // ===== INICIO DE LA MODIFICACIÓN: Uso de useCallback para la función de carga =====
+  // Esto asegura que la función no se recree innecesariamente en cada renderizado.
+  const loadPatient = useCallback(async () => {
+    // No establecer loading a true si ya hay datos, para una recarga más suave
+    if (!patient) {
+        setLoading(true);
+    }
+    try {
+      const result = await getPatientDetails(patientId);
+      if (result.success && result.patient) {
+        setPatient(result.patient as Patient);
+      } else {
+        toast.error('Paciente no encontrado');
+        router.push('/historias');
+      }
+    } catch (error) {
+      toast.error('Error al cargar paciente');
+    } finally {
+      setLoading(false);
+    }
+  }, [patientId, router, patient]); // Dependencias de la función
+  // ===== FIN DE LA MODIFICACIÓN =====
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -58,26 +80,7 @@ export default function PatientDetailPage() {
     if (patientId) {
       loadPatient();
     }
-  }, [patientId]);
-
-  const loadPatient = async () => {
-    if (!patient) {
-        setLoading(true);
-    }
-    try {
-      const result = await getPatientDetails(patientId);
-      if (result.success && result.patient) {
-        setPatient(result.patient as PatientWithDetails);
-      } else {
-        toast.error('Paciente no encontrado');
-        router.push('/historias');
-      }
-    } catch (error) {
-      toast.error('Error al cargar paciente');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [patientId, loadPatient]);
 
   const handleUpdateSuccess = () => {
     setIsEditing(false);
@@ -108,6 +111,7 @@ export default function PatientDetailPage() {
     router.push(`/historias/${patientId}?tab=${tabId}`, { scroll: false });
   }
 
+  // ===== INICIO DE LA MODIFICACIÓN: Lógica de renderizado simplificada y segura =====
   const renderBiofisicaContent = () => {
     switch (activeTestView) {
       case 'main':
@@ -117,9 +121,7 @@ export default function PatientDetailPage() {
             onTestClick={() => setActiveTestView('biofisica')} 
             onBiochemistryTestClick={() => setActiveTestView('bioquimica')}
             onHistoryClick={() => setActiveTestView('biofisica_history')}
-            onBiochemistryHistoryClick={() => {
-                setActiveTestView('bioquimica_history');
-            }}
+            onBiochemistryHistoryClick={() => setActiveTestView('bioquimica_history')}
           />
         );
       case 'biofisica':
@@ -134,6 +136,7 @@ export default function PatientDetailPage() {
         return null;
     }
   }
+  // ===== FIN DE LA MODIFICACIÓN =====
 
   return (
     <div className="space-y-6 animate-fadeIn">
