@@ -20,7 +20,10 @@ export default function HistoriasPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'list'>('list');
+  // ===== INICIO DE LA CORRECCIÓN =====
+  // Se permite que el estado acepte tanto 'list' como 'grid' para solucionar el error.
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  // ===== FIN DE LA CORRECCIÓN =====
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
 
