@@ -7,6 +7,11 @@ import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
+  // ===== INICIO DE LA MODIFICACIÓN: Diagnóstico =====
+  // Imprimimos la variable de entorno en los logs de Render para verificarla.
+  console.log("Intentando conectar con DATABASE_URL:", process.env.DATABASE_URL ? "Variable encontrada" : "¡¡¡Variable NO encontrada!!!");
+  // =================================================
+
   try {
     const validatedData = patientSchema.parse(formData);
     const chronologicalAge = calculateAge(validatedData.birthDate);
@@ -154,13 +159,10 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
   }
 }
 
-// ===== INICIO DE LA MODIFICACIÓN =====
-// Se añade el parámetro `userId` a la función y a la consulta.
 export async function searchPatients({ query, userId, page = 1, limit = 10 }: { query: string; userId: string; page?: number; limit?: number; }) {
   try {
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
     
-    // La cláusula `where` ahora requiere que el `userId` coincida Y que se cumpla una de las condiciones de búsqueda.
     const whereClause: Prisma.PatientWhereInput = {
       AND: [
         { userId: userId },
