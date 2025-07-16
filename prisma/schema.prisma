@@ -23,38 +23,42 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   patients  Patient[]
+
+  @@map("users")
 }
 
 model Patient {
-  id               String             @id @default(cuid())
-  controlNumber    Int                @default(autoincrement())
-  userId           String
-  photo            String?
-  nationality      String
-  identification   String             @unique
-  historyDate      DateTime
-  lastName         String
-  firstName        String
-  birthDate        DateTime
-  chronologicalAge Int
-  gender           Gender
-  birthPlace       String
-  phone            String
-  maritalStatus    String
-  profession       String
-  country          String
-  state            String
-  city             String
-  address          String
-  bloodType        String
-  email            String
-  observations     String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  user             User               @relation(fields: [userId], references: [id])
-  biophysicsTests  BiophysicsTest[]
-  biochemistryTests BiochemistryTest[] // Relación añadida
-  appointments     Appointment[]      // Relación añadida
+  id                String             @id @default(cuid())
+  controlNumber     Int                @default(autoincrement())
+  userId            String
+  photo             String?
+  nationality       String
+  identification    String             @unique
+  historyDate       DateTime
+  lastName          String
+  firstName         String
+  birthDate         DateTime
+  chronologicalAge  Int
+  gender            Gender
+  birthPlace        String
+  phone             String
+  maritalStatus     String
+  profession        String
+  country           String
+  state             String
+  city              String
+  address           String
+  bloodType         String
+  email             String
+  observations      String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  biophysicsTests   BiophysicsTest[]
+  biochemistryTests BiochemistryTest[]
+  appointments      Appointment[]
+
+  @@map("patients")
 }
 
 model BiophysicsTest {
@@ -85,6 +89,8 @@ model BiophysicsTest {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("biophysics_tests")
 }
 
 model BiochemistryTest {
@@ -117,6 +123,8 @@ model BiochemistryTest {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("biochemistry_tests")
 }
 
 model Appointment {
@@ -129,6 +137,8 @@ model Appointment {
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
   patient   Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
 }
 
 model Board {
@@ -142,6 +152,8 @@ model Board {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   range     Range    @relation(fields: [rangeId], references: [id])
+
+  @@map("boards")
 }
 
 model Range {
@@ -151,6 +163,8 @@ model Range {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   boards    Board[]
+
+  @@map("ranges")
 }
 
 // ENUMS
