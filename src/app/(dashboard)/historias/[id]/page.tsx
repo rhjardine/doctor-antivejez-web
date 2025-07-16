@@ -24,7 +24,8 @@ import PatientGuide from '@/components/patient-guide/PatientGuide';
 import ClinicalSummary from '@/components/patients/ClinicalSummary';
 import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
 // ===== INICIO DE LA MODIFICACIÓN =====
-// Se importa PatientWithDetails y TabId desde el archivo de tipos central.
+// Se importa el componente que faltaba.
+import BiochemistryHistoryView from '@/components/biochemistry/BiochemistryHistoryView';
 import type { PatientWithDetails, TabId } from '@/types';
 // ===== FIN DE LA MODIFICACIÓN =====
 
