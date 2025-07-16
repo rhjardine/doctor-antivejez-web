@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-// ===== INICIO DE LA MODIFICACIÓN: Usar el nombre de función correcto =====
 import { getPatientDetails } from '@/lib/actions/patients.actions';
-// ===== FIN DE LA MODIFICACIÓN =====
 import { toast } from 'sonner';
 import { 
   FaUser, 
@@ -25,10 +23,11 @@ import PatientEditForm from '@/components/patients/PatientEditForm';
 import PatientGuide from '@/components/patient-guide/PatientGuide';
 import ClinicalSummary from '@/components/patients/ClinicalSummary';
 import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
-import type { PatientWithDetails } from '@/types';
+// ===== INICIO DE LA MODIFICACIÓN =====
+// Se importa PatientWithDetails y TabId desde el archivo de tipos central.
+import type { PatientWithDetails, TabId } from '@/types';
+// ===== FIN DE LA MODIFICACIÓN =====
 
-type Patient = PatientWithDetails;
-type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
 type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'biofisica_history' | 'bioquimica_history';
 
 export default function PatientDetailPage() {
@@ -37,7 +36,7 @@ export default function PatientDetailPage() {
   const router = useRouter();
   const patientId = params.id as string;
 
-  const [patient, setPatient] = useState<Patient | null>(null);
+  const [patient, setPatient] = useState<PatientWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('resumen');
   const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
@@ -65,11 +64,9 @@ export default function PatientDetailPage() {
         setLoading(true);
     }
     try {
-      // ===== INICIO DE LA MODIFICACIÓN: Llamar a la función correcta =====
       const result = await getPatientDetails(patientId);
-      // ===== FIN DE LA MODIFICACIÓN =====
       if (result.success && result.patient) {
-        setPatient(result.patient as Patient);
+        setPatient(result.patient as PatientWithDetails);
       } else {
         toast.error('Paciente no encontrado');
         router.push('/historias');
@@ -120,10 +117,7 @@ export default function PatientDetailPage() {
             onBiochemistryTestClick={() => setActiveTestView('bioquimica')}
             onHistoryClick={() => setActiveTestView('biofisica_history')}
             onBiochemistryHistoryClick={() => {
-                // Navegar a la vista de historial dentro del componente de test bioquímico
-                // Esta lógica se maneja ahora internamente en EdadBioquimicaTestView
-                setActiveTestView('bioquimica');
-                // Se podría pasar un prop inicial si el componente se refactoriza para ello
+                setActiveTestView('bioquimica_history');
             }}
           />
         );
@@ -133,6 +127,8 @@ export default function PatientDetailPage() {
         return <EdadBioquimicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={loadPatient} />;
       case 'biofisica_history':
         return <BiophysicsHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={loadPatient} />;
+      case 'bioquimica_history':
+        return <BiochemistryHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={loadPatient} />;
       default:
         return null;
     }

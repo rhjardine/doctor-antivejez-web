@@ -31,3 +31,8 @@ export type PatientWithDetails = Patient & {
 
 // 4. Mantener la definición de Gender, ya que es un tipo de unión personalizado
 export type Gender = 'MASCULINO' | 'FEMENINO' | 'MASCULINO_DEPORTIVO' | 'FEMENINO_DEPORTIVO';
+
+// ===== INICIO DE LA MODIFICACIÓN =====
+// Se añade el tipo TabId para poder ser compartido entre componentes.
+export type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
+// ===== FIN DE LA MODIFICACIÓN =====

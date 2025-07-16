@@ -1,6 +1,6 @@
 'use client';
 
-import { PatientWithDetails } from '@/types';
+import { PatientWithDetails, TabId } from '@/types'; // ===== MODIFICADO =====
 import {
   FaCalendarCheck,
   FaPills,
@@ -22,7 +22,6 @@ import {
 import { formatDate } from '@/utils/date';
 
 // --- TIPOS Y DATOS DE EJEMPLO (MOCK DATA) ---
-// En un futuro, estos datos vendrán de la base de datos.
 type Appointment = {
   date: string;
   time: string;
@@ -121,11 +120,11 @@ const BiologicalAgeCard = ({ patient }: { patient: PatientWithDetails }) => {
   );
 };
 
-const BiomarkersCard = () => (
+const BiomarkersCard = ({ onNavigate }: { onNavigate: (tab: TabId) => void }) => (
     <div className="card">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800">Biomarcadores Principales</h3>
-        <button className="text-sm text-primary hover:underline">Ver todos</button>
+        <button onClick={() => onNavigate('biofisica')} className="text-sm text-primary hover:underline">Ver todos</button>
       </div>
        <div className="h-60 flex items-center justify-center bg-gray-50 rounded-lg">
           <p className="text-gray-500">Gráfico de biomarcadores próximamente.</p>
@@ -150,13 +149,13 @@ const NextAppointmentCard = ({ appointment }: { appointment: Appointment }) => (
   </div>
 );
 
-const CurrentTreatmentCard = ({ medications }: { medications: Medication[] }) => (
+const CurrentTreatmentCard = ({ medications, onNavigate }: { medications: Medication[], onNavigate: (tab: TabId) => void }) => (
   <div className="card">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
         <FaPills className="text-primary" /> Tratamiento Actual
       </h3>
-      <button className="text-sm text-primary hover:underline">Ver todos</button>
+      <button onClick={() => onNavigate('guia')} className="text-sm text-primary hover:underline">Ver todos</button>
     </div>
     <div className="space-y-3">
       {medications.map(med => (
@@ -175,13 +174,13 @@ const CurrentTreatmentCard = ({ medications }: { medications: Medication[] }) =>
   </div>
 );
 
-const RecentHistoryCard = ({ history }: { history: HistoryEvent[] }) => (
+const RecentHistoryCard = ({ history, onNavigate }: { history: HistoryEvent[], onNavigate: (tab: TabId) => void }) => (
   <div className="card">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
         <FaHistory className="text-primary" /> Historial Reciente
       </h3>
-      <button className="text-sm text-primary hover:underline">Ver todos</button>
+      <button onClick={() => onNavigate('historia')} className="text-sm text-primary hover:underline">Ver todos</button>
     </div>
     <div className="space-y-4">
       {history.map(event => (
@@ -197,24 +196,29 @@ const RecentHistoryCard = ({ history }: { history: HistoryEvent[] }) => (
 
 
 // --- COMPONENTE PRINCIPAL DEL RESUMEN ---
+// ===== INICIO DE LA MODIFICACIÓN =====
+// Se añaden las props onNavigateToTab y onReloadPatient para manejar la interacción.
 interface ClinicalSummaryProps {
   patient: PatientWithDetails;
+  onNavigateToTab: (tabId: TabId) => void;
+  onReloadPatient: () => void;
 }
+// ===== FIN DE LA MODIFICACIÓN =====
 
-export default function ClinicalSummary({ patient }: ClinicalSummaryProps) {
+export default function ClinicalSummary({ patient, onNavigateToTab }: ClinicalSummaryProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
       {/* Columna Izquierda */}
       <div className="lg:col-span-2 space-y-6">
         <BiologicalAgeCard patient={patient} />
-        <BiomarkersCard />
+        <BiomarkersCard onNavigate={onNavigateToTab} />
       </div>
 
       {/* Columna Derecha */}
       <div className="lg:col-span-1 space-y-6">
         <NextAppointmentCard appointment={mockAppointment} />
-        <CurrentTreatmentCard medications={mockMedications} />
-        <RecentHistoryCard history={mockHistory} />
+        <CurrentTreatmentCard medications={mockMedications} onNavigate={onNavigateToTab} />
+        <RecentHistoryCard history={mockHistory} onNavigate={onNavigateToTab} />
       </div>
     </div>
   );
