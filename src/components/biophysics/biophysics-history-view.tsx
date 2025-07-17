@@ -8,7 +8,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { deleteBiophysicsTest } from '@/lib/actions/biophysics.actions';
 import { toast } from 'sonner';
 
-// --- NUEVO Componente de Modal de Confirmación de Eliminación ---
+// --- Componente de Modal de Confirmación de Eliminación ---
 function DeleteConfirmationModal({ isOpen, onClose, onConfirm, test, isDeleting }: { isOpen: boolean, onClose: () => void, onConfirm: () => void, test: BiophysicsTest | null, isDeleting: boolean }) {
   if (!isOpen || !test) return null;
 
@@ -33,23 +33,25 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, test, isDeleting 
   );
 }
 
-
 interface BiophysicsHistoryViewProps {
   patient: PatientWithDetails;
   onBack: () => void;
-  onHistoryChange: () => void; // <-- Prop para notificar cambios
+  onHistoryChange: () => void;
 }
 
+// ===== INICIO DE LA CORRECCIÓN: Mapeo explícito de claves de edad =====
+// Se añade la propiedad `ageKey` para mapear correctamente el valor del test con su edad calculada.
 const detailItemsMap = [
-  { key: 'fatPercentage', label: '% Grasa', icon: FaWeight },
-  { key: 'bmi', label: 'IMC', icon: FaRuler },
-  { key: 'digitalReflexes', label: 'Reflejos Digitales', icon: FaBrain },
-  { key: 'visualAccommodation', label: 'Acomodación Visual', icon: FaEye },
-  { key: 'staticBalance', label: 'Balance Estático', icon: FaBalanceScale },
-  { key: 'skinHydration', label: 'Hidratación Cutánea', icon: FaTint },
-  { key: 'systolicPressure', label: 'T.A. Sistólica', icon: FaHeartbeat },
-  { key: 'diastolicPressure', label: 'T.A. Diastólica', icon: FaHeartbeat },
+  { key: 'fatPercentage', label: '% Grasa', icon: FaWeight, ageKey: 'fatAge' },
+  { key: 'bmi', label: 'IMC', icon: FaRuler, ageKey: 'bmiAge' },
+  { key: 'digitalReflexes', label: 'Reflejos Digitales', icon: FaBrain, ageKey: 'reflexesAge' },
+  { key: 'visualAccommodation', label: 'Acomodación Visual', icon: FaEye, ageKey: 'visualAge' },
+  { key: 'staticBalance', label: 'Balance Estático', icon: FaBalanceScale, ageKey: 'balanceAge' },
+  { key: 'skinHydration', label: 'Hidratación Cutánea', icon: FaTint, ageKey: 'hydrationAge' },
+  { key: 'systolicPressure', label: 'T.A. Sistólica', icon: FaHeartbeat, ageKey: 'systolicAge' },
+  { key: 'diastolicPressure', label: 'T.A. Diastólica', icon: FaHeartbeat, ageKey: 'diastolicAge' },
 ];
+// ===== FIN DE LA CORRECCIÓN =====
 
 export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange }: BiophysicsHistoryViewProps) {
   const [selectedTest, setSelectedTest] = useState<BiophysicsTest | null>(null);
@@ -57,7 +59,6 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
   const [testToDelete, setTestToDelete] = useState<BiophysicsTest | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Seleccionar el test más reciente al cargar
   useEffect(() => {
     if (patient.biophysicsTests && patient.biophysicsTests.length > 0) {
       setSelectedTest(patient.biophysicsTests[0]);
@@ -65,7 +66,6 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
       setSelectedTest(null);
     }
   }, [patient.biophysicsTests]);
-
 
   const chartData = patient.biophysicsTests
     .map(test => ({
@@ -88,7 +88,7 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
       const result = await deleteBiophysicsTest(testToDelete.id, patient.id);
       if (result.success) {
         toast.success('Test eliminado exitosamente.');
-        onHistoryChange(); // Notifica al padre para que recargue los datos
+        onHistoryChange();
       } else {
         toast.error(result.error || 'No se pudo eliminar el test.');
       }
@@ -97,7 +97,6 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
     } finally {
       setIsDeleting(false);
       setIsDeleteModalOpen(false);
-      // La actualización de `selectedTest` se manejará por el useEffect cuando `patient` cambie
     }
   };
 
@@ -193,20 +192,22 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
                   Detalles del Test - {formatDateTime(selectedTest.testDate)}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {detailItemsMap.map(({ key, label, icon: Icon }) => {
+                  {/* ===== INICIO DE LA CORRECCIÓN: Lógica de renderizado actualizada ===== */}
+                  {detailItemsMap.map(({ key, label, icon: Icon, ageKey }) => {
                     const value = selectedTest[key as keyof BiophysicsTest];
-                    const ageKey = `${key.replace('Percentage', '').replace('Pressure', '')}Age` as keyof BiophysicsTest;
-                    const ageValue = selectedTest[ageKey];
+                    const ageValue = selectedTest[ageKey as keyof BiophysicsTest];
 
                     return (
                       <div key={key} className="bg-gray-50 rounded-lg p-3 text-center">
                         <Icon className="mx-auto text-2xl text-primary/70 mb-2" />
                         <p className="text-sm font-medium text-gray-700">{label}</p>
-                        <p className="text-lg font-bold text-gray-900">{value !== null ? Number(value).toFixed(2) : '--'}</p>
-                        <p className="text-xs text-gray-500">Edad: {ageValue !== null ? Number(ageValue).toFixed(1) : '--'}a</p>
+                        {/* Se añade una comprobación más robusta para evitar errores con valores nulos o indefinidos */}
+                        <p className="text-lg font-bold text-gray-900">{value != null ? Number(value).toFixed(2) : '--'}</p>
+                        <p className="text-xs text-gray-500">Edad: {ageValue != null ? Number(ageValue).toFixed(1) : '--'}a</p>
                       </div>
                     );
                   })}
+                  {/* ===== FIN DE LA CORRECCIÓN ===== */}
                 </div>
               </div>
             ) : (
