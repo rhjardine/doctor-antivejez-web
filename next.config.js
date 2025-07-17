@@ -1,10 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  // ===== INICIO DE LA MODIFICACIÓN =====
-  // Se actualiza la configuración de imágenes a la sintaxis moderna "remotePatterns"
-  // y se elimina la obsoleta "domains". Esto mejora la compatibilidad y seguridad
-  // en entornos de producción como Render.
+  // Se elimina la opción `output: 'standalone'` para usar el modo de servidor estándar de Next.js,
+  // que es más compatible con el entorno de Render y debería resolver los errores 404.
   images: {
     remotePatterns: [
       {
@@ -13,6 +10,5 @@ const nextConfig = {
       },
     ],
   },
-  // ===== FIN DE LA MODIFICACIÓN =====
 }
 module.exports = nextConfig
