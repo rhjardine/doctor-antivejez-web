@@ -42,13 +42,13 @@ export default function PatientDetailPage() {
   const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
   const [isEditing, setIsEditing] = useState(false);
 
-  // ===== INICIO DE LA MODIFICACIÓN: Uso de useCallback para la función de carga =====
-  // Esto asegura que la función no se recree innecesariamente en cada renderizado.
+  // ===== INICIO DE LA CORRECCIÓN: Se elimina la dependencia 'patient' =====
+  // Se elimina la dependencia 'patient' del useCallback para evitar que la función
+  // se recree en cada renderizado, lo que causaba una recarga de datos innecesaria
+  // y reseteaba la selección en la vista del historial.
   const loadPatient = useCallback(async () => {
-    // No establecer loading a true si ya hay datos, para una recarga más suave
-    if (!patient) {
-        setLoading(true);
-    }
+    if (!patientId) return;
+    setLoading(true);
     try {
       const result = await getPatientDetails(patientId);
       if (result.success && result.patient) {
@@ -62,8 +62,8 @@ export default function PatientDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [patientId, router, patient]); // Dependencias de la función
-  // ===== FIN DE LA MODIFICACIÓN =====
+  }, [patientId, router]);
+  // ===== FIN DE LA CORRECCIÓN =====
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -111,7 +111,6 @@ export default function PatientDetailPage() {
     router.push(`/historias/${patientId}?tab=${tabId}`, { scroll: false });
   }
 
-  // ===== INICIO DE LA MODIFICACIÓN: Lógica de renderizado simplificada y segura =====
   const renderBiofisicaContent = () => {
     switch (activeTestView) {
       case 'main':
@@ -136,7 +135,6 @@ export default function PatientDetailPage() {
         return null;
     }
   }
-  // ===== FIN DE LA MODIFICACIÓN =====
 
   return (
     <div className="space-y-6 animate-fadeIn">
