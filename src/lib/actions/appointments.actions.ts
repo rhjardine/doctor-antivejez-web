@@ -5,10 +5,11 @@ import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-// Esquema de validación para crear/actualizar una cita
+// --- CORRECCIÓN: Se elimina 'userId' del esquema de creación directa de la cita. ---
+// La relación con el usuario se establece a través del paciente, por lo que no es un campo
+// directo del modelo Appointment.
 const appointmentSchema = z.object({
   patientId: z.string().min(1, "El paciente es requerido."),
-  userId: z.string().min(1, "El usuario es requerido."),
   date: z.date({ required_error: "La fecha es requerida." }),
   reason: z.string().min(3, "El motivo debe tener al menos 3 caracteres."),
   status: z.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED']).default('SCHEDULED'),
@@ -20,12 +21,17 @@ const appointmentSchema = z.object({
  */
 export async function createAppointment(data: {
   patientId: string;
-  userId: string;
+  userId: string; // Se mantiene para validaciones futuras, pero no se inserta directamente.
   date: Date;
   reason: string;
 }) {
   try {
-    const validatedData = appointmentSchema.parse(data);
+    // Se valida solo los datos que corresponden al modelo Appointment.
+    const validatedData = appointmentSchema.parse({
+      patientId: data.patientId,
+      date: data.date,
+      reason: data.reason,
+    });
     
     const appointment = await prisma.appointment.create({
       data: validatedData,
@@ -56,7 +62,6 @@ export async function getAppointmentsByMonth(userId: string, month: Date) {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        // --- CORRECCIÓN: Filtrar a través de la relación anidada patient -> user ---
         patient: {
           userId: userId,
         },
