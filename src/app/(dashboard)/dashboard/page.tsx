@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Users, UserPlus, TrendingUp, Star } from 'lucide-react';
 import { FaHeartbeat, FaUserPlus, FaVial } from 'react-icons/fa';
-import { getDashboardStats, TimeRange } from '@/lib/actions/dashboard.actions.ts';
+// --- CORRECCIÓN: Se elimina la extensión .ts del import ---
+import { getDashboardStats, TimeRange } from '@/lib/actions/dashboard.actions';
 import { 
   LineChart, 
   Line, 
