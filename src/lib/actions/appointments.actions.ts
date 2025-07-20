@@ -5,9 +5,9 @@ import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-// --- CORRECCIÓN: Se elimina 'userId' del esquema de creación directa de la cita. ---
-// La relación con el usuario se establece a través del paciente, por lo que no es un campo
-// directo del modelo Appointment.
+// --- CORRECCIÓN: Se elimina 'userId' del esquema de creación. ---
+// La cita se relaciona con el usuario a través del paciente, por lo que
+// userId no es un campo directo del modelo Appointment.
 const appointmentSchema = z.object({
   patientId: z.string().min(1, "El paciente es requerido."),
   date: z.date({ required_error: "La fecha es requerida." }),
@@ -21,18 +21,19 @@ const appointmentSchema = z.object({
  */
 export async function createAppointment(data: {
   patientId: string;
-  userId: string; // Se mantiene para validaciones futuras, pero no se inserta directamente.
+  userId: string; // Se mantiene para futuras validaciones de permisos, pero no se inserta.
   date: Date;
   reason: string;
 }) {
   try {
-    // Se valida solo los datos que corresponden al modelo Appointment.
+    // Se validan solo los datos que corresponden al modelo Appointment.
     const validatedData = appointmentSchema.parse({
       patientId: data.patientId,
       date: data.date,
       reason: data.reason,
     });
     
+    // Se crea la cita solo con los campos validados del esquema.
     const appointment = await prisma.appointment.create({
       data: validatedData,
     });
@@ -62,6 +63,7 @@ export async function getAppointmentsByMonth(userId: string, month: Date) {
 
     const appointments = await prisma.appointment.findMany({
       where: {
+        // La consulta busca citas de pacientes que pertenecen al userId del profesional.
         patient: {
           userId: userId,
         },
