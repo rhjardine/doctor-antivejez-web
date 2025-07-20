@@ -80,12 +80,12 @@ const ConversationalAssistant = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
         <div className="flex-1 p-6 space-y-6 overflow-y-auto">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 flex flex-col items-center justify-center h-full">
               <FaRobot className="text-5xl mb-4 text-gray-300" />
-              <p className="font-semibold">¿Cómo puedo ayudarte hoy?</p>
+              <p className="font-semibold text-gray-700">¿Cómo puedo ayudarte hoy?</p>
               <p className="text-sm mt-2">Puedes preguntar sobre pacientes, estadísticas o tratamientos.</p>
                <p className="text-xs mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
                 Nota: La conexión a la base de datos de pacientes está en desarrollo. Las respuestas actuales son simuladas.
@@ -151,7 +151,7 @@ const ConversationalAssistant = () => {
 
 // 2. AI Insights
 const AiInsights = () => (
-  <div className="p-6 text-center text-gray-500 flex flex-col items-center justify-center h-full">
+  <div className="p-6 text-center text-gray-500 flex flex-col items-center justify-center h-full bg-white">
     <FaLightbulb className="text-5xl mb-4 text-gray-300" />
     <h3 className="text-xl font-semibold text-gray-800">AI Insights</h3>
     <p className="mt-2">Esta sección mostrará proactivamente hallazgos y patrones interesantes en los datos de sus pacientes.</p>
@@ -175,7 +175,7 @@ const Recommendations = () => {
     }, []);
 
     return (
-        <div className="p-6 h-full">
+        <div className="p-6 h-full bg-white">
             <div className="max-w-lg mx-auto mb-6">
                 <label className="label">Seleccione un paciente para ver recomendaciones</label>
                 <select 
@@ -205,7 +205,7 @@ const Recommendations = () => {
 
 // 4. AI Explicable
 const ExplainableAi = () => (
-    <div className="p-6 text-center text-gray-500 flex flex-col items-center justify-center h-full">
+    <div className="p-6 text-center text-gray-500 flex flex-col items-center justify-center h-full bg-white">
         <FaQuestionCircle className="text-5xl mb-4 text-gray-300" />
         <h3 className="text-xl font-semibold text-gray-800">AI Explicable (XAI)</h3>
         <p className="mt-2">En esta sección, la IA explicará el "porqué" detrás de sus recomendaciones y hallazgos, aumentando la transparencia y confianza.</p>
@@ -215,7 +215,7 @@ const ExplainableAi = () => (
 
 // 5. Base de Conocimiento
 const KnowledgeBase = () => (
-    <div className="p-6 h-full overflow-y-auto">
+    <div className="p-6 h-full overflow-y-auto bg-white">
         <h3 className="text-xl font-semibold text-gray-800 mb-6">Base de Conocimiento Científico</h3>
         <div className="space-y-6">
             {mockKnowledgeBase.map((item, index) => (
@@ -260,16 +260,22 @@ export default function AgenteIAPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-100px)] animate-fadeIn">
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-4 px-4" aria-label="Tabs">
+      {/* Header con título */}
+      <div className="px-4 pt-2">
+        <h1 className="text-2xl font-bold text-gray-900">AI Longevity Assistant</h1>
+      </div>
+
+      {/* Navegación por Pestañas con nuevo estilo */}
+      <div className="px-4">
+        <nav className="flex space-x-2 border-b border-gray-200" aria-label="Tabs">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabId)}
-              className={`flex items-center gap-2 px-3 py-3 text-sm font-medium rounded-t-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+              className={`flex items-center gap-2 px-3 py-3 text-sm font-medium transition-colors focus:outline-none -mb-px ${
                 activeTab === tab.id
                   ? 'border-b-2 border-primary text-primary'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent'
               }`}
             >
               <tab.icon />
@@ -279,8 +285,11 @@ export default function AgenteIAPage() {
         </nav>
       </div>
 
-       <div className="flex-1 bg-white rounded-b-xl shadow-md border border-t-0 border-gray-200 overflow-hidden">
-        {renderContent()}
+      {/* Contenedor del contenido de la pestaña */}
+       <div className="flex-1 mt-2 overflow-hidden">
+        <div className="h-full rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            {renderContent()}
+        </div>
       </div>
     </div>
   );
