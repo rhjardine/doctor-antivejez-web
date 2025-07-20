@@ -14,7 +14,8 @@ import {
   FaCog, 
   FaSignOutAlt,
   FaChevronDown,
-  FaChevronUp
+  FaChevronUp,
+  FaCalendarAlt // <-- Icono añadido
 } from 'react-icons/fa';
 
 const menuItems = [
@@ -29,6 +30,13 @@ const menuItems = [
     icon: FaHistory, 
     href: '/historias',
     color: 'text-blue-500'
+  },
+  // --- NUEVO ENLACE A CITAS ---
+  { 
+    name: 'Citas', 
+    icon: FaCalendarAlt, 
+    href: '/citas',
+    color: 'text-teal-500'
   },
   { 
     name: 'Profesionales', 
@@ -51,7 +59,7 @@ const menuItems = [
   { 
     name: 'Reportes', 
     icon: FaChartBar, 
-    href: '/reportes', // La ruta ya existe, solo nos aseguramos de que el componente sea funcional
+    href: '/reportes',
     color: 'text-yellow-500'
   },
   { 
