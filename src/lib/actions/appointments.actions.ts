@@ -6,7 +6,6 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 // Esquema de validación para crear/actualizar una cita
-// --- CORRECCIÓN: Cambiado "CANCELED" a "CANCELLED" para coincidir con el schema de Prisma ---
 const appointmentSchema = z.object({
   patientId: z.string().min(1, "El paciente es requerido."),
   userId: z.string().min(1, "El usuario es requerido."),
@@ -57,7 +56,10 @@ export async function getAppointmentsByMonth(userId: string, month: Date) {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        userId,
+        // --- CORRECCIÓN: Filtrar a través de la relación 'user' ---
+        user: {
+          id: userId,
+        },
         date: {
           gte: start,
           lte: end,
