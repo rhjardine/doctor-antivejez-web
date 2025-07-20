@@ -133,3 +133,4 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
     return { success: false, error: 'Error al obtener estadísticas' };
   }
 }
+//Cambios
