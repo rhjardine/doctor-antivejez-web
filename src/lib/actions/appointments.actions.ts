@@ -6,12 +6,13 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 // Esquema de validación para crear/actualizar una cita
+// --- CORRECCIÓN: Cambiado "CANCELED" a "CANCELLED" para coincidir con el schema de Prisma ---
 const appointmentSchema = z.object({
   patientId: z.string().min(1, "El paciente es requerido."),
   userId: z.string().min(1, "El usuario es requerido."),
   date: z.date({ required_error: "La fecha es requerida." }),
   reason: z.string().min(3, "El motivo debe tener al menos 3 caracteres."),
-  status: z.enum(['SCHEDULED', 'COMPLETED', 'CANCELED']).default('SCHEDULED'),
+  status: z.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED']).default('SCHEDULED'),
 });
 
 /**
@@ -91,7 +92,7 @@ export async function updateAppointment(id: string, data: Partial<{
   patientId: string;
   date: Date;
   reason: string;
-  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELED';
+  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 }>) {
   try {
     const appointment = await prisma.appointment.update({
