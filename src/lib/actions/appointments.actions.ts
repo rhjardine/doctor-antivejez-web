@@ -56,9 +56,9 @@ export async function getAppointmentsByMonth(userId: string, month: Date) {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        // --- CORRECCIÓN: Filtrar a través de la relación 'user' ---
-        user: {
-          id: userId,
+        // --- CORRECCIÓN: Filtrar a través de la relación anidada patient -> user ---
+        patient: {
+          userId: userId,
         },
         date: {
           gte: start,
