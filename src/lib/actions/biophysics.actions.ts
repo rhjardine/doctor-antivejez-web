@@ -57,8 +57,9 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
         // Guardar el promedio de las dimensiones, como en la lógica original.
         digitalReflexes: formValues.digitalReflexes
           ? ((formValues.digitalReflexes.high || 0) +
-              (formValues.digitalRefles.long || 0) +
-              (formValues.digitalRefles.width || 0)) / 3
+              // CORRECCIÓN: Se corrige el error de tipeo de 'digitalRefles' a 'digitalReflexes'.
+              (formValues.digitalReflexes.long || 0) +
+              (formValues.digitalReflexes.width || 0)) / 3
           : undefined,
         visualAccommodation: formValues.visualAccommodation,
         staticBalance: formValues.staticBalance
