@@ -50,3 +50,4 @@ export const telotestReportData: TelotestReport = {
     { id: 3, text: 'Crous-Bou M, et al. Mediterranean diet and telomere length in Nurses\' Health Study...', url: '#' },
   ],
 };
+//Ajuste
