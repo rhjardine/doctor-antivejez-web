@@ -5,7 +5,7 @@ import { BoardWithRanges, FormValues, CalculationResult } from '@/types/biophysi
 import { calculateBiofisicaResults } from '@/utils/biofisica-calculations'; 
 import { revalidatePath } from 'next/cache';
 
-// --- ACCIÓN CENTRALIZADA PARA CALCULAR Y GUARDAR ---
+// --- ENFOQUE UNIFICADO: CALCULAR Y GUARDAR EN UN SOLO PASO ---
 interface CalculateAndSaveParams {
   patientId: string;
   chronologicalAge: number;
@@ -15,23 +15,21 @@ interface CalculateAndSaveParams {
 }
 
 /**
- * Orquesta todo el proceso de cálculo y guardado en el servidor.
- * 1. Obtiene los baremos de la base de datos.
- * 2. Ejecuta la lógica de cálculo que ya tenías.
- * 3. Guarda el test completo en la base de datos.
- * @returns Un objeto con el resultado del test o un mensaje de error.
+ * Orquesta el proceso completo de cálculo y guardado en una sola llamada,
+ * como funcionaba originalmente.
+ * @returns Un objeto con los resultados calculados y serializados para la UI.
  */
 export async function calculateAndSaveBiophysicsTest(params: CalculateAndSaveParams) {
   try {
     const { patientId, chronologicalAge, gender, isAthlete, formValues } = params;
 
-    // 1. Obtener baremos (se ejecuta de forma segura en el servidor)
+    // 1. Obtener baremos
     const boards = await getBiophysicsBoardsAndRanges();
     if (!boards || boards.length === 0) {
       throw new Error('No se pudieron cargar los baremos para el cálculo.');
     }
 
-    // 2. Realizar el cálculo usando tu lógica existente con el nombre de función correcto.
+    // 2. Realizar el cálculo
     const calculationResult: CalculationResult = calculateBiofisicaResults(
       boards,
       formValues,
@@ -48,13 +46,10 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
         gender,
         isAthlete,
         testDate: new Date(),
-        // Resultados principales
         biologicalAge: calculationResult.biologicalAge,
         differentialAge: calculationResult.differentialAge,
-        // Valores del formulario
         fatPercentage: formValues.fatPercentage,
         bmi: formValues.bmi,
-        // Guardar el promedio de las dimensiones, como en la lógica original.
         digitalReflexes: formValues.digitalReflexes
           ? ((formValues.digitalReflexes.high || 0) +
               (formValues.digitalReflexes.long || 0) +
@@ -69,7 +64,6 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
         skinHydration: formValues.skinHydration,
         systolicPressure: formValues.systolicPressure,
         diastolicPressure: formValues.diastolicPressure,
-        // Edades parciales
         fatAge: calculationResult.partialAges.fatAge,
         bmiAge: calculationResult.partialAges.bmiAge,
         reflexesAge: calculationResult.partialAges.reflexesAge,
@@ -81,15 +75,12 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       },
     });
 
-    // CORRECCIÓN DEFINITIVA: Se eliminan TODAS las llamadas a revalidatePath de esta función.
-    // Esto previene que Next.js recargue los datos de la página actual, lo que causaba
-    // que el estado del componente se reiniciara ("blanqueo"). La actualización
-    // del historial en otras páginas se hará a través del callback `onTestComplete`
-    // o cuando el usuario navegue a ellas.
-    // revalidatePath('/dashboard');
-    // revalidatePath('/historias');
+    // 4. Revalidar rutas en segundo plano SIN recargar la página actual.
+    // Esto asegura que el estado del formulario del cliente no se pierda.
+    revalidatePath('/dashboard');
+    revalidatePath('/historias'); // Revalida la lista general de historias
 
-    // Se mantiene la serialización de la fecha para evitar errores de transferencia de datos.
+    // 5. Devolver los datos serializados para que el cliente los muestre
     const serializableData = {
       ...newTest,
       testDate: newTest.testDate.toISOString(),
@@ -106,7 +97,7 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
 }
 
 
-// --- TUS FUNCIONES EXISTENTES (SE MANTIENEN SIN CAMBIOS) ---
+// --- FUNCIONES EXISTENTES (SE MANTIENEN SIN CAMBIOS) ---
 
 export async function getBiophysicsBoardsAndRanges(): Promise<BoardWithRanges[]> {
   try {
@@ -126,7 +117,6 @@ export async function deleteBiophysicsTest(testId: string, patientId: string) {
     await prisma.biophysicsTest.delete({
       where: { id: testId },
     });
-    // La revalidación aquí es correcta porque esta acción se llama desde un contexto diferente (ej. el historial).
     revalidatePath(`/historias/${patientId}`);
     revalidatePath('/dashboard');
     return { success: true };
@@ -142,7 +132,6 @@ export async function getLatestBiophysicsTest(patientId: string) {
       where: { patientId },
       orderBy: { testDate: 'desc' },
     });
-    // Se serializa la fecha por seguridad, aunque esta función podría no pasarla al cliente.
     if (test) {
       const serializableTest = { ...test, testDate: test.testDate.toISOString() };
       return { success: true, test: serializableTest };
@@ -160,7 +149,6 @@ export async function getBiophysicsTestHistory(patientId: string) {
       where: { patientId },
       orderBy: { testDate: 'desc' },
     });
-    // Se serializan las fechas de todo el historial para el cliente.
     const serializableTests = tests.map(test => ({
       ...test,
       testDate: test.testDate.toISOString(),
