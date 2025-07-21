@@ -262,7 +262,7 @@ export default function AgenteIAPage() {
     <div className="flex flex-col h-[calc(100vh-100px)] animate-fadeIn">
       {/* Header con título */}
       <div className="px-4 pt-2">
-        <h1 className="text-2xl font-bold text-gray-900">AI Longevity Assistant</h1>
+        <h1 className="text-2xl font-bold text-gray-900">AI Longevity Agent</h1>
       </div>
 
       {/* Navegación por Pestañas con nuevo estilo */}

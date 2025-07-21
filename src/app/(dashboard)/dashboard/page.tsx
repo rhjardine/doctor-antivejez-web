@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Users, UserPlus, TrendingUp, Star } from 'lucide-react';
 import { FaHeartbeat, FaUserPlus, FaVial } from 'react-icons/fa';
-// --- CORRECCIÓN: Se elimina la extensión .ts del import ---
 import { getDashboardStats, TimeRange } from '@/lib/actions/dashboard.actions';
 import { 
   LineChart, 
@@ -116,17 +115,23 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">Bienvenido al Sistema Doctor AntiVejez</p>
         </div>
+        {/* --- INICIO DE LA MODIFICACIÓN DE ESTILOS --- */}
         <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-lg">
             {timeRangeOptions.map(option => (
                 <button 
                     key={option.id}
                     onClick={() => setSelectedRange(option.id)}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${selectedRange === option.id ? 'bg-white text-primary shadow' : 'text-gray-600 hover:bg-white/60'}`}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                        selectedRange === option.id 
+                        ? 'bg-white text-primary shadow' 
+                        : 'text-gray-600 hover:bg-white/60'
+                    }`}
                 >
                     {option.label}
                 </button>
             ))}
         </div>
+        {/* --- FIN DE LA MODIFICACIÓN DE ESTILOS --- */}
       </div>
 
       {/* Stats Cards */}
