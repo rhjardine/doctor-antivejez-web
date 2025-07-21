@@ -2,7 +2,6 @@
 
 import { prisma } from '@/lib/db';
 import { BoardWithRanges, FormValues, CalculationResult } from '@/types/biophysics';
-// CORRECCIÓN: Se cambia 'calculateBiologicalAge' por el nombre correcto de la función: 'calculateBiofisicaResults'.
 import { calculateBiofisicaResults } from '@/utils/biofisica-calculations'; 
 import { revalidatePath } from 'next/cache';
 
@@ -58,8 +57,8 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
         // Guardar el promedio de las dimensiones, como en la lógica original.
         digitalReflexes: formValues.digitalReflexes
           ? ((formValues.digitalReflexes.high || 0) +
-              (formValues.digitalReflexes.long || 0) +
-              (formValues.digitalReflexes.width || 0)) / 3
+              (formValues.digitalRefles.long || 0) +
+              (formValues.digitalRefles.width || 0)) / 3
           : undefined,
         visualAccommodation: formValues.visualAccommodation,
         staticBalance: formValues.staticBalance
@@ -82,11 +81,21 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       },
     });
 
-    // Se mantiene comentado para evitar que la página se recargue y se pierda el estado del formulario.
-    // revalidatePath(`/historias/${patientId}`);
-    // revalidatePath('/dashboard');
+    // CORRECCIÓN FINAL: Revalidamos rutas generales para actualizar historiales en otras
+    // pantallas, pero EVITAMOS revalidar la ruta actual (`/historias/${patientId}`)
+    // para prevenir que el estado del formulario en el cliente se reinicie.
+    revalidatePath('/dashboard');
+    revalidatePath('/historias');
 
-    return { success: true, data: { ...newTest, partialAges: calculationResult.partialAges } };
+    // Se mantiene la serialización de la fecha para evitar errores de transferencia de datos.
+    const serializableData = {
+      ...newTest,
+      testDate: newTest.testDate.toISOString(),
+      partialAges: calculationResult.partialAges,
+    };
+
+    return { success: true, data: serializableData };
+    
   } catch (error) {
     console.error('Error en calculateAndSaveBiophysicsTest:', error);
     const errorMessage = error instanceof Error ? error.message : 'Ocurrió un error desconocido.';
@@ -130,7 +139,11 @@ export async function getLatestBiophysicsTest(patientId: string) {
       where: { patientId },
       orderBy: { testDate: 'desc' },
     });
-    return { success: true, test };
+    // Se serializa la fecha por seguridad, aunque esta función podría no pasarla al cliente.
+    if (test) {
+      return { success: true, test: { ...test, testDate: test.testDate.toISOString() } };
+    }
+    return { success: true, test: null };
   } catch (error) {
     console.error('Error obteniendo último test:', error);
     return { success: false, error: 'Error al obtener el test' };
@@ -143,7 +156,12 @@ export async function getBiophysicsTestHistory(patientId: string) {
       where: { patientId },
       orderBy: { testDate: 'desc' },
     });
-    return { success: true, tests };
+    // Se serializan las fechas de todo el historial para el cliente.
+    const serializableTests = tests.map(test => ({
+      ...test,
+      testDate: test.testDate.toISOString(),
+    }));
+    return { success: true, tests: serializableTests };
   } catch (error)
   {
     console.error('Error obteniendo historial de tests:', error);
