@@ -9,13 +9,11 @@ import { saveBiochemistryTest } from '@/lib/actions/biochemistry.actions';
 import { BiochemistryFormValues, BiochemistryPartialAges } from '@/types/biochemistry';
 import BiochemistryHistoryView from './BiochemistryHistoryView';
 
-// ===== INICIO DE LA MODIFICACIÓN: Añadir la prop onTestComplete =====
 interface EdadBioquimicaTestViewProps {
   patient: PatientWithDetails;
   onBack: () => void;
   onTestComplete: () => void; // Para recargar los datos del paciente
 }
-// ===== FIN DE LA MODIFICACIÓN =====
 
 const BIOCHEMISTRY_ITEMS: { key: keyof BiochemistryFormValues; label: string; isDim: boolean }[] = [
     { key: 'somatomedin', label: 'Somatomedina C (IGF-1) (ng/mL)', isDim: false },
@@ -120,12 +118,13 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Columna de Formulario */}
-            <div className="card space-y-4">
-                <h3 className="text-lg font-semibold">Parámetros del Test</h3>
+            {/* --- INICIO DE LA MODIFICACIÓN DE ESTILOS --- */}
+            {/* Columna de Formulario con nuevo estilo oscuro */}
+            <div className="bg-primary-dark rounded-xl p-6 text-white space-y-4">
+                <h3 className="text-lg font-semibold text-white">Parámetros del Test</h3>
                 {BIOCHEMISTRY_ITEMS.map(item => (
                     <div key={item.key}>
-                        <label className="label">{item.label}</label>
+                        <label className="block text-sm font-medium text-white/80 mb-2">{item.label}</label>
                         {item.key === 'boneDensitometry' ? (
                             <div className="grid grid-cols-2 gap-2">
                                 <input type="number" step="any" placeholder="Fémur" value={formValues.boneDensitometry?.field1 ?? ''} onChange={e => handleInputChange('boneDensitometry', e.target.value, 'field1')} className="input" disabled={isSaved || processing} />
@@ -137,8 +136,9 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
                     </div>
                 ))}
             </div>
+            {/* --- FIN DE LA MODIFICACIÓN DE ESTILOS --- */}
 
-            {/* Columna de Resultados y Acciones */}
+            {/* Columna de Resultados y Acciones (sin cambios) */}
             <div className="space-y-6">
                 <div className="card">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados</h3>
