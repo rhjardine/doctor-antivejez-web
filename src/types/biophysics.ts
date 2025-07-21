@@ -1,17 +1,21 @@
 export interface FormValues {
   fatPercentage?: number;
   bmi?: number;
+  // --- CORRECCIÓN: Se permite que las dimensiones sean opcionales ---
+  // Esto alinea el tipo con el estado inicial del formulario, que puede
+  // tener valores indefinidos antes de que el usuario los ingrese.
   digitalReflexes?: {
-    high: number;
-    long: number;
-    width: number;
+    high?: number;
+    long?: number;
+    width?: number;
   };
   visualAccommodation?: number;
   staticBalance?: {
-    high: number;
-    long: number;
-    width: number;
+    high?: number;
+    long?: number;
+    width?: number;
   };
+  // --- FIN DE LA CORRECCIÓN ---
   skinHydration?: number;
   systolicPressure?: number;
   diastolicPressure?: number;
