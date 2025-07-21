@@ -54,16 +54,20 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   const [isSaved, setIsSaved] = useState(false);
   const [calculated, setCalculated] = useState(false);
 
+  // ===== INICIO DE LA CORRECCIÓN: Estado inicial robusto =====
+  // Se inicializan todos los campos como `undefined` para asegurar que la validación
+  // solo acepte valores explícitamente introducidos por el usuario.
   const [formValues, setFormValues] = useState<FormValues>({
     fatPercentage: undefined,
     bmi: undefined,
-    digitalReflexes: { high: 0, long: 0, width: 0 },
+    digitalReflexes: { high: undefined, long: undefined, width: undefined },
     visualAccommodation: undefined,
-    staticBalance: { high: 0, long: 0, width: 0 },
+    staticBalance: { high: undefined, long: undefined, width: undefined },
     skinHydration: undefined,
     systolicPressure: undefined,
     diastolicPressure: undefined,
   });
+  // ===== FIN DE LA CORRECCIÓN =====
 
   const [results, setResults] = useState<CalculationResult>({
     biologicalAge: 0,
@@ -86,43 +90,48 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     }
   };
 
+  // ===== INICIO DE LA CORRECCIÓN: Manejador de inputs mejorado =====
+  // Ahora maneja correctamente los valores `undefined` cuando un campo se vacía.
   const handleInputChange = (key: string, value: number | undefined, dimension?: 'high' | 'long' | 'width') => {
     setFormValues(prev => {
       const formKey = key as keyof FormValues;
       if (dimension && (formKey === 'digitalReflexes' || formKey === 'staticBalance')) {
-        const currentDimensions = prev[formKey] as { high: number, long: number, width: number };
-        return { ...prev, [formKey]: { ...currentDimensions, [dimension]: value || 0 } };
+        const currentDimensions = prev[formKey] as { high?: number, long?: number, width?: number };
+        return { ...prev, [formKey]: { ...currentDimensions, [dimension]: value } };
       }
       return { ...prev, [formKey]: value };
     });
-    // Cualquier cambio en el input, resetea los estados de calculado y guardado
     setCalculated(false);
     setIsSaved(false);
   };
+  // ===== FIN DE LA CORRECCIÓN =====
 
   const handleCalculateAndSave = async () => {
     setProcessing(true);
 
+    // ===== INICIO DE LA CORRECCIÓN: Validación estricta =====
+    // Se asegura de que todos los campos, incluyendo las 3 dimensiones, tengan un valor numérico válido.
     const invalidFields = [];
     for (const item of BIOPHYSICS_ITEMS) {
       const value = formValues[item.key];
       if (item.hasDimensions) {
-        const dimensionalValue = value as { high: number; long: number; width: number; } | undefined;
-        if (dimensionalValue?.high === undefined || isNaN(dimensionalValue.high) || dimensionalValue?.long === undefined || isNaN(dimensionalValue.long) || dimensionalValue?.width === undefined || isNaN(dimensionalValue.width)) {
+        const dimensionalValue = value as { high?: number; long?: number; width?: number; };
+        if (typeof dimensionalValue?.high !== 'number' || typeof dimensionalValue?.long !== 'number' || typeof dimensionalValue?.width !== 'number') {
           invalidFields.push(item.label);
         }
       } else {
-        if (value === undefined || isNaN(value as number)) {
+        if (typeof value !== 'number') {
           invalidFields.push(item.label);
         }
       }
     }
 
     if (invalidFields.length > 0) {
-      toast.error(`Por favor, complete y/o corrija los siguientes campos: ${invalidFields.join(', ')}`);
+      toast.error(`Por favor, complete todos los campos: ${invalidFields.join(', ')}`);
       setProcessing(false);
       return;
     }
+    // ===== FIN DE LA CORRECCIÓN =====
 
     let calculationResult: CalculationResult;
     try {
@@ -148,11 +157,11 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
         fatAge: calculationResult.partialAges.fatAge,
         bmi: formValues.bmi,
         bmiAge: calculationResult.partialAges.bmiAge,
-        digitalReflexes: formValues.digitalReflexes ? (formValues.digitalReflexes.high + formValues.digitalReflexes.long + formValues.digitalReflexes.width) / 3 : undefined,
+        digitalReflexes: formValues.digitalReflexes ? (formValues.digitalReflexes.high! + formValues.digitalReflexes.long! + formValues.digitalReflexes.width!) / 3 : undefined,
         reflexesAge: calculationResult.partialAges.reflexesAge,
         visualAccommodation: formValues.visualAccommodation,
         visualAge: calculationResult.partialAges.visualAge,
-        staticBalance: formValues.staticBalance ? (formValues.staticBalance.high + formValues.staticBalance.long + formValues.staticBalance.width) / 3 : undefined,
+        staticBalance: formValues.staticBalance ? (formValues.staticBalance.high! + formValues.staticBalance.long! + formValues.staticBalance.width!) / 3 : undefined,
         balanceAge: calculationResult.partialAges.balanceAge,
         skinHydration: formValues.skinHydration,
         hydrationAge: calculationResult.partialAges.hydrationAge,
@@ -294,15 +303,12 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
         <div className="w-full md:w-1/2 space-y-6">
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Finales</h3>
-            {/* INICIO DE LA MODIFICACIÓN: Cambiado a una cuadrícula de 3 columnas */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              {/* Card para Edad Cronológica */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
                 <p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge}</p>
               </div>
 
-              {/* Card para Edad Biofísica */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Edad Biofísica</p>
                 <p className="text-3xl font-bold text-primary">
@@ -310,7 +316,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                 </p>
               </div>
 
-              {/* Card para Edad Diferencial */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Diferencial</p>
                 <p
@@ -320,7 +325,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                 </p>
               </div>
             </div>
-            {/* FIN DE LA MODIFICACIÓN */}
           </div>
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados por Ítem</h3>
