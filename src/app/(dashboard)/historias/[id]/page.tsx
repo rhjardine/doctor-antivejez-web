@@ -24,11 +24,14 @@ import PatientGuide from '@/components/patient-guide/PatientGuide';
 import ClinicalSummary from '@/components/patients/ClinicalSummary';
 import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
 import BiochemistryHistoryView from '@/components/biochemistry/BiochemistryHistoryView';
+import GeneticTestView from '@/components/genetics/GeneticTestView'; // <-- Importar nuevo componente
+import { telotestReportData } from '@/lib/mock-data'; // <-- Importar datos de ejemplo
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
-type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'biofisica_history' | 'bioquimica_history';
+// --- Se añade 'genetica' a las vistas activas ---
+type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'biofisica_history' | 'bioquimica_history' | 'genetica';
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -42,10 +45,6 @@ export default function PatientDetailPage() {
   const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
   const [isEditing, setIsEditing] = useState(false);
 
-  // ===== INICIO DE LA CORRECCIÓN: Se elimina la dependencia 'patient' =====
-  // Se elimina la dependencia 'patient' del useCallback para evitar que la función
-  // se recree en cada renderizado, lo que causaba una recarga de datos innecesaria
-  // y reseteaba la selección en la vista del historial.
   const loadPatient = useCallback(async () => {
     if (!patientId) return;
     setLoading(true);
@@ -63,7 +62,6 @@ export default function PatientDetailPage() {
       setLoading(false);
     }
   }, [patientId, router]);
-  // ===== FIN DE LA CORRECCIÓN =====
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -121,6 +119,7 @@ export default function PatientDetailPage() {
             onBiochemistryTestClick={() => setActiveTestView('bioquimica')}
             onHistoryClick={() => setActiveTestView('biofisica_history')}
             onBiochemistryHistoryClick={() => setActiveTestView('bioquimica_history')}
+            onGeneticTestClick={() => setActiveTestView('genetica')} // <-- Nuevo manejador
           />
         );
       case 'biofisica':
@@ -131,6 +130,9 @@ export default function PatientDetailPage() {
         return <BiophysicsHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={loadPatient} />;
       case 'bioquimica_history':
         return <BiochemistryHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={loadPatient} />;
+      // --- Renderizado del nuevo componente ---
+      case 'genetica':
+        return <GeneticTestView report={telotestReportData} onBack={() => setActiveTestView('main')} />;
       default:
         return null;
     }
