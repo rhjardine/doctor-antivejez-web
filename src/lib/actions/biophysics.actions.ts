@@ -2,11 +2,11 @@
 
 import { prisma } from '@/lib/db';
 import { BoardWithRanges, FormValues, CalculationResult } from '@/types/biophysics';
-import { calculateBiologicalAge } from '@/utils/biofisica-calculations'; // Asegúrate que la ruta a tu lógica de cálculo sea correcta
+// CORRECCIÓN: Se cambia 'calculateBiologicalAge' por el nombre correcto de la función: 'calculateBiofisicaResults'.
+import { calculateBiofisicaResults } from '@/utils/biofisica-calculations'; 
 import { revalidatePath } from 'next/cache';
 
 // --- ACCIÓN CENTRALIZADA PARA CALCULAR Y GUARDAR ---
-// Esta es la única acción que el formulario del cliente necesita llamar.
 interface CalculateAndSaveParams {
   patientId: string;
   chronologicalAge: number;
@@ -32,11 +32,11 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       throw new Error('No se pudieron cargar los baremos para el cálculo.');
     }
 
-    // 2. Realizar el cálculo usando tu lógica existente
-    const calculationResult: CalculationResult = calculateBiologicalAge(
+    // 2. Realizar el cálculo usando tu lógica existente con el nombre de función correcto.
+    const calculationResult: CalculationResult = calculateBiofisicaResults(
+      boards,
       formValues,
       chronologicalAge,
-      boards,
       gender,
       isAthlete
     );
@@ -82,9 +82,9 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       },
     });
 
-    // 4. Revalidar caché para actualizar la UI automáticamente
-    revalidatePath(`/historias/${patientId}`);
-    revalidatePath('/dashboard');
+    // Se mantiene comentado para evitar que la página se recargue y se pierda el estado del formulario.
+    // revalidatePath(`/historias/${patientId}`);
+    // revalidatePath('/dashboard');
 
     return { success: true, data: { ...newTest, partialAges: calculationResult.partialAges } };
   } catch (error) {
@@ -103,8 +103,6 @@ export async function getBiophysicsBoardsAndRanges(): Promise<BoardWithRanges[]>
       where: { type: 'FORM_BIOPHYSICS' },
       include: { range: true },
     });
-    // El mapeo no es estrictamente necesario si la consulta ya devuelve lo que necesitas,
-    // pero lo mantenemos por si hay transformaciones futuras.
     return boards.map(board => ({ ...board }));
   } catch (error) {
     console.error('Error obteniendo boards:', error);
