@@ -3,15 +3,14 @@
 import { PatientWithDetails } from '@/types';
 import { FaHeartbeat, FaFlask, FaDna, FaAtom, FaHistory } from 'react-icons/fa';
 
-// ===== INICIO DE LA MODIFICACIÓN: Definición de props actualizada =====
 interface EdadBiologicaMainProps {
   patient: PatientWithDetails;
   onTestClick: () => void;
   onBiochemistryTestClick: () => void;
   onHistoryClick: () => void;
   onBiochemistryHistoryClick: () => void;
+  onGeneticTestClick: () => void; // <-- CORRECCIÓN: Se añade la prop que faltaba
 }
-// ===== FIN DE LA MODIFICACIÓN =====
 
 export default function EdadBiologicaMain({
   patient,
@@ -19,6 +18,7 @@ export default function EdadBiologicaMain({
   onBiochemistryTestClick,
   onHistoryClick,
   onBiochemistryHistoryClick,
+  onGeneticTestClick,
 }: EdadBiologicaMainProps) {
   const lastBiophysicsTest = patient.biophysicsTests?.[0];
   const lastBiochemistryTest = patient.biochemistryTests?.[0];
@@ -61,11 +61,11 @@ export default function EdadBiologicaMain({
       id: 'genetica',
       title: 'EDAD GENÉTICA',
       icon: FaDna,
-      value: '--',
-      isClickable: false,
-      onClick: undefined,
-      color: 'bg-gray-400',
-      hasHistory: false,
+      value: 'Ver', 
+      isClickable: true,
+      onClick: onGeneticTestClick,
+      color: 'bg-primary', 
+      hasHistory: false, 
       onHistoryClick: undefined,
     },
   ];
@@ -123,7 +123,7 @@ export default function EdadBiologicaMain({
                   </div>
                   <h3 className="text-sm font-medium mb-2 opacity-90">{card.title}</h3>
                   <p className="text-3xl font-bold">
-                    {card.value !== '--' ? `${card.value} años` : card.value}
+                    {card.value !== '--' && card.value !== 'Ver' ? `${card.value} años` : card.value}
                   </p>
                   {card.id === 'biofisica' && lastBiophysicsTest && (
                     <p className="text-sm mt-2 opacity-80">
