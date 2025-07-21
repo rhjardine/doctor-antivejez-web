@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useForm, Controller } from 'react-hook-form';
 import { toast } from 'sonner';
 import { FaArrowLeft, FaSave, FaEdit, FaUndo, FaCheckCircle } from 'react-icons/fa';
 
@@ -16,38 +14,6 @@ import {
 } from '@/types/biophysics';
 import { calculateAndSaveBiophysicsTest } from '@/lib/actions/biophysics.actions';
 import { getAgeStatus, getStatusColor } from '@/utils/biofisica-calculations';
-
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-
-// --- Esquema de validación con Zod ---
-// Define la estructura y las reglas de validación para el formulario.
-const formSchema = z.object({
-  fatPercentage: z.coerce.number({ required_error: 'Requerido' }).min(0),
-  bmi: z.coerce.number({ required_error: 'Requerido' }).min(0),
-  digitalReflexes: z.object({
-    high: z.coerce.number({ required_error: 'Requerido' }).min(0),
-    long: z.coerce.number({ required_error: 'Requerido' }).min(0),
-    width: z.coerce.number({ required_error: 'Requerido' }).min(0),
-  }),
-  visualAccommodation: z.coerce.number({ required_error: 'Requerido' }).min(0),
-  staticBalance: z.object({
-    high: z.coerce.number({ required_error: 'Requerido' }).min(0),
-    long: z.coerce.number({ required_error: 'Requerido' }).min(0),
-    width: z.coerce.number({ required_error: 'Requerido' }).min(0),
-  }),
-  skinHydration: z.coerce.number({ required_error: 'Requerido' }).min(0),
-  systolicPressure: z.coerce.number({ required_error: 'Requerido' }).min(0),
-  diastolicPressure: z.coerce.number({ required_error: 'Requerido' }).min(0),
-});
 
 // --- Componente de Modal de Éxito (Conservado de tu versión original) ---
 function SuccessModal({ onClose }: { onClose: () => void }) {
@@ -88,21 +54,26 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   const [isSaved, setIsSaved] = useState(false);
   const [results, setResults] = useState<CalculationResult | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {}, // Los valores se manejarán en los campos
-  });
+  const { control, handleSubmit, formState: { errors } } = useForm<FormValues>();
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: FormValues) => {
     setProcessing(true);
     setResults(null);
+
+    // Convertir valores de string a número antes de enviar
+    const numericData: FormValues = JSON.parse(JSON.stringify(data), (key, value) => {
+        if (value !== null && value !== '' && !isNaN(Number(value))) {
+            return Number(value);
+        }
+        return value;
+    });
 
     const response = await calculateAndSaveBiophysicsTest({
       patientId: patient.id,
       chronologicalAge: patient.chronologicalAge,
       gender: patient.gender,
       isAthlete: patient.gender.includes('DEPORTIVO'),
-      formValues: values,
+      formValues: numericData,
     });
 
     setProcessing(false);
@@ -154,41 +125,39 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
           <h3 className="text-lg font-semibold mb-4">Test de Edad Biofísica</h3>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pr-2">
-              {BIOPHYSICS_ITEMS.map(item => (
-                <div key={item.key} className="bg-white/10 rounded-lg p-4">
-                  <FormLabel className="block text-sm font-medium mb-2">
-                    {item.label} {item.unit && `(${item.unit})`}
-                  </FormLabel>
-                  {item.hasDimensions ? (
-                    <div className="grid grid-cols-3 gap-2">
-                      <FormField control={form.control} name={`${item.key}.high`} render={({ field }) => <FormItem><FormControl><Input type="number" step="any" placeholder="Alto" {...field} className="input" disabled={isSaved || processing} /></FormControl><FormMessage /></FormItem>} />
-                      <FormField control={form.control} name={`${item.key}.long`} render={({ field }) => <FormItem><FormControl><Input type="number" step="any" placeholder="Largo" {...field} className="input" disabled={isSaved || processing} /></FormControl><FormMessage /></FormItem>} />
-                      <FormField control={form.control} name={`${item.key}.width`} render={({ field }) => <FormItem><FormControl><Input type="number" step="any" placeholder="Ancho" {...field} className="input" disabled={isSaved || processing} /></FormControl><FormMessage /></FormItem>} />
-                    </div>
-                  ) : (
-                    <FormField control={form.control} name={item.key} render={({ field }) => <FormItem><FormControl><Input type="number" step="any" {...field} className="input w-full" disabled={isSaved || processing} /></FormControl><FormMessage /></FormItem>} />
-                  )}
-                </div>
-              ))}
-              
-              <div className="mt-6 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Button type="submit" disabled={processing || isSaved} className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                  <FaSave />
-                  <span>{processing ? 'Procesando...' : 'Calcular y Guardar'}</span>
-                </Button>
-                <Button type="button" onClick={handleEdit} disabled={!isSaved || processing} className="w-full bg-yellow-500 text-white font-medium py-3 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                  <FaEdit />
-                  <span>Editar</span>
-                </Button>
-                <Button type="button" onClick={onBack} disabled={processing} className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                  <FaUndo />
-                  <span>Volver</span>
-                </Button>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pr-2">
+            {BIOPHYSICS_ITEMS.map(item => (
+              <div key={item.key} className="bg-white/10 rounded-lg p-4">
+                <label className="block text-sm font-medium mb-2">
+                  {item.label} {item.unit && `(${item.unit})`}
+                </label>
+                {item.hasDimensions ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    <Controller name={`${item.key}.high`} control={control} rules={{ required: true }} render={({ field }) => <input type="number" step="any" placeholder="Alto" {...field} className="input" disabled={isSaved || processing} />} />
+                    <Controller name={`${item.key}.long`} control={control} rules={{ required: true }} render={({ field }) => <input type="number" step="any" placeholder="Largo" {...field} className="input" disabled={isSaved || processing} />} />
+                    <Controller name={`${item.key}.width`} control={control} rules={{ required: true }} render={({ field }) => <input type="number" step="any" placeholder="Ancho" {...field} className="input" disabled={isSaved || processing} />} />
+                  </div>
+                ) : (
+                  <Controller name={item.key} control={control} rules={{ required: true }} render={({ field }) => <input type="number" step="any" {...field} className="input w-full" disabled={isSaved || processing} />} />
+                )}
               </div>
-            </form>
-          </Form>
+            ))}
+            
+            <div className="mt-6 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button type="submit" disabled={processing || isSaved} className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                <FaSave />
+                <span>{processing ? 'Procesando...' : 'Calcular y Guardar'}</span>
+              </button>
+              <button type="button" onClick={handleEdit} disabled={!isSaved || processing} className="w-full bg-yellow-500 text-white font-medium py-3 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                <FaEdit />
+                <span>Editar</span>
+              </button>
+              <button type="button" onClick={onBack} disabled={processing} className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                <FaUndo />
+                <span>Volver</span>
+              </button>
+            </div>
+          </form>
         </div>
 
         {/* Columna Derecha: Resultados */}

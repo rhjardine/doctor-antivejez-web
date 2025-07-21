@@ -2,10 +2,10 @@
 
 import { prisma } from '@/lib/db';
 import { BoardWithRanges, FormValues, CalculationResult } from '@/types/biophysics';
-import { calculateBiologicalAge } from '@/utils/biofisica-calculations'; // Asegúrate que la ruta sea correcta
+import { calculateBiologicalAge } from '@/utils/biofisica-calculations'; // Asegúrate que la ruta a tu lógica de cálculo sea correcta
 import { revalidatePath } from 'next/cache';
 
-// --- NUEVA ACCIÓN CENTRALIZADA ---
+// --- ACCIÓN CENTRALIZADA PARA CALCULAR Y GUARDAR ---
 // Esta es la única acción que el formulario del cliente necesita llamar.
 interface CalculateAndSaveParams {
   patientId: string;
@@ -17,10 +17,10 @@ interface CalculateAndSaveParams {
 
 /**
  * Orquesta todo el proceso de cálculo y guardado en el servidor.
- * 1. Obtiene los baremos.
- * 2. Ejecuta la lógica de cálculo.
- * 3. Guarda el test en la base de datos.
- * @returns El resultado del test o un error.
+ * 1. Obtiene los baremos de la base de datos.
+ * 2. Ejecuta la lógica de cálculo que ya tenías.
+ * 3. Guarda el test completo en la base de datos.
+ * @returns Un objeto con el resultado del test o un mensaje de error.
  */
 export async function calculateAndSaveBiophysicsTest(params: CalculateAndSaveParams) {
   try {
@@ -55,9 +55,18 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
         // Valores del formulario
         fatPercentage: formValues.fatPercentage,
         bmi: formValues.bmi,
-        digitalReflexes: formValues.digitalReflexes ? (formValues.digitalReflexes.high || 0) : undefined, // Ajusta según cómo guardes las dimensiones
+        // Guardar el promedio de las dimensiones, como en la lógica original.
+        digitalReflexes: formValues.digitalReflexes
+          ? ((formValues.digitalReflexes.high || 0) +
+              (formValues.digitalReflexes.long || 0) +
+              (formValues.digitalReflexes.width || 0)) / 3
+          : undefined,
         visualAccommodation: formValues.visualAccommodation,
-        staticBalance: formValues.staticBalance ? (formValues.staticBalance.high || 0) : undefined, // Ajusta según cómo guardes las dimensiones
+        staticBalance: formValues.staticBalance
+          ? ((formValues.staticBalance.high || 0) +
+              (formValues.staticBalance.long || 0) +
+              (formValues.staticBalance.width || 0)) / 3
+          : undefined,
         skinHydration: formValues.skinHydration,
         systolicPressure: formValues.systolicPressure,
         diastolicPressure: formValues.diastolicPressure,
@@ -73,7 +82,7 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       },
     });
 
-    // 4. Revalidar caché para actualizar la UI
+    // 4. Revalidar caché para actualizar la UI automáticamente
     revalidatePath(`/historias/${patientId}`);
     revalidatePath('/dashboard');
 
@@ -86,7 +95,7 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
 }
 
 
-// --- TUS FUNCIONES EXISTENTES (SE MANTIENEN IGUAL) ---
+// --- TUS FUNCIONES EXISTENTES (SE MANTIENEN SIN CAMBIOS) ---
 
 export async function getBiophysicsBoardsAndRanges(): Promise<BoardWithRanges[]> {
   try {
@@ -94,6 +103,8 @@ export async function getBiophysicsBoardsAndRanges(): Promise<BoardWithRanges[]>
       where: { type: 'FORM_BIOPHYSICS' },
       include: { range: true },
     });
+    // El mapeo no es estrictamente necesario si la consulta ya devuelve lo que necesitas,
+    // pero lo mantenemos por si hay transformaciones futuras.
     return boards.map(board => ({ ...board }));
   } catch (error) {
     console.error('Error obteniendo boards:', error);
@@ -135,7 +146,8 @@ export async function getBiophysicsTestHistory(patientId: string) {
       orderBy: { testDate: 'desc' },
     });
     return { success: true, tests };
-  } catch (error) {
+  } catch (error)
+  {
     console.error('Error obteniendo historial de tests:', error);
     return { success: false, error: 'Error al obtener el historial', tests: [] };
   }
