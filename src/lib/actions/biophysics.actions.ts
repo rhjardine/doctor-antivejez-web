@@ -57,7 +57,6 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
         // Guardar el promedio de las dimensiones, como en la lógica original.
         digitalReflexes: formValues.digitalReflexes
           ? ((formValues.digitalReflexes.high || 0) +
-              // CORRECCIÓN: Se corrige el error de tipeo de 'digitalRefles' a 'digitalReflexes'.
               (formValues.digitalReflexes.long || 0) +
               (formValues.digitalReflexes.width || 0)) / 3
           : undefined,
@@ -82,11 +81,13 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       },
     });
 
-    // CORRECCIÓN FINAL: Revalidamos rutas generales para actualizar historiales en otras
-    // pantallas, pero EVITAMOS revalidar la ruta actual (`/historias/${patientId}`)
-    // para prevenir que el estado del formulario en el cliente se reinicie.
-    revalidatePath('/dashboard');
-    revalidatePath('/historias');
+    // CORRECCIÓN DEFINITIVA: Se eliminan TODAS las llamadas a revalidatePath de esta función.
+    // Esto previene que Next.js recargue los datos de la página actual, lo que causaba
+    // que el estado del componente se reiniciara ("blanqueo"). La actualización
+    // del historial en otras páginas se hará a través del callback `onTestComplete`
+    // o cuando el usuario navegue a ellas.
+    // revalidatePath('/dashboard');
+    // revalidatePath('/historias');
 
     // Se mantiene la serialización de la fecha para evitar errores de transferencia de datos.
     const serializableData = {
@@ -125,6 +126,7 @@ export async function deleteBiophysicsTest(testId: string, patientId: string) {
     await prisma.biophysicsTest.delete({
       where: { id: testId },
     });
+    // La revalidación aquí es correcta porque esta acción se llama desde un contexto diferente (ej. el historial).
     revalidatePath(`/historias/${patientId}`);
     revalidatePath('/dashboard');
     return { success: true };
@@ -142,7 +144,8 @@ export async function getLatestBiophysicsTest(patientId: string) {
     });
     // Se serializa la fecha por seguridad, aunque esta función podría no pasarla al cliente.
     if (test) {
-      return { success: true, test: { ...test, testDate: test.testDate.toISOString() } };
+      const serializableTest = { ...test, testDate: test.testDate.toISOString() };
+      return { success: true, test: serializableTest };
     }
     return { success: true, test: null };
   } catch (error) {
