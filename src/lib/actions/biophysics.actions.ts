@@ -86,7 +86,16 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
     // revalidatePath(`/historias/${patientId}`);
     // revalidatePath('/dashboard');
 
-    return { success: true, data: { ...newTest, partialAges: calculationResult.partialAges } };
+    // CORRECCIÓN: Se crea un objeto de datos serializable para evitar errores al retornar al cliente.
+    // El objeto Date 'testDate' se convierte a un string.
+    const serializableData = {
+      ...newTest,
+      testDate: newTest.testDate.toISOString(),
+      partialAges: calculationResult.partialAges,
+    };
+
+    return { success: true, data: serializableData };
+    
   } catch (error) {
     console.error('Error en calculateAndSaveBiophysicsTest:', error);
     const errorMessage = error instanceof Error ? error.message : 'Ocurrió un error desconocido.';
