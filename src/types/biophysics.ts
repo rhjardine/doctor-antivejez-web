@@ -1,9 +1,7 @@
+// No se necesitan cambios aquí. Se usa tu estructura original.
 export interface FormValues {
   fatPercentage?: number;
   bmi?: number;
-  // --- CORRECCIÓN: Se permite que las dimensiones sean opcionales ---
-  // Esto alinea el tipo con el estado inicial del formulario, que puede
-  // tener valores indefinidos antes de que el usuario los ingrese.
   digitalReflexes?: {
     high?: number;
     long?: number;
@@ -15,7 +13,6 @@ export interface FormValues {
     long?: number;
     width?: number;
   };
-  // --- FIN DE LA CORRECCIÓN ---
   skinHydration?: number;
   systolicPressure?: number;
   diastolicPressure?: number;
@@ -70,4 +67,3 @@ export const GENDER_OPTIONS = [
   { value: 'MASCULINO_DEPORTIVO', label: 'Masculino Deportivo' },
   { value: 'FEMENINO_DEPORTIVO', label: 'Femenino Deportivo' },
 ] as const;
-//Cambio

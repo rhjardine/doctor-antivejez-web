@@ -1,94 +1,113 @@
-// src/lib/actions/biophysics.actions.ts
 'use server';
 
 import { prisma } from '@/lib/db';
-import { BoardWithRanges } from '@/types/biophysics';
+import { BoardWithRanges, FormValues, CalculationResult } from '@/types/biophysics';
+import { calculateBiologicalAge } from '@/utils/biofisica-calculations'; // Asegúrate que la ruta sea correcta
 import { revalidatePath } from 'next/cache';
+
+// --- NUEVA ACCIÓN CENTRALIZADA ---
+// Esta es la única acción que el formulario del cliente necesita llamar.
+interface CalculateAndSaveParams {
+  patientId: string;
+  chronologicalAge: number;
+  gender: string;
+  isAthlete: boolean;
+  formValues: FormValues;
+}
+
+/**
+ * Orquesta todo el proceso de cálculo y guardado en el servidor.
+ * 1. Obtiene los baremos.
+ * 2. Ejecuta la lógica de cálculo.
+ * 3. Guarda el test en la base de datos.
+ * @returns El resultado del test o un error.
+ */
+export async function calculateAndSaveBiophysicsTest(params: CalculateAndSaveParams) {
+  try {
+    const { patientId, chronologicalAge, gender, isAthlete, formValues } = params;
+
+    // 1. Obtener baremos (se ejecuta de forma segura en el servidor)
+    const boards = await getBiophysicsBoardsAndRanges();
+    if (!boards || boards.length === 0) {
+      throw new Error('No se pudieron cargar los baremos para el cálculo.');
+    }
+
+    // 2. Realizar el cálculo usando tu lógica existente
+    const calculationResult: CalculationResult = calculateBiologicalAge(
+      formValues,
+      chronologicalAge,
+      boards,
+      gender,
+      isAthlete
+    );
+
+    // 3. Guardar el nuevo test en la base de datos
+    const newTest = await prisma.biophysicsTest.create({
+      data: {
+        patientId,
+        chronologicalAge,
+        gender,
+        isAthlete,
+        testDate: new Date(),
+        // Resultados principales
+        biologicalAge: calculationResult.biologicalAge,
+        differentialAge: calculationResult.differentialAge,
+        // Valores del formulario
+        fatPercentage: formValues.fatPercentage,
+        bmi: formValues.bmi,
+        digitalReflexes: formValues.digitalReflexes ? (formValues.digitalReflexes.high || 0) : undefined, // Ajusta según cómo guardes las dimensiones
+        visualAccommodation: formValues.visualAccommodation,
+        staticBalance: formValues.staticBalance ? (formValues.staticBalance.high || 0) : undefined, // Ajusta según cómo guardes las dimensiones
+        skinHydration: formValues.skinHydration,
+        systolicPressure: formValues.systolicPressure,
+        diastolicPressure: formValues.diastolicPressure,
+        // Edades parciales
+        fatAge: calculationResult.partialAges.fatAge,
+        bmiAge: calculationResult.partialAges.bmiAge,
+        reflexesAge: calculationResult.partialAges.reflexesAge,
+        visualAge: calculationResult.partialAges.visualAge,
+        balanceAge: calculationResult.partialAges.balanceAge,
+        hydrationAge: calculationResult.partialAges.hydrationAge,
+        systolicAge: calculationResult.partialAges.systolicAge,
+        diastolicAge: calculationResult.partialAges.diastolicAge,
+      },
+    });
+
+    // 4. Revalidar caché para actualizar la UI
+    revalidatePath(`/historias/${patientId}`);
+    revalidatePath('/dashboard');
+
+    return { success: true, data: { ...newTest, partialAges: calculationResult.partialAges } };
+  } catch (error) {
+    console.error('Error en calculateAndSaveBiophysicsTest:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Ocurrió un error desconocido.';
+    return { success: false, error: errorMessage };
+  }
+}
+
+
+// --- TUS FUNCIONES EXISTENTES (SE MANTIENEN IGUAL) ---
 
 export async function getBiophysicsBoardsAndRanges(): Promise<BoardWithRanges[]> {
   try {
     const boards = await prisma.board.findMany({
-      where: {
-        type: 'FORM_BIOPHYSICS',
-      },
-      include: {
-        range: true,
-      },
+      where: { type: 'FORM_BIOPHYSICS' },
+      include: { range: true },
     });
-
-    return boards.map(board => ({
-      id: board.id,
-      rangeId: board.rangeId,
-      type: board.type,
-      name: board.name,
-      minValue: board.minValue,
-      maxValue: board.maxValue,
-      inverse: board.inverse,
-      range: {
-        id: board.range.id,
-        minAge: board.range.minAge,
-        maxAge: board.range.maxAge,
-      },
-    }));
+    return boards.map(board => ({ ...board }));
   } catch (error) {
     console.error('Error obteniendo boards:', error);
     return [];
   }
 }
 
-export async function saveBiophysicsTest(data: {
-  patientId: string;
-  chronologicalAge: number;
-  biologicalAge: number;
-  differentialAge: number;
-  gender: string;
-  isAthlete: boolean;
-  fatPercentage?: number;
-  fatAge?: number;
-  bmi?: number;
-  bmiAge?: number;
-  digitalReflexes?: number;
-  reflexesAge?: number;
-  visualAccommodation?: number;
-  visualAge?: number;
-  staticBalance?: number;
-  balanceAge?: number;
-  skinHydration?: number;
-  hydrationAge?: number;
-  systolicPressure?: number;
-  systolicAge?: number;
-  diastolicPressure?: number;
-  diastolicAge?: number;
-}) {
-  try {
-    const test = await prisma.biophysicsTest.create({
-      data: {
-        ...data,
-        testDate: new Date(),
-      },
-    });
-
-    revalidatePath(`/historias/${data.patientId}`);
-    revalidatePath('/dashboard'); // Revalidar dashboard al guardar un test
-
-    return { success: true, test };
-  } catch (error) {
-    console.error('Error guardando test biofísico:', error);
-    return { success: false, error: 'Error al guardar el test' };
-  }
-}
-
-// --- NUEVA FUNCIÓN PARA ELIMINAR UN TEST ---
 export async function deleteBiophysicsTest(testId: string, patientId: string) {
   try {
     await prisma.biophysicsTest.delete({
       where: { id: testId },
     });
-
-    // Revalida las rutas afectadas para que Next.js actualice la cache
     revalidatePath(`/historias/${patientId}`);
     revalidatePath('/dashboard');
-
     return { success: true };
   } catch (error) {
     console.error('Error eliminando test biofísico:', error);
@@ -96,14 +115,12 @@ export async function deleteBiophysicsTest(testId: string, patientId: string) {
   }
 }
 
-
 export async function getLatestBiophysicsTest(patientId: string) {
   try {
     const test = await prisma.biophysicsTest.findFirst({
       where: { patientId },
       orderBy: { testDate: 'desc' },
     });
-
     return { success: true, test };
   } catch (error) {
     console.error('Error obteniendo último test:', error);
@@ -117,7 +134,6 @@ export async function getBiophysicsTestHistory(patientId: string) {
       where: { patientId },
       orderBy: { testDate: 'desc' },
     });
-
     return { success: true, tests };
   } catch (error) {
     console.error('Error obteniendo historial de tests:', error);
