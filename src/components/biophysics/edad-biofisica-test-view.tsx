@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Patient } from '@/types';
-import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, PartialAges } from '@/types/biophysics';
-import { getBiophysicsBoardsAndRanges, saveBiophysicsTest } from '@/lib/actions/biophysics.actions';
-import { calculateBiofisicaResults, getAgeStatus, getStatusColor } from '@/utils/biofisica-calculations';
+import { Patient } from '../../types';
+import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, PartialAges } from '../../types/biophysics';
+// ===== INICIO DE LA CORRECCIÓN: Importar la función correcta =====
+import { getBiophysicsBoardsAndRanges, calculateAndSaveBiophysicsTest } from '../../lib/actions/biophysics.actions';
+// ===== FIN DE LA CORRECCIÓN =====
+import { calculateBiofisicaResults, getAgeStatus, getStatusColor } from '../../utils/biofisica-calculations';
 import { toast } from 'sonner';
 import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle, FaUndo, FaSave } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
@@ -99,6 +101,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     setIsSaved(false);
   };
 
+  // ===== INICIO DE LA CORRECCIÓN: Lógica unificada de cálculo y guardado =====
   const handleCalculateAndSave = async () => {
     setProcessing(true);
 
@@ -123,57 +126,38 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       return;
     }
 
-    let calculationResult: CalculationResult;
     try {
-      const isAthlete = patient.gender.includes('DEPORTIVO');
-      calculationResult = calculateBiofisicaResults(boards, formValues, patient.chronologicalAge, patient.gender, isAthlete);
-      setResults(calculationResult);
-      setCalculated(true);
-    } catch (error: any) {
-      toast.error(`Error de cálculo: ${error.message}`);
-      setProcessing(false);
-      return;
-    }
-
-    try {
-      const testData = {
+      const params = {
         patientId: patient.id,
         chronologicalAge: patient.chronologicalAge,
-        biologicalAge: calculationResult.biologicalAge,
-        differentialAge: calculationResult.differentialAge,
         gender: patient.gender,
         isAthlete: patient.gender.includes('DEPORTIVO'),
-        fatPercentage: formValues.fatPercentage,
-        fatAge: calculationResult.partialAges.fatAge,
-        bmi: formValues.bmi,
-        bmiAge: calculationResult.partialAges.bmiAge,
-        digitalReflexes: formValues.digitalReflexes ? (formValues.digitalReflexes.high! + formValues.digitalReflexes.long! + formValues.digitalReflexes.width!) / 3 : undefined,
-        reflexesAge: calculationResult.partialAges.reflexesAge,
-        visualAccommodation: formValues.visualAccommodation,
-        visualAge: calculationResult.partialAges.visualAge,
-        staticBalance: formValues.staticBalance ? (formValues.staticBalance.high! + formValues.staticBalance.long! + formValues.staticBalance.width!) / 3 : undefined,
-        balanceAge: calculationResult.partialAges.balanceAge,
-        skinHydration: formValues.skinHydration,
-        hydrationAge: calculationResult.partialAges.hydrationAge,
-        systolicPressure: formValues.systolicPressure,
-        systolicAge: calculationResult.partialAges.systolicAge,
-        diastolicPressure: formValues.diastolicPressure,
-        diastolicAge: calculationResult.partialAges.diastolicAge,
+        formValues: formValues,
       };
-      const result = await saveBiophysicsTest(testData);
-      if (result.success) {
+      
+      const result = await calculateAndSaveBiophysicsTest(params);
+
+      if (result.success && result.data) {
+        const calculationResult: CalculationResult = {
+            biologicalAge: result.data.biologicalAge,
+            differentialAge: result.data.differentialAge,
+            partialAges: result.data.partialAges,
+        };
+        setResults(calculationResult);
+        setCalculated(true);
         onTestComplete(); 
         setIsSuccessModalOpen(true); 
         setIsSaved(true);
       } else {
-        toast.error(result.error || 'Error al guardar el test');
+        toast.error(result.error || 'Error al calcular y guardar el test');
       }
-    } catch (error) {
-      toast.error('Error al guardar el test');
+    } catch (error: any) {
+      toast.error(error.message || 'Error al procesar el test');
     } finally {
       setProcessing(false);
     }
   };
+  // ===== FIN DE LA CORRECCIÓN =====
   
   const handleEdit = () => {
     setIsSaved(false);
@@ -244,7 +228,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                     <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))} className="input w-full" disabled={isSaved || processing} />
                   )}
 
-                  {/* --- INICIO DE LA REINTEGRACIÓN --- */}
                   {calculated && (
                     <div className="mt-2 text-sm">
                       <span className="opacity-70">Edad Calculada: </span>
@@ -253,7 +236,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                       </span>
                     </div>
                   )}
-                  {/* --- FIN DE LA REINTEGRACIÓN --- */}
                 </div>
               );
             })}
@@ -303,11 +285,9 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Edad Biofísica</p>
-                {/* --- INICIO DE LA MODIFICACIÓN DE ESTILO --- */}
                 <p className={`text-3xl font-bold ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-primary'}`}>
                   {calculated ? `${results.biologicalAge}` : '--'}
                 </p>
-                {/* --- FIN DE LA MODIFICACIÓN DE ESTILO --- */}
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">

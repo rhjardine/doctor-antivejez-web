@@ -20,6 +20,13 @@
   --gray-700: rgb(55, 65, 81);
   --gray-800: rgb(31, 41, 55);
   --gray-900: rgb(17, 24, 39);
+
+  /* ===== INICIO DE LA MODIFICACIÓN ===== */
+  /* Colores para los estados de edad biológica */
+  --status-green: rgb(22, 163, 74);   /* Verde para Rejuvenecido */
+  --status-yellow: rgb(234, 179, 8);  /* Amarillo para Normal */
+  --status-red: rgb(220, 38, 38);      /* Rojo para Envejecido */
+  /* ===== FIN DE LA MODIFICACIÓN ===== */
 }
 
 /* Estilos base */
@@ -320,6 +327,16 @@ body {
   .alert-info {
     @apply bg-blue-50 border-blue-400 text-blue-800;
   }
+
+  /* ===== INICIO DE LA MODIFICACIÓN ===== */
+  /* Clases de utilidad para los colores de estado */
+  .text-status-green { color: var(--status-green); }
+  .text-status-yellow { color: var(--status-yellow); }
+  .text-status-red { color: var(--status-red); }
+  .bg-status-green { background-color: var(--status-green); }
+  .bg-status-yellow { background-color: var(--status-yellow); }
+  .bg-status-red { background-color: var(--status-red); }
+  /* ===== FIN DE LA MODIFICACIÓN ===== */
 }
 
 /* Keyframes para animaciones */
