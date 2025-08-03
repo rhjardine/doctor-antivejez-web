@@ -1,80 +1,79 @@
-// src/lib/actions/biochemistry.actions.ts
 'use server';
 
-import { prisma } from '@/lib/db';
+import { db } from '@/lib/db';
+import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
+import { BiochemistryFormValues } from '@/types/biochemistry';
 import { revalidatePath } from 'next/cache';
 
-// ===== INICIO DE LA MODIFICACIÓN: Corregir el tipo de dato esperado =====
-// Se define explícitamente el tipo para que coincida con lo que se guarda en la base de datos.
-// `boneDensitometry` ahora es `number | undefined`, no un objeto.
-type BiochemistryTestData = {
-  patientId: string;
-  chronologicalAge: number;
-  biochemicalAge: number;
-  differentialAge: number;
-  somatomedin?: number;
-  hba1c?: number;
-  insulin?: number;
-  postPrandial?: number;
-  tgHdlRatio?: number;
-  dhea?: number;
-  homocysteine?: number;
-  psa?: number;
-  fsh?: number;
-  boneDensitometry?: number;
-};
-// ===== FIN DE LA MODIFICACIÓN =====
-
 /**
- * Guarda un nuevo registro de test bioquímico en la base de datos.
- * @param data - Los datos completos del test, incluyendo el ID del paciente y los resultados.
- * @returns Un objeto indicando si la operación fue exitosa y el registro creado.
+ * Obtiene los baremos y rangos para el test bioquímico.
  */
-export async function saveBiochemistryTest(data: BiochemistryTestData) {
+export async function getBiochemistryBoardsAndRanges() {
   try {
-    const { patientId, ...testData } = data;
-    if (!patientId) {
-      throw new Error('El ID del paciente es requerido para guardar el test.');
-    }
-
-    // Crea el nuevo registro en la tabla 'BiochemistryTest'
-    const test = await prisma.biochemistryTest.create({
-      data: {
-        patientId: patientId,
-        testDate: new Date(),
-        // El resto de los datos ya coinciden con el esquema
-        ...testData,
+    const boards = await db.board.findMany({
+      where: {
+        type: 'FORM_BIOCHEMISTRY',
+      },
+      include: {
+        range: true,
       },
     });
-
-    // Revalida la ruta de la historia del paciente para que los datos se actualicen sin recargar la página.
-    revalidatePath(`/historias/${patientId}`);
-    
-    return { success: true, test };
+    return boards;
   } catch (error) {
-    console.error('Error guardando test bioquímico:', error);
-    return { success: false, error: 'Error al guardar el test bioquímico' };
+    console.error('Error fetching biochemistry boards:', error);
+    throw new Error('No se pudieron cargar los baremos bioquímicos.');
   }
 }
 
+interface SaveTestParams {
+  patientId: string;
+  chronologicalAge: number;
+  formValues: BiochemistryFormValues;
+}
+
 /**
- * Elimina un test bioquímico de la base de datos.
- * @param testId - El ID del test a eliminar.
- * @param patientId - El ID del paciente para revalidar la ruta.
- * @returns Un objeto indicando si la operación fue exitosa.
+ * Calcula y guarda un nuevo test bioquímico para un paciente.
  */
-export async function deleteBiochemistryTest(testId: string, patientId: string) {
+export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
+  const { patientId, chronologicalAge, formValues } = params;
+
   try {
-    await prisma.biochemistryTest.delete({
-      where: { id: testId },
+    // 1. Validar que todos los campos estén completos
+    for (const key in formValues) {
+      if (formValues[key as keyof BiochemistryFormValues] === undefined) {
+        return { success: false, error: `El campo ${key} es obligatorio.` };
+      }
+    }
+
+    // 2. Obtener los baremos de la base de datos
+    const allBoards = await getBiochemistryBoardsAndRanges();
+
+    // 3. Calcular los resultados
+    const results = calculateBioquimicaResults(formValues, allBoards, chronologicalAge);
+
+    // 4. Preparar los datos para guardar en la base de datos
+    const dbData = {
+      patientId,
+      chronologicalAge,
+      biologicalAge: results.biologicalAge,
+      differentialAge: results.differentialAge,
+      ...formValues,
+      ...results.partialAges,
+    };
+
+    // 5. Crear el nuevo registro del test
+    await db.biochemistryTest.create({
+      data: dbData,
     });
-
+    
+    // 6. Revalidar la caché para que la UI se actualice
     revalidatePath(`/historias/${patientId}`);
-    revalidatePath('/dashboard');
 
-    return { success: true };
-  } catch (error) {
-    console.error('Error eliminando test bioquímico:', error);
-    return { success: false, error: 'Error al eliminar el test' };
+    // 7. Devolver los resultados completos para la UI
+    return { success: true, data: results };
+
+  } catch (error: any) {
+    console.error('Error saving biochemistry test:', error);
+    return { success: false, error: error.message || 'Error desconocido al guardar el test.' };
   }
 }

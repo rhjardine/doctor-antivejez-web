@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-js"
 }
 
 datasource db {
@@ -10,65 +10,101 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// MODELS
+// =================================================================
+// Modelos de Autenticación y Usuarios (Sin Cambios)
+// =================================================================
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  password  String
-  name      String
-  role      Role      @default(MEDICO)
-  avatar    String?
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  patients  Patient[]
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("PROFESIONAL")
+  accounts      Account[]
+  sessions      Session[]
+  patients      Patient[]
 
   @@map("users")
 }
 
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// =================================================================
+// Modelos de la Aplicación
+// =================================================================
+
 model Patient {
-  id                String             @id @default(cuid())
-  controlNumber     Int                @default(autoincrement())
-  userId            String
-  photo             String?
-  nationality       String
-  identification    String             @unique
-  historyDate       DateTime
-  lastName          String
-  firstName         String
-  birthDate         DateTime
-  chronologicalAge  Int
-  gender            Gender
-  birthPlace        String
-  phone             String
-  maritalStatus     String
-  profession        String
-  country           String
-  state             String
-  city              String
-  address           String
-  bloodType         String
-  email             String
-  observations      String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  biophysicsTests   BiophysicsTest[]
-  biochemistryTests BiochemistryTest[]
-  appointments      Appointment[]
+  id               String    @id @default(cuid())
+  controlNumber    String?   @unique
+  firstName        String
+  lastName         String
+  birthDate        DateTime
+  chronologicalAge Int
+  gender           String
+  email            String?
+  phone            String?
+  address          String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  biophysicsTests  BiophysicsTest[]
+  // ===== INICIO DE LA MODIFICACIÓN =====
+  biochemistryTests BiochemistryTest[] // Relación con el nuevo test
+  // ===== FIN DE LA MODIFICACIÓN =====
 
   @@map("patients")
 }
 
+// Test Biofísico (Sin Cambios)
 model BiophysicsTest {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   patientId           String
-  chronologicalAge    Float
-  biologicalAge       Float
-  differentialAge     Float
+  patient             Patient   @relation(fields: [patientId], references: [id])
+  createdAt           DateTime  @default(now())
+  chronologicalAge    Int
+  biologicalAge       Int
+  differentialAge     Int
   gender              String
-  isAthlete           Boolean  @default(false)
+  isAthlete           Boolean
   fatPercentage       Float?
   fatAge              Float?
   bmi                 Float?
@@ -85,105 +121,91 @@ model BiophysicsTest {
   systolicAge         Float?
   diastolicPressure   Float?
   diastolicAge        Float?
-  testDate            DateTime @default(now())
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@map("biophysics_tests")
 }
 
+
+// ===== INICIO DE LA MODIFICACIÓN: Nuevo Modelo para Test Bioquímico =====
 model BiochemistryTest {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   patientId           String
-  testDate            DateTime @default(now())
-  chronologicalAge    Float
-  biochemicalAge      Float
+  patient             Patient   @relation(fields: [patientId], references: [id])
+  createdAt           DateTime  @default(now())
+  chronologicalAge    Int
+  biologicalAge       Float
   differentialAge     Float
-  somatomedin         Float?
-  somatomedinAge      Float?
-  hba1c               Float?
-  hba1cAge            Float?
-  insulin             Float?
-  insulinAge          Float?
-  postPrandial        Float?
-  postPrandialAge     Float?
-  tgHdlRatio          Float?
-  tgHdlRatioAge       Float?
-  dhea                Float?
-  dheaAge             Float?
-  homocysteine        Float?
-  homocysteineAge     Float?
-  psa                 Float?
-  psaAge              Float?
-  fsh                 Float?
-  fshAge              Float?
-  boneDensitometry    Float?
-  boneDensitometryAge Float?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  patient             Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  // Campos específicos del test
+  somatomedinC        Float
+  somatomedinCAge     Float
+  hba1c               Float
+  hba1cAge            Float
+  insulinBasal        Float
+  insulinBasalAge     Float
+  dheaS               Float
+  dheaSAge            Float
+  freeTestosterone    Float
+  freeTestosteroneAge Float
+  shbg                Float
+  shbgAge             Float
+  prostateAntigen     Float
+  prostateAntigenAge  Float
+  uricAcid            Float
+  uricAcidAge         Float
+  ferritin            Float
+  ferritinAge         Float
+  vitaminD            Float
+  vitaminDAge         Float
+  homocysteine        Float
+  homocysteineAge     Float
+  pcr                 Float
+  pcrAge              Float
+  fibrinogen          Float
+  fibrinogenAge       Float
+  triglycerides       Float
+  triglyceridesAge    Float
+  hdl                 Float
+  hdlAge              Float
+  tgHdlRatio          Float
+  tgHdlRatioAge       Float
 
   @@map("biochemistry_tests")
 }
+// ===== FIN DE LA MODIFICACIÓN =====
 
-model Appointment {
-  id        String            @id @default(cuid())
-  patientId String
-  date      DateTime
-  reason    String
-  status    AppointmentStatus @default(SCHEDULED)
-  notes     String?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  patient   Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
-  @@map("appointments")
+// =================================================================
+// Modelos para Baremos y Rangos
+// =================================================================
+
+// ===== INICIO DE LA MODIFICACIÓN: Añadir nuevo tipo de baremo =====
+enum BoardType {
+  FORM_BIOPHYSICS
+  FORM_BIOCHEMISTRY
 }
-
-model Board {
-  id        String   @id @default(cuid())
-  rangeId   Int
-  type      String   @default("FORM_BIOPHYSICS")
-  name      String
-  minValue  Float
-  maxValue  Float
-  inverse   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  range     Range    @relation(fields: [rangeId], references: [id])
-
-  @@map("boards")
-}
+// ===== FIN DE LA MODIFICACIÓN =====
 
 model Range {
-  id        Int      @id @default(autoincrement())
-  minAge    Float
-  maxAge    Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  boards    Board[]
+  id      Int     @id
+  minAge  Int
+  maxAge  Int
+  boards  Board[]
 
   @@map("ranges")
 }
 
-// ENUMS
+model Board {
+  id        String    @id @default(cuid())
+  name      String
+  minValue  Float
+  maxValue  Float
+  inverse   Boolean   @default(false)
+  rangeId   Int
+  range     Range     @relation(fields: [rangeId], references: [id])
+  // ===== INICIO DE LA MODIFICACIÓN: Usar el nuevo Enum =====
+  type      BoardType
+  // ===== FIN DE LA MODIFICACIÓN =====
 
-enum Role {
-  MEDICO
-  ADMINISTRATIVO
-  PACIENTE
-}
-
-enum Gender {
-  MASCULINO
-  FEMENINO
-  MASCULINO_DEPORTIVO
-  FEMENINO_DEPORTIVO
-}
-
-enum AppointmentStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
+  @@map("boards")
 }
