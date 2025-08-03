@@ -2,7 +2,10 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-js"
+  // ===== INICIO DE LA CORRECCIÓN =====
+  // El nombre correcto del proveedor es "prisma-client-js".
+  provider = "prisma-client-js"
+  // ===== FIN DE LA CORRECCIÓN =====
 }
 
 datasource db {
@@ -11,7 +14,7 @@ datasource db {
 }
 
 // =================================================================
-// Modelos de Autenticación y Usuarios (Sin Cambios)
+// Modelos de Autenticación y Usuarios
 // =================================================================
 model Account {
   id                String  @id @default(cuid())
@@ -72,29 +75,26 @@ model VerificationToken {
 // =================================================================
 
 model Patient {
-  id               String    @id @default(cuid())
-  controlNumber    String?   @unique
-  firstName        String
-  lastName         String
-  birthDate        DateTime
-  chronologicalAge Int
-  gender           String
-  email            String?
-  phone            String?
-  address          String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  userId           String
-  user             User      @relation(fields: [userId], references: [id])
-  biophysicsTests  BiophysicsTest[]
-  // ===== INICIO DE LA MODIFICACIÓN =====
-  biochemistryTests BiochemistryTest[] // Relación con el nuevo test
-  // ===== FIN DE LA MODIFICACIÓN =====
+  id                String             @id @default(cuid())
+  controlNumber     String?            @unique
+  firstName         String
+  lastName          String
+  birthDate         DateTime
+  chronologicalAge  Int
+  gender            String
+  email             String?
+  phone             String?
+  address           String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  userId            String
+  user              User               @relation(fields: [userId], references: [id])
+  biophysicsTests   BiophysicsTest[]
+  biochemistryTests BiochemistryTest[]
 
   @@map("patients")
 }
 
-// Test Biofísico (Sin Cambios)
 model BiophysicsTest {
   id                  String    @id @default(cuid())
   patientId           String
@@ -125,8 +125,6 @@ model BiophysicsTest {
   @@map("biophysics_tests")
 }
 
-
-// ===== INICIO DE LA MODIFICACIÓN: Nuevo Modelo para Test Bioquímico =====
 model BiochemistryTest {
   id                  String    @id @default(cuid())
   patientId           String
@@ -135,56 +133,50 @@ model BiochemistryTest {
   chronologicalAge    Int
   biologicalAge       Float
   differentialAge     Float
-
-  // Campos específicos del test
-  somatomedinC        Float
-  somatomedinCAge     Float
-  hba1c               Float
-  hba1cAge            Float
-  insulinBasal        Float
-  insulinBasalAge     Float
-  dheaS               Float
-  dheaSAge            Float
-  freeTestosterone    Float
-  freeTestosteroneAge Float
-  shbg                Float
-  shbgAge             Float
-  prostateAntigen     Float
-  prostateAntigenAge  Float
-  uricAcid            Float
-  uricAcidAge         Float
-  ferritin            Float
-  ferritinAge         Float
-  vitaminD            Float
-  vitaminDAge         Float
-  homocysteine        Float
-  homocysteineAge     Float
-  pcr                 Float
-  pcrAge              Float
-  fibrinogen          Float
-  fibrinogenAge       Float
-  triglycerides       Float
-  triglyceridesAge    Float
-  hdl                 Float
-  hdlAge              Float
-  tgHdlRatio          Float
-  tgHdlRatioAge       Float
+  somatomedinC        Float?
+  somatomedinCAge     Float?
+  hba1c               Float?
+  hba1cAge            Float?
+  insulinBasal        Float?
+  insulinBasalAge     Float?
+  dheaS               Float?
+  dheaSAge            Float?
+  freeTestosterone    Float?
+  freeTestosteroneAge Float?
+  shbg                Float?
+  shbgAge             Float?
+  prostateAntigen     Float?
+  prostateAntigenAge  Float?
+  uricAcid            Float?
+  uricAcidAge         Float?
+  ferritin            Float?
+  ferritinAge         Float?
+  vitaminD            Float?
+  vitaminDAge         Float?
+  homocysteine        Float?
+  homocysteineAge     Float?
+  pcr                 Float?
+  pcrAge              Float?
+  fibrinogen          Float?
+  fibrinogenAge       Float?
+  triglycerides       Float?
+  triglyceridesAge    Float?
+  hdl                 Float?
+  hdlAge              Float?
+  tgHdlRatio          Float?
+  tgHdlRatioAge       Float?
 
   @@map("biochemistry_tests")
 }
-// ===== FIN DE LA MODIFICACIÓN =====
-
 
 // =================================================================
 // Modelos para Baremos y Rangos
 // =================================================================
 
-// ===== INICIO DE LA MODIFICACIÓN: Añadir nuevo tipo de baremo =====
 enum BoardType {
   FORM_BIOPHYSICS
   FORM_BIOCHEMISTRY
 }
-// ===== FIN DE LA MODIFICACIÓN =====
 
 model Range {
   id      Int     @id
@@ -203,9 +195,7 @@ model Board {
   inverse   Boolean   @default(false)
   rangeId   Int
   range     Range     @relation(fields: [rangeId], references: [id])
-  // ===== INICIO DE LA MODIFICACIÓN: Usar el nuevo Enum =====
   type      BoardType
-  // ===== FIN DE LA MODIFICACIÓN =====
 
   @@map("boards")
 }
