@@ -77,3 +77,25 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
     return { success: false, error: error.message || 'Error desconocido al guardar el test.' };
   }
 }
+
+/**
+ * Elimina un test bioquímico por su ID.
+ */
+export async function deleteBiochemistryTest(testId: string) {
+  try {
+    const test = await db.biochemistryTest.findUnique({ where: { id: testId } });
+    if (!test) {
+      return { success: false, error: 'Test no encontrado.' };
+    }
+
+    await db.biochemistryTest.delete({
+      where: { id: testId },
+    });
+
+    revalidatePath(`/historias/${test.patientId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting biochemistry test:', error);
+    return { success: false, error: 'No se pudo eliminar el test.' };
+  }
+}
