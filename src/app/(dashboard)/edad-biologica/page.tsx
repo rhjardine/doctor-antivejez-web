@@ -123,9 +123,9 @@ export default function EdadBiologicaPage() {
               <p className="text-2xl font-bold text-gray-900">
                 {patients.length > 0
                   ? Math.round(
-                      patients.reduce((acc, p) => acc + (p.biophysicsTests?.[0]?.biologicalAge || 0), 0)
-                      / patients.length
-                    )
+                    patients.reduce((acc, p) => acc + (p.biophysicsTests?.[0]?.biologicalAge || 0), 0)
+                    / patients.length
+                  )
                   : 0} años
               </p>
             </div>
@@ -142,9 +142,9 @@ export default function EdadBiologicaPage() {
               <p className="text-2xl font-bold text-gray-900">
                 {patients.length > 0
                   ? Math.round(
-                      patients.reduce((acc, p) => acc + p.chronologicalAge, 0)
-                      / patients.length
-                    )
+                    patients.reduce((acc, p) => acc + p.chronologicalAge, 0)
+                    / patients.length
+                  )
                   : 0} años
               </p>
             </div>
@@ -219,7 +219,7 @@ export default function EdadBiologicaPage() {
                         {patient.firstName} {patient.lastName}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        ID: {patient.identification}
+                        ID: {patient.controlNumber}
                       </p>
                     </div>
                   </div>
