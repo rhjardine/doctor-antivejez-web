@@ -77,7 +77,7 @@ function AppointmentModal({
   const [patientId, setPatientId] = useState(appointment?.patientId || '');
   const [notes, setNotes] = useState(appointment?.notes || '');
   const [time, setTime] = useState(
-    appointment ? format(new Date(appointment.date), 'HH:mm') : '09:00'
+    appointment ? format(new Date(appointment.date), 'HH:mm')
   );
 
   useEffect(() => {
