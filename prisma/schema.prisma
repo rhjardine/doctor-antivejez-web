@@ -2,15 +2,32 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  // ===== INICIO DE LA CORRECCIÓN =====
-  // El nombre correcto del proveedor es "prisma-client-js".
   provider = "prisma-client-js"
-  // ===== FIN DE LA CORRECCIÓN =====
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// =================================================================
+// ENUMS - Para consistencia y seguridad de tipos
+// =================================================================
+enum Role {
+  PROFESIONAL
+  ADMINISTRATIVO
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum AppointmentStatus {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
 }
 
 // =================================================================
@@ -47,16 +64,17 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?       @unique
   emailVerified DateTime?
   image         String?
   password      String?
-  role          String    @default("PROFESIONAL")
+  role          Role          @default(PROFESIONAL) // Usando el Enum Role
   accounts      Account[]
   sessions      Session[]
   patients      Patient[]
+  appointments  Appointment[]
 
   @@map("users")
 }
@@ -81,7 +99,7 @@ model Patient {
   lastName          String
   birthDate         DateTime
   chronologicalAge  Int
-  gender            String
+  gender            Gender             // Usando el Enum Gender
   email             String?
   phone             String?
   address           String?
@@ -91,19 +109,35 @@ model Patient {
   user              User               @relation(fields: [userId], references: [id])
   biophysicsTests   BiophysicsTest[]
   biochemistryTests BiochemistryTest[]
+  appointments      Appointment[]
 
   @@map("patients")
 }
 
+model Appointment {
+  id             String          @id @default(cuid())
+  patientId      String
+  patient        Patient         @relation(fields: [patientId], references: [id])
+  professionalId String
+  professional   User            @relation(fields: [professionalId], references: [id])
+  date           DateTime
+  status         AppointmentStatus @default(PENDIENTE) // Usando el Enum AppointmentStatus
+  notes          String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("appointments")
+}
+
 model BiophysicsTest {
-  id                  String    @id @default(cuid())
+  id                  String   @id @default(cuid())
   patientId           String
-  patient             Patient   @relation(fields: [patientId], references: [id])
-  createdAt           DateTime  @default(now())
+  patient             Patient  @relation(fields: [patientId], references: [id])
+  createdAt           DateTime @default(now())
   chronologicalAge    Int
   biologicalAge       Int
   differentialAge     Int
-  gender              String
+  gender              Gender   // Usando el Enum Gender
   isAthlete           Boolean
   fatPercentage       Float?
   fatAge              Float?
@@ -126,10 +160,10 @@ model BiophysicsTest {
 }
 
 model BiochemistryTest {
-  id                  String    @id @default(cuid())
+  id                  String   @id @default(cuid())
   patientId           String
-  patient             Patient   @relation(fields: [patientId], references: [id])
-  createdAt           DateTime  @default(now())
+  patient             Patient  @relation(fields: [patientId], references: [id])
+  createdAt           DateTime @default(now())
   chronologicalAge    Int
   biologicalAge       Float
   differentialAge     Float
@@ -170,7 +204,7 @@ model BiochemistryTest {
 }
 
 // =================================================================
-// Modelos para Baremos y Rangos
+// Modelos para Baremos y Rangos (Aún necesarios para Bioquímica)
 // =================================================================
 
 enum BoardType {
@@ -179,23 +213,23 @@ enum BoardType {
 }
 
 model Range {
-  id      Int     @id
-  minAge  Int
-  maxAge  Int
-  boards  Board[]
+  id     Int     @id
+  minAge Int
+  maxAge Int
+  boards Board[]
 
   @@map("ranges")
 }
 
 model Board {
-  id        String    @id @default(cuid())
-  name      String
-  minValue  Float
-  maxValue  Float
-  inverse   Boolean   @default(false)
-  rangeId   Int
-  range     Range     @relation(fields: [rangeId], references: [id])
-  type      BoardType
+  id       String    @id @default(cuid())
+  name     String
+  minValue Float
+  maxValue Float
+  inverse  Boolean   @default(false)
+  rangeId  Int
+  range    Range     @relation(fields: [rangeId], references: [id])
+  type     BoardType
 
   @@map("boards")
 }

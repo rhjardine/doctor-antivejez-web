@@ -1,90 +1,103 @@
 'use client';
 
-import { useState } from 'react';
-import { PatientWithDetails } from '@/types';
+import { useState, useEffect } from 'react';
+import { Patient } from '@/types';
+import {
+  BIOCHEMISTRY_ITEMS,
+  BiochemistryFormValues,
+  BiochemistryCalculationResult,
+  BoardWithRanges,
+  ResultStatus,
+} from '@/types/biochemistry';
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se corrige el nombre de la función importada para que coincida con la exportada.
+import { calculateAndSaveBiochemistryTest, getBiochemistryBoardsAndRanges } from '@/lib/actions/biochemistry.actions';
+// ===== FIN DE LA CORRECCIÓN =====
+import { getStatusColor } from '@/utils/bioquimica-calculations';
 import { toast } from 'sonner';
-import { FaArrowLeft, FaSave, FaEdit, FaUndo, FaChartBar, FaHistory } from 'react-icons/fa';
-import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
-import { saveBiochemistryTest } from '@/lib/actions/biochemistry.actions';
-import { BiochemistryFormValues, BiochemistryPartialAges } from '@/types/biochemistry';
-import BiochemistryHistoryView from './BiochemistryHistoryView';
+import { FaArrowLeft, FaSave, FaEdit, FaUndo, FaCheckCircle } from 'react-icons/fa';
 
 interface EdadBioquimicaTestViewProps {
-  patient: PatientWithDetails;
+  patient: Patient;
   onBack: () => void;
-  onTestComplete: () => void; // Para recargar los datos del paciente
+  onTestComplete: () => void;
 }
 
-const BIOCHEMISTRY_ITEMS: { key: keyof BiochemistryFormValues; label: string; isDim: boolean }[] = [
-    { key: 'somatomedin', label: 'Somatomedina C (IGF-1) (ng/mL)', isDim: false },
-    { key: 'hba1c', label: 'Hb Glicosilada: %', isDim: false },
-    { key: 'insulin', label: 'Insulina Basal', isDim: false },
-    { key: 'postPrandial', label: 'Post Prandial (mui/mL)', isDim: false },
-    { key: 'tgHdlRatio', label: 'Relación TG: mg/dl - HDL', isDim: false },
-    { key: 'dhea', label: 'DHEA-S: ug/dl', isDim: false },
-    { key: 'homocysteine', label: 'Homocisteina (umol/L)', isDim: false },
-    { key: 'psa', label: 'PSA Total / Libre (%)', isDim: false },
-    { key: 'fsh', label: 'FSH UI/L', isDim: false },
-    { key: 'boneDensitometry', label: 'Densitometría ósea (Fémur / Columna)', isDim: true },
-];
+function SuccessModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center relative animate-slideUp">
+        <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Operación Exitosa</h3>
+        <p className="text-gray-600 mb-6">El test bioquímico se ha guardado correctamente.</p>
+        <button onClick={onClose} className="btn-primary w-full">Aceptar</button>
+      </div>
+    </div>
+  );
+}
 
 export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete }: EdadBioquimicaTestViewProps) {
-  const [view, setView] = useState<'form' | 'history'>('form');
-  const [formValues, setFormValues] = useState<Partial<BiochemistryFormValues>>({});
-  const [partialAges, setPartialAges] = useState<Partial<BiochemistryPartialAges>>({});
-  const [finalAge, setFinalAge] = useState<number | null>(null);
-  const [differentialAge, setDifferentialAge] = useState<number | null>(null);
+  const [boards, setBoards] = useState<BoardWithRanges[]>([]);
+  const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [calculated, setCalculated] = useState(false);
 
-  const handleInputChange = (key: keyof BiochemistryFormValues, value: string, subKey?: 'field1' | 'field2') => {
-    const numericValue = value === '' ? undefined : parseFloat(value);
-    setFormValues(prev => {
-      if (key === 'boneDensitometry' && subKey) {
-        const currentDims = (prev.boneDensitometry || {}) as { field1?: number; field2?: number };
-        return { ...prev, boneDensitometry: { ...currentDims, [subKey]: numericValue } };
+  const [formValues, setFormValues] = useState<BiochemistryFormValues>({});
+  const [results, setResults] = useState<Partial<BiochemistryCalculationResult>>({});
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const boardsData = await getBiochemistryBoardsAndRanges();
+        setBoards(boardsData);
+      } catch (error) {
+        toast.error('Error al cargar los baremos del test.');
+      } finally {
+        setLoading(false);
       }
-      return { ...prev, [key]: numericValue };
-    });
+    };
+    loadInitialData();
+  }, []);
+
+  const handleInputChange = (key: keyof BiochemistryFormValues, value: string) => {
+    setFormValues(prev => ({
+      ...prev,
+      [key]: value === '' ? undefined : parseFloat(value),
+    }));
+    setCalculated(false);
     setIsSaved(false);
-    setFinalAge(null);
   };
 
   const handleCalculateAndSave = async () => {
-    const isEmpty = Object.values(formValues).every(
-      value => value === undefined || (typeof value === 'object' && value !== null && Object.values(value).every(subValue => subValue === undefined))
-    );
-    if (isEmpty) {
-      toast.error("Por favor, ingrese al menos un valor para calcular.");
+    setProcessing(true);
+
+    const missingFields = BIOCHEMISTRY_ITEMS.filter(item => formValues[item.key] === undefined);
+    if (missingFields.length > 0) {
+      toast.error(`Por favor, complete todos los campos: ${missingFields.map(f => f.label).join(', ')}`);
+      setProcessing(false);
       return;
     }
-    setProcessing(true);
+
     try {
-      const result = calculateBioquimicaResults(formValues, patient.chronologicalAge);
-      setPartialAges(result.partialAges);
-      setFinalAge(result.biochemicalAge);
-      setDifferentialAge(result.differentialAge);
-
-      const { boneDensitometry, ...restOfFormValues } = formValues;
-      let boneDensitometryAvg: number | undefined = undefined;
-      if (boneDensitometry && typeof boneDensitometry.field1 === 'number' && typeof boneDensitometry.field2 === 'number') {
-          boneDensitometryAvg = (boneDensitometry.field1 + boneDensitometry.field2) / 2;
-      }
-
-      await saveBiochemistryTest({
+      const result = await calculateAndSaveBiochemistryTest({
         patientId: patient.id,
         chronologicalAge: patient.chronologicalAge,
-        biochemicalAge: result.biochemicalAge,
-        differentialAge: result.differentialAge,
-        ...restOfFormValues,
-        boneDensitometry: boneDensitometryAvg,
+        formValues,
       });
 
-      toast.success('Test Bioquímico guardado exitosamente.');
-      setIsSaved(true);
-      onTestComplete(); // Notifica al padre para recargar los datos
+      if (result.success && result.data) {
+        setResults(result.data);
+        setCalculated(true);
+        setIsSaved(true);
+        setIsSuccessModalOpen(true);
+        onTestComplete();
+      } else {
+        toast.error(result.error || 'Ocurrió un error al procesar el test.');
+      }
     } catch (error: any) {
-      toast.error(error.message || 'Error al calcular o guardar el test.');
+      toast.error(error.message || 'Error inesperado.');
     } finally {
       setProcessing(false);
     }
@@ -92,71 +105,104 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
 
   const handleEdit = () => {
     setIsSaved(false);
-    toast.info("El formulario ha sido habilitado para edición.");
+    setCalculated(false);
+    toast.info("Formulario habilitado para edición.");
   };
 
-  if (view === 'history') {
-    return <BiochemistryHistoryView patient={patient} onBack={() => setView('form')} onHistoryChange={onTestComplete} />;
+  if (loading) {
+    return <div className="flex items-center justify-center h-96"><div className="loader"></div></div>;
   }
 
   return (
-    <div className="space-y-6">
-        <div className="flex items-center justify-between">
-            <button onClick={onBack} className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors p-2 hover:bg-gray-100 rounded-lg">
-                <FaArrowLeft />
-                <span>Volver</span>
+    <>
+      {isSuccessModalOpen && <SuccessModal onClose={() => setIsSuccessModalOpen(false)} />}
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Columna del Formulario */}
+        <div className="w-full md:w-1/2 bg-primary-dark rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={onBack} className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors">
+              <FaArrowLeft />
+              <span>Volver al Perfil</span>
             </button>
-            <h2 className="text-2xl font-bold text-gray-900">Nuevo Test Bioquímico</h2>
-            <button 
-                onClick={() => setView('history')}
-                className="btn-secondary flex items-center gap-2"
-                disabled={patient.biochemistryTests.length === 0}
-            >
-                <FaHistory />
-                <span>Ver Historial</span>
+            <div className="text-right">
+              <h2 className="text-xl font-bold">{patient.firstName} {patient.lastName}</h2>
+              <p className="text-sm opacity-80">Edad: {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}</p>
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold mb-4">Test de Edad Bioquímica</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-2 max-h-[60vh] overflow-y-auto custom-scrollbar-tabs">
+            {BIOCHEMISTRY_ITEMS.map(item => (
+              <div key={item.key} className="bg-white/10 rounded-lg p-3">
+                <label className="block text-xs font-medium mb-1">{item.label} <span className="opacity-70">{item.unit && `(${item.unit})`}</span></label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formValues[item.key] ?? ''}
+                  onChange={e => handleInputChange(item.key, e.target.value)}
+                  className="input text-sm"
+                  disabled={isSaved || processing}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button onClick={handleCalculateAndSave} disabled={processing || isSaved} className="btn-primary-white">
+              <FaSave className="mr-2" /> {processing ? 'Procesando...' : 'Calcular y Guardar'}
             </button>
+            <button onClick={handleEdit} disabled={!isSaved || processing} className="btn-warning">
+              <FaEdit className="mr-2" /> Editar
+            </button>
+            <button onClick={onBack} disabled={processing} className="btn-secondary-dark">
+              <FaUndo className="mr-2" /> Volver
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* --- INICIO DE LA MODIFICACIÓN DE ESTILOS --- */}
-            {/* Columna de Formulario con nuevo estilo oscuro */}
-            <div className="bg-primary-dark rounded-xl p-6 text-white space-y-4">
-                <h3 className="text-lg font-semibold text-white">Parámetros del Test</h3>
-                {BIOCHEMISTRY_ITEMS.map(item => (
-                    <div key={item.key}>
-                        <label className="block text-sm font-medium text-white/80 mb-2">{item.label}</label>
-                        {item.key === 'boneDensitometry' ? (
-                            <div className="grid grid-cols-2 gap-2">
-                                <input type="number" step="any" placeholder="Fémur" value={formValues.boneDensitometry?.field1 ?? ''} onChange={e => handleInputChange('boneDensitometry', e.target.value, 'field1')} className="input" disabled={isSaved || processing} />
-                                <input type="number" step="any" placeholder="Columna" value={formValues.boneDensitometry?.field2 ?? ''} onChange={e => handleInputChange('boneDensitometry', e.target.value, 'field2')} className="input" disabled={isSaved || processing} />
-                            </div>
-                        ) : (
-                            <input type="number" step="any" value={(formValues[item.key] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value)} className="input" disabled={isSaved || processing} />
-                        )}
-                    </div>
-                ))}
+        {/* Columna de Resultados */}
+        <div className="w-full md:w-1/2 space-y-6">
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Finales</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
+                <p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Edad Bioquímica</p>
+                <p className={`text-3xl font-bold ${calculated ? 'text-primary' : 'text-gray-400'}`}>
+                  {calculated ? results.biologicalAge?.toFixed(1) : '--'}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Diferencial</p>
+                <p className={`text-3xl font-bold ${calculated ? 'text-gray-900' : 'text-gray-400'}`}>
+                  {calculated && results.differentialAge !== undefined ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge.toFixed(1)}` : '--'}
+                </p>
+              </div>
             </div>
-            {/* --- FIN DE LA MODIFICACIÓN DE ESTILOS --- */}
+          </div>
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados por Ítem</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {BIOCHEMISTRY_ITEMS.map(item => {
+                const status = calculated && results.statuses ? results.statuses[item.key] : undefined;
+                const statusColor = status ? getStatusColor(status) : 'bg-gray-300';
+                const statusText = status ? status.replace('_', ' ').replace('OPTIMAL', 'ÓPTIMO') : 'SIN CALCULAR';
 
-            {/* Columna de Resultados y Acciones (sin cambios) */}
-            <div className="space-y-6">
-                <div className="card">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                        <div className="bg-gray-50 rounded-lg p-4"><p className="text-sm text-gray-600 mb-1">Edad Cronológica</p><p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge}</p></div>
-                        <div className="bg-gray-50 rounded-lg p-4"><p className="text-sm text-gray-600 mb-1">Edad Bioquímica</p><p className="text-3xl font-bold text-primary">{finalAge !== null ? Math.round(finalAge) : '--'}</p></div>
-                        <div className="bg-gray-50 rounded-lg p-4"><p className="text-sm text-gray-600 mb-1">Diferencial</p><p className="text-3xl font-bold text-gray-900">{differentialAge !== null ? `${differentialAge > 0 ? '+' : ''}${Math.round(differentialAge)}` : '--'}</p></div>
+                return (
+                  <div key={item.key} className={`rounded-lg p-3 text-white transition-all ${statusColor}`}>
+                    <h4 className="font-bold text-sm truncate">{item.label}</h4>
+                    <p className="text-xs opacity-80 mb-1">Valor: {formValues[item.key] ?? '--'} {item.unit}</p>
+                    <div className="mt-1 pt-1 border-t border-white/20 text-center">
+                      <span className="text-xs font-semibold uppercase tracking-wider">{statusText}</span>
                     </div>
-                </div>
-                <div className="card">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button onClick={handleCalculateAndSave} disabled={processing || isSaved} className="btn-primary flex items-center justify-center gap-2 py-3"><FaSave /><span>{processing ? 'Procesando...' : 'Calcular y Guardar'}</span></button>
-                        <button onClick={handleEdit} disabled={!isSaved || processing} className="btn-secondary flex items-center justify-center gap-2 py-3"><FaEdit /><span>Editar</span></button>
-                    </div>
-                </div>
+                  </div>
+                );
+              })}
             </div>
+          </div>
         </div>
-    </div>
+      </div>
+    </>
   );
 }
