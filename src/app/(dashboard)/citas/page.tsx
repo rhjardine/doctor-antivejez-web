@@ -75,7 +75,7 @@ function AppointmentModal({
   userId: string;
 }) {
   const [patientId, setPatientId] = useState(appointment?.patientId || '');
-  const [reason, setReason] = useState(appointment?.reason || '');
+  const [notes, setNotes] = useState(appointment?.notes || '');
   const [time, setTime] = useState(
     appointment ? format(new Date(appointment.date), 'HH:mm') : '09:00'
   );
@@ -83,11 +83,11 @@ function AppointmentModal({
   useEffect(() => {
     if (appointment) {
       setPatientId(appointment.patientId);
-      setReason(appointment.reason);
+      setNotes(appointment.notes);
       setTime(format(new Date(appointment.date), 'HH:mm'));
     } else {
       setPatientId('');
-      setReason('');
+      setNotes('');
       setTime('09:00');
     }
   }, [appointment]);
@@ -107,7 +107,7 @@ function AppointmentModal({
     onSave({
       id: appointment?.id,
       patientId,
-      reason,
+      notes,
       date: appointmentDate,
       userId,
     });
@@ -155,8 +155,8 @@ function AppointmentModal({
           <div>
             <label className="label">Motivo de la Cita</label>
             <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               className="input"
               rows={3}
               placeholder="Ej: Consulta de seguimiento"
@@ -418,7 +418,7 @@ export default function CitasPage() {
                             onClick={(e) => { e.stopPropagation(); handleAppointmentClick(app, day.date); }}
                         >
                             <p className="truncate font-semibold">{format(app.date, 'HH:mm')} - {app.patient?.firstName}</p>
-                            <p className="truncate">{app.reason}</p>
+                            <p className="truncate">{app.notes}</p>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); openDeleteModal(app); }}
                                 className="absolute top-0 right-0 p-1 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
