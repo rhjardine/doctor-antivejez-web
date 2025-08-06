@@ -83,7 +83,7 @@ function AppointmentModal({
   useEffect(() => {
     if (appointment) {
       setPatientId(appointment.patientId);
-      setNotes(appointment.notes);
+      setNotes(appointment.notes || '');
       setTime(format(new Date(appointment.date), 'HH:mm'));
     } else {
       setPatientId('');
