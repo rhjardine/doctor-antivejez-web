@@ -6,7 +6,7 @@ import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, Parti
 // ===== INICIO DE LA CORRECCIÓN: Importar la función correcta =====
 import { getBiophysicsBoardsAndRanges, calculateAndSaveBiophysicsTest } from '../../lib/actions/biophysics.actions';
 // ===== FIN DE LA CORRECCIÓN =====
-import { calculateBiofisicaResults, getAgeStatus, getStatusColor } from '../../utils/biofisica-calculations';
+import { getAgeStatus, getStatusColor } from '../../utils/biofisica-calculations';
 import { toast } from 'sonner';
 import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle, FaUndo, FaSave } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
