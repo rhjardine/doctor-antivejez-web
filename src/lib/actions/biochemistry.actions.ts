@@ -52,14 +52,17 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
     const results = calculateBioquimicaResults(formValues, allBoards, chronologicalAge);
 
     // 4. Preparar los datos para guardar en la base de datos
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // Se renombra 'biologicalAge' a 'biochemicalAge' para que coincida con el schema.prisma
     const dbData = {
       patientId,
       chronologicalAge,
-      biologicalAge: results.biologicalAge,
+      biochemicalAge: results.biologicalAge,
       differentialAge: results.differentialAge,
       ...formValues,
       ...results.partialAges,
     };
+    // ===== FIN DE LA CORRECCIÓN =====
 
     // 5. Crear el nuevo registro del test
     await prisma.biochemistryTest.create({
