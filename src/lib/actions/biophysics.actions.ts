@@ -1,42 +1,55 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { BoardWithRanges, FormValues, CalculationResult } from '@/types/biophysics';
-import { calculateBiofisicaResults } from '@/utils/biofisica-calculations'; 
+import { BoardWithRanges, FormValues, CalculationResult, PartialAges, BIOPHYSICS_ITEMS } from '@/types/biophysics';
+import { calculateBiophysicalTestResults } from '@/utils/biofisica-calculations'; 
 import { revalidatePath } from 'next/cache';
 
 // --- ENFOQUE UNIFICADO: CALCULAR Y GUARDAR EN UN SOLO PASO ---
 interface CalculateAndSaveParams {
   patientId: string;
   chronologicalAge: number;
-  gender: string;
+  gender: 'MASCULINO' | 'FEMENINO' | 'MASCULINO_DEPORTIVO' | 'FEMENINO_DEPORTIVO';
   isAthlete: boolean;
   formValues: FormValues;
 }
 
 /**
- * Orquesta el proceso completo de cálculo y guardado en una sola llamada,
- * como funcionaba originalmente.
+ * Orquesta el proceso completo de cálculo y guardado en una sola llamada.
  * @returns Un objeto con los resultados calculados y serializados para la UI.
  */
 export async function calculateAndSaveBiophysicsTest(params: CalculateAndSaveParams) {
   try {
     const { patientId, chronologicalAge, gender, isAthlete, formValues } = params;
 
-    // 1. Obtener baremos
-    const boards = await getBiophysicsBoardsAndRanges();
-    if (!boards || boards.length === 0) {
-      throw new Error('No se pudieron cargar los baremos para el cálculo.');
-    }
+    // 1. Realizar el cálculo utilizando la nueva lógica de 'biofisica-calculations.ts'
+    // Esta función ya no necesita los baremos de la base de datos.
+    const resultsArray = calculateBiophysicalTestResults(formValues, gender);
 
-    // 2. Realizar el cálculo
-    const calculationResult: CalculationResult = calculateBiofisicaResults(
-      boards,
-      formValues,
-      chronologicalAge,
-      gender,
-      isAthlete
-    );
+    // 2. Procesar los resultados para obtener la edad biológica final y las edades parciales
+    const partialAges: Partial<PartialAges> = {};
+    let totalBiologicalAge = 0;
+    let validAgeCount = 0;
+
+    resultsArray.forEach(result => {
+        const key = BIOPHYSICS_ITEMS.find(item => item.key === result.parameter)?.key;
+        if (key && result.biologicalAge !== null) {
+            const ageKey = `${key}Age` as keyof PartialAges;
+            // @ts-ignore
+            partialAges[ageKey] = result.biologicalAge;
+            totalBiologicalAge += result.biologicalAge;
+            validAgeCount++;
+        }
+    });
+    
+    const biologicalAge = validAgeCount > 0 ? totalBiologicalAge / validAgeCount : chronologicalAge;
+    const differentialAge = biologicalAge - chronologicalAge;
+
+    const calculationResult: CalculationResult = {
+        biologicalAge: Math.round(biologicalAge),
+        differentialAge: Math.round(differentialAge),
+        partialAges: partialAges as PartialAges,
+    };
 
     // 3. Guardar el nuevo test en la base de datos
     const newTest = await prisma.biophysicsTest.create({
@@ -75,10 +88,9 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       },
     });
 
-    // 4. Revalidar rutas en segundo plano SIN recargar la página actual.
-    // Esto asegura que el estado del formulario del cliente no se pierda.
+    // 4. Revalidar rutas
     revalidatePath('/dashboard');
-    revalidatePath('/historias'); // Revalida la lista general de historias
+    revalidatePath('/historias'); 
 
     // 5. Devolver los datos serializados para que el cliente los muestre
     const serializableData = {
