@@ -62,7 +62,10 @@ export default function BiochemistryHistoryView({ patient, onBack, onHistoryChan
 
     setIsDeleting(true);
     try {
-      const result = await deleteBiochemistryTest(testToDelete.id, patient.id);
+      // ===== INICIO DE LA CORRECCIÓN =====
+      // Se elimina el segundo argumento (patient.id) que causaba el error.
+      const result = await deleteBiochemistryTest(testToDelete.id);
+      // ===== FIN DE LA CORRECCIÓN =====
       if (result.success) {
         toast.success('Test eliminado exitosamente.');
         onHistoryChange();
