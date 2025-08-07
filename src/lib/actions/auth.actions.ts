@@ -89,8 +89,8 @@ export async function getUserById(id: string) {
         name: true,
         role: true,
         // ===== INICIO DE LA CORRECCIÓN =====
-        // Se cambia 'image' por 'avatar' para que coincida con el schema.prisma
-        avatar: true,
+        // Se cambia 'avatar' por 'image' para que coincida con el schema.prisma actual.
+        image: true,
         // ===== FIN DE LA CORRECCIÓN =====
       },
     });
