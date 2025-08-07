@@ -1,6 +1,6 @@
 'use server';
 
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
 import { BiochemistryFormValues } from '@/types/biochemistry';
 import { revalidatePath } from 'next/cache';
@@ -10,7 +10,7 @@ import { revalidatePath } from 'next/cache';
  */
 export async function getBiochemistryBoardsAndRanges() {
   try {
-    const boards = await db.board.findMany({
+    const boards = await prisma.board.findMany({
       where: {
         type: 'FORM_BIOCHEMISTRY',
       },
@@ -62,7 +62,7 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
     };
 
     // 5. Crear el nuevo registro del test
-    await db.biochemistryTest.create({
+    await prisma.biochemistryTest.create({
       data: dbData,
     });
     
@@ -83,12 +83,12 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
  */
 export async function deleteBiochemistryTest(testId: string) {
   try {
-    const test = await db.biochemistryTest.findUnique({ where: { id: testId } });
+    const test = await prisma.biochemistryTest.findUnique({ where: { id: testId } });
     if (!test) {
       return { success: false, error: 'Test no encontrado.' };
     }
 
-    await db.biochemistryTest.delete({
+    await prisma.biochemistryTest.delete({
       where: { id: testId },
     });
 
