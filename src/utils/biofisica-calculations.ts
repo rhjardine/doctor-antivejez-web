@@ -1,329 +1,333 @@
 /**
  * @file src/utils/biofisica-calculations.ts
- * @description Lógica de cálculo para el test de edad biológica biofísica.
- * @version 2.1.0
- * @date 2025-08-05
- *
- * @note AJUSTE QUIRÚRGICO DE PRODUCCIÓN:
- * Se ha reemplazado la lógica dependiente de la base de datos por un baremo completo
- * codificado directamente aquí. Esto se debe a que el modelo de datos original
- * no podía representar las curvas de riesgo en "U" (donde valores bajos y altos
- * son perjudiciales), causando errores de cálculo en casos de borde.
- * Esta nueva implementación es un reflejo fiel de la tabla de baremos proporcionada
- * por el cliente médico, garantizando la máxima precisión.
- *
- * @note v2.1.0: Se reincorporan las funciones de ayuda para estado y color
- * (`getAgeStatus`, `getStatusColor`) para mantener la funcionalidad completa del módulo
- * en un único archivo.
+ * @description Lógica de cálculo para el test de edad biológica biofísica, implementando baremos con rangos dobles.
+ * @version 3.0.0 - Versión Definitiva
+ * @date 2025-08-07
  */
 
-import { BiophysicsTestKeys, BiophysicsResult, BiophysicsFormData } from '@/types/biophysics';
+import { FormValues, PartialAges, CalculationResult, BiophysicsTestKeys } from '@/types/biophysics';
 import { Gender } from '@prisma/client';
+import { AGE_DIFF_RANGES } from '@/lib/constants';
 
 // ===================================================================================
-// CONSTANTES DE CONFIGURACIÓN
+// TIPOS E INTERFACES INTERNAS PARA EL CÁLCULO AVANZADO
 // ===================================================================================
 
-const AGE_DIFF_RANGES = {
-  NORMAL_MIN: -5, // Límite inferior para estado "NORMAL"
-  NORMAL_MAX: 5,  // Límite superior para estado "NORMAL"
-};
+interface ParameterRange {
+    upper: [number, number] | null;
+    lower: [number, number] | null;
+}
 
-type AgeStatus = 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO';
+interface CalculationParams {
+    fatPercentage: number;
+    bmi: number;
+    reflexes: number[];
+    accommodation: number;
+    balance: number[];
+    hydration: number;
+    systolic: number;
+    diastolic: number;
+    gender: 'male' | 'female';
+    isAthlete: boolean;
+}
 
-// ===================================================================================
-// FUNCIONES DE CÁLCULO
-// ===================================================================================
-
-/**
- * Realiza una interpolación lineal para calcular la edad biológica dentro de un rango.
- * @param value - El valor del parámetro medido.
- * @param valueMin - El valor mínimo del rango de medición.
- * @param valueMax - El valor máximo del rango de medición.
- * @param ageMin - La edad biológica mínima correspondiente.
- * @param ageMax - La edad biológica máxima correspondiente.
- * @param inverse - Si la relación es inversa (a mayor valor, menor edad).
- * @returns La edad biológica interpolada.
- */
-const interpolateAge = (
-  value: number,
-  valueMin: number,
-  valueMax: number,
-  ageMin: number,
-  ageMax: number,
-  inverse: boolean = false
-): number => {
-  const valueRange = valueMax - valueMin;
-  const ageRange = ageMax - ageMin;
-
-  if (valueRange === 0) {
-    return inverse ? ageMax : ageMin;
-  }
-
-  // Asegura que el valor esté dentro de los límites para una interpolación correcta
-  const clampedValue = Math.max(valueMin, Math.min(value, valueMax));
-
-  const valueFraction = (clampedValue - valueMin) / valueRange;
-  const ageOffset = valueFraction * ageRange;
-
-  const calculatedAge = inverse ? ageMax - ageOffset : ageMin + ageOffset;
-  return Math.round(calculatedAge); // Devolver edad redondeada
-};
+interface InternalCalculationResult {
+    individualAges: Partial<PartialAges>;
+    biophysicalAge: number;
+}
 
 // ===================================================================================
-// BAREMO DE EDAD BIOLÓGICA BIOFÍSICA - FUENTE DE VERDAD
-// Este objeto es la transcripción directa de la tabla de baremos del médico.
+// CLASE DE CÁLCULO AVANZADO CON LÓGICA DE BAREMOS DOBLES
 // ===================================================================================
-const BAREMO_BIOFISICO = {
-  // NOTA: 'inverse: true' en el rango 'low' significa que a medida que el valor
-  // se acerca a 'min' desde 'max', la edad aumenta (se acerca a ageMax).
-  fat: [
-    // Para mujeres
-    { age_min: 21, age_max: 28, high: { min: 18, max: 22 } },
-    { age_min: 28, age_max: 35, high: { min: 21, max: 25 } },
-    { age_min: 35, age_max: 42, high: { min: 24, max: 28 } },
-    { age_min: 42, age_max: 49, high: { min: 27, max: 31 } },
-    { age_min: 49, age_max: 56, high: { min: 30, max: 34 } },
-    { age_min: 56, age_max: 63, high: { min: 33, max: 37 } },
-    { age_min: 63, age_max: 70, high: { min: 36, max: 40 } },
-    { age_min: 70, age_max: 77, high: { min: 39, max: 43 } },
-    { age_min: 77, age_max: 84, high: { min: 42, max: 46 } },
-    { age_min: 84, age_max: 91, high: { min: 45, max: 49 } },
-    { age_min: 91, age_max: 98, high: { min: 48, max: 52 } },
-    { age_min: 98, age_max: 105, high: { min: 51, max: 55 } },
-    { age_min: 105, age_max: 112, high: { min: 54, max: 58 } },
-    { age_min: 112, age_max: 120, high: { min: 57, max: 61 } },
-  ],
-  male_fat: [
-    // Para hombres
-    { age_min: 21, age_max: 28, high: { min: 10, max: 14 } },
-    { age_min: 28, age_max: 35, high: { min: 13, max: 17 } },
-    { age_min: 35, age_max: 42, high: { min: 16, max: 20 } },
-    { age_min: 42, age_max: 49, high: { min: 19, max: 23 } },
-    { age_min: 49, age_max: 56, high: { min: 22, max: 26 } },
-    { age_min: 56, age_max: 63, high: { min: 25, max: 29 } },
-    { age_min: 63, age_max: 70, high: { min: 28, max: 32 } },
-    { age_min: 70, age_max: 77, high: { min: 31, max: 35 } },
-    { age_min: 77, age_max: 84, high: { min: 34, max: 38 } },
-    { age_min: 84, age_max: 91, high: { min: 37, max: 41 } },
-    { age_min: 91, age_max: 98, high: { min: 40, max: 44 } },
-    { age_min: 98, age_max: 105, high: { min: 43, max: 47 } },
-    { age_min: 105, age_max: 112, high: { min: 46, max: 50 } },
-    { age_min: 112, age_max: 120, high: { min: 49, max: 53 } },
-  ],
-  body_mass: [
-    { age_min: 21, age_max: 28, low: { min: 21, max: 22, inverse: true }, high: { min: 28, max: 29 } },
-    { age_min: 28, age_max: 35, low: { min: 20, max: 21, inverse: true }, high: { min: 29, max: 32 } },
-    { age_min: 35, age_max: 42, low: { min: 19, max: 20, inverse: true }, high: { min: 32, max: 35 } },
-    { age_min: 42, age_max: 49, low: { min: 18, max: 19, inverse: true }, high: { min: 35, max: 38 } },
-    { age_min: 49, age_max: 56, low: { min: 17, max: 18, inverse: true }, high: { min: 38, max: 41 } },
-    { age_min: 56, age_max: 63, low: { min: 16, max: 17, inverse: true }, high: { min: 41, max: 44 } },
-    { age_min: 63, age_max: 70, low: { min: 15, max: 16, inverse: true }, high: { min: 44, max: 47 } },
-    { age_min: 70, age_max: 77, low: { min: 14, max: 15, inverse: true }, high: { min: 47, max: 50 } },
-    { age_min: 77, age_max: 84, low: { min: 13, max: 14, inverse: true }, high: { min: 50, max: 53 } },
-    { age_min: 84, age_max: 91, low: { min: 12, max: 13, inverse: true }, high: { min: 51, max: 54 } },
-    { age_min: 91, age_max: 98, low: { min: 11, max: 12, inverse: true }, high: { min: 52, max: 55 } },
-    { age_min: 98, age_max: 105, low: { min: 10, max: 11, inverse: true }, high: { min: 53, max: 56 } },
-    { age_min: 105, age_max: 112, low: { min: 9, max: 10, inverse: true }, high: { min: 54, max: 57 } },
-    { age_min: 112, age_max: 120, low: { min: 8, max: 9, inverse: true }, high: { min: 55, max: 58 } },
-  ],
-  systolic: [
-    { age_min: 21, age_max: 28, low: { min: 85, max: 90, inverse: true }, high: { min: 125, max: 130 } },
-    { age_min: 28, age_max: 35, low: { min: 80, max: 85, inverse: true }, high: { min: 130, max: 140 } },
-    { age_min: 35, age_max: 42, low: { min: 75, max: 80, inverse: true }, high: { min: 140, max: 150 } },
-    { age_min: 42, age_max: 49, low: { min: 70, max: 75, inverse: true }, high: { min: 150, max: 160 } },
-    { age_min: 49, age_max: 56, low: { min: 68, max: 70, inverse: true }, high: { min: 160, max: 170 } },
-    { age_min: 56, age_max: 63, low: { min: 65, max: 68, inverse: true }, high: { min: 170, max: 180 } },
-    { age_min: 63, age_max: 70, low: { min: 63, max: 65, inverse: true }, high: { min: 180, max: 190 } },
-    { age_min: 70, age_max: 77, low: { min: 60, max: 63, inverse: true }, high: { min: 190, max: 200 } },
-    { age_min: 77, age_max: 84, low: { min: 58, max: 60, inverse: true }, high: { min: 200, max: 210 } },
-    { age_min: 84, age_max: 91, low: { min: 55, max: 58, inverse: true }, high: { min: 210, max: 220 } },
-    { age_min: 91, age_max: 98, low: { min: 50, max: 55, inverse: true }, high: { min: 215, max: 225 } },
-    { age_min: 98, age_max: 105, low: { min: 45, max: 50, inverse: true }, high: { min: 220, max: 230 } },
-    { age_min: 105, age_max: 112, low: { min: 40, max: 45, inverse: true }, high: { min: 230, max: 240 } },
-    { age_min: 112, age_max: 120, low: { min: 35, max: 40, inverse: true }, high: { min: 240, max: 250 } },
-  ],
-  diastolic: [
-    { age_min: 21, age_max: 28, low: { min: 60, max: 65, inverse: true }, high: { min: 85, max: 90 } },
-    { age_min: 28, age_max: 35, low: { min: 58, max: 60, inverse: true }, high: { min: 90, max: 95 } },
-    { age_min: 35, age_max: 42, low: { min: 55, max: 58, inverse: true }, high: { min: 95, max: 100 } },
-    { age_min: 42, age_max: 49, low: { min: 53, max: 55, inverse: true }, high: { min: 100, max: 105 } },
-    { age_min: 49, age_max: 56, low: { min: 50, max: 53, inverse: true }, high: { min: 105, max: 110 } },
-    { age_min: 56, age_max: 63, low: { min: 48, max: 50, inverse: true }, high: { min: 110, max: 115 } },
-    { age_min: 63, age_max: 70, low: { min: 45, max: 48, inverse: true }, high: { min: 115, max: 120 } },
-    { age_min: 70, age_max: 77, low: { min: 43, max: 45, inverse: true }, high: { min: 120, max: 125 } },
-    { age_min: 77, age_max: 84, low: { min: 41, max: 43, inverse: true }, high: { min: 125, max: 130 } },
-    { age_min: 84, age_max: 91, low: { min: 38, max: 41, inverse: true }, high: { min: 130, max: 135 } },
-    { age_min: 91, age_max: 98, low: { min: 35, max: 38, inverse: true }, high: { min: 135, max: 140 } },
-    { age_min: 98, age_max: 105, low: { min: 33, max: 35, inverse: true }, high: { min: 140, max: 145 } },
-    { age_min: 105, age_max: 112, low: { min: 30, max: 33, inverse: true }, high: { min: 145, max: 150 } },
-    { age_min: 112, age_max: 120, low: { min: 28, max: 30, inverse: true }, high: { min: 150, max: 155 } },
-  ],
-  pulse: [
-    { age_min: 21, age_max: 28, low: { min: 50, max: 55, inverse: true }, high: { min: 80, max: 85 } },
-    { age_min: 28, age_max: 35, low: { min: 55, max: 60, inverse: true }, high: { min: 85, max: 90 } },
-    { age_min: 35, age_max: 42, low: { min: 60, max: 65, inverse: true }, high: { min: 90, max: 95 } },
-    { age_min: 42, age_max: 49, low: { min: 65, max: 70, inverse: true }, high: { min: 95, max: 100 } },
-    { age_min: 49, age_max: 56, low: { min: 70, max: 75, inverse: true }, high: { min: 100, max: 105 } },
-    { age_min: 56, age_max: 63, low: { min: 75, max: 80, inverse: true }, high: { min: 105, max: 110 } },
-    { age_min: 63, age_max: 70, low: { min: 80, max: 85, inverse: true }, high: { min: 110, max: 115 } },
-    { age_min: 70, age_max: 77, low: { min: 85, max: 90, inverse: true }, high: { min: 115, max: 120 } },
-    { age_min: 77, age_max: 84, low: { min: 90, max: 95, inverse: true }, high: { min: 120, max: 125 } },
-    { age_min: 84, age_max: 91, low: { min: 95, max: 100, inverse: true }, high: { min: 125, max: 130 } },
-    { age_min: 91, age_max: 98, low: { min: 100, max: 105, inverse: true }, high: { min: 130, max: 135 } },
-    { age_min: 98, age_max: 105, low: { min: 105, max: 110, inverse: true }, high: { min: 135, max: 140 } },
-    { age_min: 105, age_max: 112, low: { min: 110, max: 115, inverse: true }, high: { min: 140, max: 145 } },
-    { age_min: 112, age_max: 120, low: { min: 115, max: 120, inverse: true }, high: { min: 145, max: 150 } },
-  ],
-  digital_reflections: [
-    { age_min: 21, age_max: 28, high: { min: 45, max: 50, inverse: true } },
-    { age_min: 28, age_max: 35, high: { min: 35, max: 45, inverse: true } },
-    { age_min: 35, age_max: 42, high: { min: 30, max: 35, inverse: true } },
-    { age_min: 42, age_max: 49, high: { min: 25, max: 30, inverse: true } },
-    { age_min: 49, age_max: 56, high: { min: 20, max: 25, inverse: true } },
-    { age_min: 56, age_max: 63, high: { min: 15, max: 20, inverse: true } },
-    { age_min: 63, age_max: 70, high: { min: 10, max: 15, inverse: true } },
-    { age_min: 70, age_max: 77, high: { min: 8, max: 10, inverse: true } },
-    { age_min: 77, age_max: 84, high: { min: 6, max: 8, inverse: true } },
-    { age_min: 84, age_max: 91, high: { min: 4, max: 6, inverse: true } },
-    { age_min: 91, age_max: 98, high: { min: 3, max: 4, inverse: true } },
-    { age_min: 98, age_max: 105, high: { min: 2, max: 3, inverse: true } },
-    { age_min: 105, age_max: 112, high: { min: 1, max: 2, inverse: true } },
-    { age_min: 112, age_max: 120, high: { min: 0, max: 1, inverse: true } },
-  ],
-};
 
-/**
- * Calcula la edad biológica para un único ítem del test biofísico.
- * @param paramName - El nombre del parámetro a calcular.
- * @param value - El valor numérico del parámetro.
- * @param gender - El género del paciente.
- * @returns La edad biológica calculada o null si no se puede determinar.
- */
-const calculateBiophysicalAgeForItem = (
-  paramName: BiophysicsTestKeys,
-  value: number,
-  gender: Gender
-): number | null => {
-  let paramConfigKey = paramName;
+class AdvancedBiophysicalAgeCalculator {
+    private readonly ageRanges: [number, number][];
+    private readonly parameterRanges: Record<string, ParameterRange[]>;
 
-  // Manejo especial para % Grasa que depende del género
-  if (paramName === 'fat') {
-    paramConfigKey = gender === 'MALE' ? 'male_fat' : 'fat';
-  }
+    constructor() {
+        this.ageRanges = [
+            [21, 28], [28, 35], [35, 42], [42, 49], [49, 56], [56, 63], [63, 70],
+            [70, 77], [77, 84], [84, 91], [91, 98], [98, 105], [105, 112], [112, 120]
+        ];
 
-  const paramConfig = BAREMO_BIOFISICO[paramConfigKey as keyof typeof BAREMO_BIOFISICO];
-
-  if (!paramConfig) {
-    console.warn(`No se encontró configuración en el baremo para el parámetro: ${paramName}`);
-    return null; // No hay configuración para este parámetro
-  }
-
-  // Encontrar el rango de edad correcto para el valor dado
-  for (const config of paramConfig) {
-    // Comprobar si el valor cae en el rango BAJO (si existe)
-    if (config.low && value >= config.low.min && value <= config.low.max) {
-      return interpolateAge(value, config.low.min, config.low.max, config.age_min, config.age_max, config.low.inverse);
-    }
-    // Comprobar si el valor cae en el rango ALTO (si existe)
-    if (config.high && value >= config.high.min && value <= config.high.max) {
-      return interpolateAge(value, config.high.min, config.high.max, config.age_min, config.age_max, config.high.inverse);
-    }
-  }
-
-  // --- MANEJO DE VALORES FUERA DE TODOS LOS RANGOS (EXTREMOS) ---
-  // Si el valor es menor que el mínimo absoluto o mayor que el máximo absoluto.
-  const firstRange = paramConfig[0];
-  const lastRange = paramConfig[paramConfig.length - 1];
-
-  const absoluteMin = firstRange.low?.min ?? firstRange.high?.min;
-  const absoluteMax = lastRange.high?.max ?? lastRange.low?.max;
-
-  // Valor por debajo del mínimo absoluto
-  if (absoluteMin !== undefined && value < absoluteMin) {
-    // Si hay un rango bajo, significa curva en U. Un valor muy bajo es malo.
-    // Se le asigna la edad del primer rango (el más joven).
-    // Si la curva es inversa en el lado bajo, un valor más bajo da una edad mayor.
-    if (firstRange.low?.inverse) return firstRange.age_max;
-    return firstRange.age_min;
-  }
-
-  // Valor por encima del máximo absoluto
-  if (absoluteMax !== undefined && value > absoluteMax) {
-    // Un valor muy alto siempre corresponde a la edad máxima del último rango.
-    return lastRange.age_max;
-  }
-
-  console.warn(`El valor ${value} para el parámetro ${paramName} está en un hueco no definido en el baremo.`);
-  return null; // El valor está en un "hueco" entre rangos definidos
-};
-
-/**
- * Calcula los resultados completos del test biofísico a partir de los datos del formulario.
- * @param formData - Los datos del formulario del test.
- * @param gender - El género del paciente.
- * @returns Un array con los resultados calculados para cada parámetro.
- */
-export const calculateBiophysicalTestResults = (
-  formData: BiophysicsFormData,
-  gender: Gender
-): BiophysicsResult[] => {
-  const results = Object.entries(formData).map(([key, formValue]) => {
-    const paramName = key as BiophysicsTestKeys;
-    const numericValue = typeof formValue === 'string' ? parseFloat(formValue) : formValue;
-
-    if (isNaN(numericValue)) {
-      return {
-        parameter: paramName,
-        value: formValue,
-        biologicalAge: null,
-        score: 0,
-      };
+        this.parameterRanges = {
+            fatPercentageMale: [
+                { upper: [10, 14], lower: null }, { upper: [14, 18], lower: null },
+                { upper: [18, 21], lower: null }, { upper: [21, 24], lower: null },
+                { upper: [24, 27], lower: null }, { upper: [27, 30], lower: null },
+                { upper: [30, 33], lower: [9.99, 7] }, { upper: [33, 36], lower: [7, 6] },
+                { upper: [36, 39], lower: [6, 5] }, { upper: [39, 42], lower: [5, 4] },
+                { upper: [42, 45], lower: [4, 3] }, { upper: [45, 48], lower: [3, 2] },
+                { upper: [48, 51], lower: [2, 1] }, { upper: [51, 54], lower: [1, 0] }
+            ],
+            fatPercentageMaleAthlete: [
+                { upper: [1, 7], lower: null }, { upper: [7, 14], lower: null },
+                { upper: [14, 17], lower: null }, { upper: [17, 21], lower: null },
+                { upper: [21, 25], lower: null }, { upper: [25, 28], lower: null },
+                { upper: [28, 31], lower: null }, { upper: [31, 34], lower: null },
+                { upper: [34, 37], lower: null }, { upper: [37, 40], lower: null },
+                { upper: [40, 43], lower: null }, { upper: [43, 46], lower: null },
+                { upper: [46, 49], lower: null }, { upper: [49, 52], lower: null }
+            ],
+            fatPercentageFemale: [
+                { upper: [18, 22], lower: null }, { upper: [22, 26], lower: null },
+                { upper: [26, 29], lower: null }, { upper: [29, 32], lower: null },
+                { upper: [32, 35], lower: null }, { upper: [35, 38], lower: null },
+                { upper: [38, 41], lower: [17.99, 15] }, { upper: [41, 44], lower: [15, 14] },
+                { upper: [44, 47], lower: [14, 13] }, { upper: [47, 50], lower: [13, 12] },
+                { upper: [50, 53], lower: [12, 11] }, { upper: [53, 56], lower: [11, 10] },
+                { upper: [56, 59], lower: [10, 9] }, { upper: [59, 62], lower: [9, 8] }
+            ],
+            fatPercentageFemaleAthlete: [
+                { upper: [1, 9], lower: null }, { upper: [9, 18], lower: null },
+                { upper: [18, 22], lower: null }, { upper: [22, 25], lower: null },
+                { upper: [25, 27], lower: null }, { upper: [27, 30], lower: null },
+                { upper: [30, 33], lower: null }, { upper: [33, 36], lower: null },
+                { upper: [36, 39], lower: null }, { upper: [39, 42], lower: null },
+                { upper: [42, 45], lower: null }, { upper: [45, 48], lower: null },
+                { upper: [48, 51], lower: null }, { upper: [51, 54], lower: null }
+            ],
+            bmi: [
+                { upper: [18, 22], lower: null }, { upper: [22, 25], lower: null },
+                { upper: [25, 27], lower: null }, { upper: [27, 30], lower: null },
+                { upper: [30, 33], lower: null }, { upper: [33, 36], lower: null },
+                { upper: [36, 39], lower: null }, { upper: [39, 42], lower: [17.99, 16] },
+                { upper: [42, 45], lower: [16, 15] }, { upper: [45, 48], lower: [15, 14] },
+                { upper: [48, 51], lower: [13, 12] }, { upper: [51, 54], lower: [12, 11] },
+                { upper: [54, 57], lower: [11, 10] }, { upper: [57, 60], lower: [10, 9] }
+            ],
+            digitalReflexes: [
+                { upper: [50, 45], lower: null }, { upper: [45, 35], lower: null },
+                { upper: [35, 30], lower: null }, { upper: [30, 25], lower: null },
+                { upper: [25, 20], lower: null }, { upper: [20, 15], lower: null },
+                { upper: [15, 10], lower: null }, { upper: [10, 8], lower: null },
+                { upper: [8, 6], lower: null }, { upper: [6, 4], lower: null },
+                { upper: [4, 3], lower: null }, { upper: [3, 2], lower: null },
+                { upper: [2, 1], lower: null }, { upper: [1, 0], lower: null }
+            ],
+            visualAccommodation: [
+                { upper: [0, 10], lower: null }, { upper: [10, 15], lower: null },
+                { upper: [15, 18], lower: null }, { upper: [18, 21], lower: null },
+                { upper: [21, 24], lower: null }, { upper: [24, 27], lower: null },
+                { upper: [27, 30], lower: null }, { upper: [30, 33], lower: null },
+                { upper: [33, 37], lower: null }, { upper: [37, 40], lower: null },
+                { upper: [40, 43], lower: null }, { upper: [43, 47], lower: null },
+                { upper: [47, 50], lower: null }, { upper: [50, 53], lower: null }
+            ],
+            staticBalance: [
+                { upper: [120, 30], lower: null }, { upper: [30, 25], lower: null },
+                { upper: [25, 20], lower: null }, { upper: [20, 15], lower: null },
+                { upper: [15, 12], lower: null }, { upper: [12, 9], lower: null },
+                { upper: [9, 7], lower: null }, { upper: [7, 6], lower: null },
+                { upper: [6, 5], lower: null }, { upper: [5, 4], lower: null },
+                { upper: [4, 3], lower: null }, { upper: [3, 2], lower: null },
+                { upper: [2, 1], lower: null }, { upper: [1, 0], lower: null }
+            ],
+            skinHydration: [
+                { upper: [0, 1], lower: null }, { upper: [1, 2], lower: null },
+                { upper: [2, 4], lower: null }, { upper: [4, 8], lower: null },
+                { upper: [8, 16], lower: null }, { upper: [16, 32], lower: null },
+                { upper: [32, 64], lower: null }, { upper: [64, 74], lower: null },
+                { upper: [74, 84], lower: null }, { upper: [84, 94], lower: null },
+                { upper: [94, 104], lower: null }, { upper: [104, 108], lower: null },
+                { upper: [108, 112], lower: null }, { upper: [112, 120], lower: null }
+            ],
+            systolicPressure: [
+                { upper: [100, 110], lower: null }, { upper: [110, 120], lower: null },
+                { upper: [120, 130], lower: [99.99, 95] }, { upper: [130, 140], lower: [95, 90] },
+                { upper: [140, 150], lower: [90, 85] }, { upper: [150, 160], lower: [85, 80] },
+                { upper: [160, 170], lower: [80, 75] }, { upper: [170, 180], lower: [75, 70] },
+                { upper: [180, 190], lower: [70, 65] }, { upper: [190, 200], lower: [65, 60] },
+                { upper: [200, 210], lower: [60, 55] }, { upper: [210, 220], lower: [55, 50] },
+                { upper: [220, 230], lower: [50, 45] }, { upper: [230, 240], lower: [45, 40] }
+            ],
+            diastolicPressure: [
+                { upper: [60, 65], lower: null }, { upper: [65, 70], lower: null },
+                { upper: [70, 75], lower: null }, { upper: [75, 80], lower: null },
+                { upper: [80, 85], lower: null }, { upper: [85, 90], lower: null },
+                { upper: [90, 95], lower: [59.99, 57] }, { upper: [95, 100], lower: [57, 53] },
+                { upper: [100, 110], lower: [53, 50] }, { upper: [110, 120], lower: [50, 47] },
+                { upper: [120, 130], lower: [47, 44] }, { upper: [130, 140], lower: [44, 41] },
+                { upper: [140, 150], lower: [41, 38] }, { upper: [150, 160], lower: [38, 35] }
+            ]
+        };
     }
 
-    const biologicalAge = calculateBiophysicalAgeForItem(
-      paramName,
-      numericValue,
-      gender
-    );
+    private interpolateLinear(value: number, range1: number, range2: number, age1: number, age2: number): number {
+        if (Math.abs(range1 - range2) < 0.001) return age1;
+        const ratio = (value - range1) / (range2 - range1);
+        const result = age1 + ratio * (age2 - age1);
+        return Math.ceil(result);
+    }
+
+    private calculateParameterAge(value: number, parameter: BiophysicsTestKeys, isAthlete: boolean, gender: 'male' | 'female'): number {
+        let paramKey = parameter as string;
+        if (parameter === 'fatPercentage') {
+            if (gender === 'male') {
+                paramKey = isAthlete ? 'fatPercentageMaleAthlete' : 'fatPercentageMale';
+            } else {
+                paramKey = isAthlete ? 'fatPercentageFemaleAthlete' : 'fatPercentageFemale';
+            }
+        }
+
+        const ranges = this.parameterRanges[paramKey];
+        if (!ranges) {
+            console.warn(`Parámetro no encontrado: ${paramKey}`);
+            return 0;
+        }
+
+        for (let i = 0; i < ranges.length; i++) {
+            const range = ranges[i];
+            const [ageMin, ageMax] = this.ageRanges[i];
+
+            if (range.upper) {
+                const [upperMin, upperMax] = range.upper;
+                const lowerBound = Math.min(upperMin, upperMax);
+                const upperBound = Math.max(upperMin, upperMax);
+                if (value >= lowerBound && value <= upperBound) {
+                    return this.interpolateLinear(value, upperMin, upperMax, ageMin, ageMax);
+                }
+            }
+
+            if (range.lower) {
+                const [lowerMin, lowerMax] = range.lower;
+                const lowerBound = Math.min(lowerMin, lowerMax);
+                const upperBound = Math.max(lowerMin, lowerMax);
+                if (value >= lowerBound && value <= upperBound) {
+                    return this.interpolateLinear(value, lowerMax, lowerMin, ageMin, ageMax);
+                }
+            }
+        }
+
+        return this.handleOutOfRangeValue(value, paramKey);
+    }
+
+    private handleOutOfRangeValue(value: number, parameter: string): number {
+        const ranges = this.parameterRanges[parameter];
+        if (!ranges || ranges.length === 0) return 0;
+
+        const firstRange = ranges[0].upper;
+        if (firstRange) {
+            const firstMin = Math.min(firstRange[0], firstRange[1]);
+            if (value < firstMin) {
+                return this.ageRanges[0][0];
+            }
+        }
+
+        const lastRange = ranges[ranges.length - 1].upper;
+        if (lastRange) {
+            const lastMax = Math.max(lastRange[0], lastRange[1]);
+            if (value > lastMax) {
+                return this.ageRanges[this.ageRanges.length - 1][1];
+            }
+        }
+        return 0;
+    }
+
+    private calculateAverage(values: number[]): number {
+        if (values.length === 0) return 0;
+        const sum = values.reduce((acc, val) => acc + val, 0);
+        return sum / values.length;
+    }
+
+    public calculate(params: CalculationParams): InternalCalculationResult {
+        const avgReflexes = this.calculateAverage(params.reflexes);
+        const avgBalance = this.calculateAverage(params.balance);
+
+        const individualAges: Partial<PartialAges> = {
+            fatAge: this.calculateParameterAge(params.fatPercentage, 'fatPercentage', params.isAthlete, params.gender),
+            bmiAge: this.calculateParameterAge(params.bmi, 'bmi', params.isAthlete, params.gender),
+            reflexesAge: this.calculateParameterAge(avgReflexes, 'digitalReflexes', params.isAthlete, params.gender),
+            visualAge: this.calculateParameterAge(params.accommodation, 'visualAccommodation', params.isAthlete, params.gender),
+            balanceAge: this.calculateParameterAge(avgBalance, 'staticBalance', params.isAthlete, params.gender),
+            hydrationAge: this.calculateParameterAge(params.hydration, 'skinHydration', params.isAthlete, params.gender),
+            systolicAge: this.calculateParameterAge(params.systolic, 'systolicPressure', params.isAthlete, params.gender),
+            diastolicAge: this.calculateParameterAge(params.diastolic, 'diastolicPressure', params.isAthlete, params.gender)
+        };
+
+        const validAges = Object.values(individualAges).filter(age => age && age > 0) as number[];
+        if (validAges.length === 0) {
+            throw new Error('No se pudieron calcular edades válidas para ningún parámetro');
+        }
+
+        const totalAge = validAges.reduce((sum, age) => sum + age, 0);
+        const averageAge = totalAge / validAges.length;
+
+        return {
+            individualAges,
+            biophysicalAge: Math.round(averageAge),
+        };
+    }
+}
+
+// ===================================================================================
+// FUNCIONES PÚBLICAS Y DE SOPORTE
+// ===================================================================================
+
+function validateFormValues(formValues: FormValues): void {
+    const requiredFields: BiophysicsTestKeys[] = [
+        'fatPercentage', 'bmi', 'digitalReflexes', 'visualAccommodation',
+        'staticBalance', 'skinHydration', 'systolicPressure', 'diastolicPressure'
+    ];
+
+    for (const field of requiredFields) {
+        const value = formValues[field];
+        if (field === 'digitalReflexes' || field === 'staticBalance') {
+            const dimensionalValue = value as { high?: number; long?: number; width?: number; };
+            if (!dimensionalValue || typeof dimensionalValue.high !== 'number' || typeof dimensionalValue.long !== 'number' || typeof dimensionalValue.width !== 'number') {
+                throw new Error(`El campo ${field} requiere valores numéricos para alto, largo y ancho`);
+            }
+        } else {
+            if (typeof value !== 'number' || isNaN(value)) {
+                throw new Error(`El campo ${field} debe ser un número válido`);
+            }
+        }
+    }
+}
+
+export function calculateBiophysicalTestResults(
+    formValues: FormValues,
+    gender: Gender,
+    chronologicalAge: number
+): CalculationResult {
+    validateFormValues(formValues);
+
+    const calculator = new AdvancedBiophysicalAgeCalculator();
+
+    const params: CalculationParams = {
+        fatPercentage: formValues.fatPercentage!,
+        bmi: formValues.bmi!,
+        reflexes: [formValues.digitalReflexes!.high!, formValues.digitalReflexes!.long!, formValues.digitalReflexes!.width!],
+        accommodation: formValues.visualAccommodation!,
+        balance: [formValues.staticBalance!.high!, formValues.staticBalance!.long!, formValues.staticBalance!.width!],
+        hydration: formValues.skinHydration!,
+        systolic: formValues.systolicPressure!,
+        diastolic: formValues.diastolicPressure!,
+        gender: gender.startsWith('FEMENINO') ? 'female' : 'male',
+        isAthlete: gender.includes('DEPORTIVO')
+    };
+
+    const result = calculator.calculate(params);
+    const differentialAge = result.biophysicalAge - chronologicalAge;
 
     return {
-      parameter: paramName,
-      value: numericValue,
-      biologicalAge: biologicalAge,
-      score: biologicalAge ? biologicalAge / Object.keys(formData).length : 0,
+        biologicalAge: result.biophysicalAge,
+        differentialAge: differentialAge,
+        partialAges: result.individualAges
     };
-  });
+}
 
-  return results;
-};
-
-
-// ===================================================================================
-// FUNCIONES DE AYUDA PARA LA INTERFAZ (UI HELPERS)
-// ===================================================================================
-
-/**
- * Determina el estado de envejecimiento basado en la diferencia de edad.
- * @param differentialAge - La diferencia entre la edad biológica y la cronológica.
- * @returns El estado de envejecimiento como 'REJUVENECIDO', 'NORMAL', o 'ENVEJECIDO'.
- */
-export function getAgeStatus(differentialAge: number): AgeStatus {
+export function getAgeStatus(differentialAge: number): 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO' {
     if (differentialAge <= AGE_DIFF_RANGES.NORMAL_MIN) return 'REJUVENECIDO';
     if (differentialAge > AGE_DIFF_RANGES.NORMAL_MIN && differentialAge < AGE_DIFF_RANGES.NORMAL_MAX) return 'NORMAL';
     return 'ENVEJECIDO';
 }
 
-/**
- * Devuelve la clase de color de Tailwind CSS correspondiente a un estado de envejecimiento.
- * @param status - El estado de envejecimiento.
- * @returns Una cadena con la clase de Tailwind para el color del texto.
- */
-export function getStatusColor(status: AgeStatus): string {
-    const colorMap: Record<AgeStatus, string> = {
-      REJUVENECIDO: 'text-status-green',
-      NORMAL: 'text-status-yellow',
-      ENVEJECIDO: 'text-status-red',
+export function getStatusColor(status: 'REJUVENECIDO' | 'NORMAL' | 'ENVEJECIDO'): string {
+    const colorMap = {
+        REJUVENECIDO: 'text-status-green',
+        NORMAL: 'text-status-yellow',
+        ENVEJECIDO: 'text-status-red',
     };
-    return colorMap[status] || 'text-gray-500';
+    return colorMap[status];
 }
