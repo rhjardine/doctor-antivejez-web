@@ -1,15 +1,16 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { BoardWithRanges, FormValues, CalculationResult, PartialAges, BIOPHYSICS_ITEMS } from '@/types/biophysics';
+import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/types/biophysics';
 import { calculateBiophysicalTestResults } from '@/utils/biofisica-calculations'; 
 import { revalidatePath } from 'next/cache';
+import { Gender } from '@prisma/client';
 
 // --- ENFOQUE UNIFICADO: CALCULAR Y GUARDAR EN UN SOLO PASO ---
 interface CalculateAndSaveParams {
   patientId: string;
   chronologicalAge: number;
-  gender: 'MASCULINO' | 'FEMENINO' | 'MASCULINO_DEPORTIVO' | 'FEMENINO_DEPORTIVO';
+  gender: Gender;
   isAthlete: boolean;
   formValues: FormValues;
 }
@@ -22,34 +23,14 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
   try {
     const { patientId, chronologicalAge, gender, isAthlete, formValues } = params;
 
-    // 1. Realizar el cálculo utilizando la nueva lógica de 'biofisica-calculations.ts'
-    // Esta función ya no necesita los baremos de la base de datos.
-    const resultsArray = calculateBiophysicalTestResults(formValues, gender);
-
-    // 2. Procesar los resultados para obtener la edad biológica final y las edades parciales
-    const partialAges: Partial<PartialAges> = {};
-    let totalBiologicalAge = 0;
-    let validAgeCount = 0;
-
-    resultsArray.forEach(result => {
-        const key = BIOPHYSICS_ITEMS.find(item => item.key === result.parameter)?.key;
-        if (key && result.biologicalAge !== null) {
-            const ageKey = `${key}Age` as keyof PartialAges;
-            // @ts-ignore
-            partialAges[ageKey] = result.biologicalAge;
-            totalBiologicalAge += result.biologicalAge;
-            validAgeCount++;
-        }
-    });
-    
-    const biologicalAge = validAgeCount > 0 ? totalBiologicalAge / validAgeCount : chronologicalAge;
-    const differentialAge = biologicalAge - chronologicalAge;
-
-    const calculationResult: CalculationResult = {
-        biologicalAge: Math.round(biologicalAge),
-        differentialAge: Math.round(differentialAge),
-        partialAges: partialAges as PartialAges,
-    };
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // Se añade el argumento 'chronologicalAge' que faltaba en la llamada a la función.
+    const calculationResult = calculateBiophysicalTestResults(
+      formValues,
+      gender,
+      chronologicalAge
+    );
+    // ===== FIN DE LA CORRECCIÓN =====
 
     // 3. Guardar el nuevo test en la base de datos
     const newTest = await prisma.biophysicsTest.create({
