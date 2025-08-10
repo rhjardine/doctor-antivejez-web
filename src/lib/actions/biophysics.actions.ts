@@ -2,7 +2,8 @@
 
 import { prisma } from '@/lib/db';
 import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/types/biophysics';
-import { calculateBiophysicalTestResults } from '@/utils/biofisica-calculations'; 
+// CORRECCIÓN: Se importa la función correcta y completa que has desarrollado.
+import { calculateBiofisicaResults } from '@/utils/biofisica-calculations'; 
 import { revalidatePath } from 'next/cache';
 import { Gender } from '@prisma/client';
 
@@ -23,14 +24,17 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
   try {
     const { patientId, chronologicalAge, gender, isAthlete, formValues } = params;
 
-    // ===== INICIO DE LA CORRECCIÓN =====
-    // Se añade el argumento 'chronologicalAge' que faltaba en la llamada a la función.
-    const calculationResult = calculateBiophysicalTestResults(
+    // ===== INICIO DE LA CORRECCIÓN CLAVE =====
+    // Se llama a la función `calculateBiofisicaResults` (con 'a' al final), que es la
+    // versión completa que acepta todos los parámetros necesarios para tu nueva lógica.
+    const calculationResult = calculateBiofisicaResults(
+      [], // El argumento 'boards' ya no es necesario con la nueva lógica de cálculo.
       formValues,
+      chronologicalAge,
       gender,
-      chronologicalAge
+      isAthlete
     );
-    // ===== FIN DE LA CORRECCIÓN =====
+    // ===== FIN DE LA CORRECCIÓN CLAVE =====
 
     // 3. Guardar el nuevo test en la base de datos
     const newTest = await prisma.biophysicsTest.create({
@@ -71,7 +75,7 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
 
     // 4. Revalidar rutas
     revalidatePath('/dashboard');
-    revalidatePath('/historias'); 
+    revalidatePath(`/historias/${patientId}`); 
 
     // 5. Devolver los datos serializados para que el cliente los muestre
     const serializableData = {
