@@ -3,7 +3,7 @@
 // Se mantiene tu excelente enfoque con un enum para discriminar los tipos de ítem.
 export enum GuideItemType {
   SIMPLE = 'SIMPLE',
-  METABOLIC = 'METABOLIC', // Añadido para completitud
+  METABOLIC = 'METABOLIC',
   REVITALIZATION = 'REVITALIZATION',
 }
 
@@ -12,17 +12,17 @@ export enum GuideItemType {
 // Interfaz base para todos los ítems
 interface BaseGuideItem {
   id: string;
-  name: string; // Usamos 'name' para consistencia con el resto de la app
+  name: string;
 }
 
-// Interfaz para un ítem simple (la mayoría de los casos)
-export interface SimpleGuideItem extends BaseGuideItem {
+// CORRECCIÓN: Renombrado a StandardGuideItem para que coincida con la importación del componente.
+export interface StandardGuideItem extends BaseGuideItem {
   type: GuideItemType.SIMPLE;
   dose?: string;
 }
 
-// Interfaz para el ítem del Activador Metabólico
-export interface MetabolicGuideItem extends BaseGuideItem {
+// CORRECCIÓN: Renombrado a MetabolicActivatorItem para que coincida con la importación del componente.
+export interface MetabolicActivatorItem extends BaseGuideItem {
     type: GuideItemType.METABOLIC;
     subItems: {
         homeopathy: { id: string, name: string }[];
@@ -33,11 +33,10 @@ export interface MetabolicGuideItem extends BaseGuideItem {
 // Interfaz específica para el ítem de la Fase de Revitalización
 export interface RevitalizationGuideItem extends BaseGuideItem {
   type: GuideItemType.REVITALIZATION;
-  // Los campos de datos (complejoB_cc, etc.) se manejarán en el estado 'selections'
 }
 
 // Unión discriminada para que TypeScript entienda qué tipo de ítem es
-export type GuideItem = SimpleGuideItem | MetabolicGuideItem | RevitalizationGuideItem;
+export type GuideItem = StandardGuideItem | MetabolicActivatorItem | RevitalizationGuideItem;
 
 // La estructura de la categoría ahora contiene una lista de estos nuevos ítems
 export interface GuideCategory {
@@ -47,7 +46,6 @@ export interface GuideCategory {
 }
 
 // --- DEFINICIÓN CRÍTICA Y NECESARIA ---
-// Este es el tipo que faltaba en tu versión y que causa el error de build.
 // Define la forma del objeto 'selections' que almacena las elecciones del usuario.
 export type Selections = Record<string, {
   selected?: boolean;
@@ -57,7 +55,6 @@ export type Selections = Record<string, {
   complejoB_cc?: string;
   bioquel_cc?: string;
   frequency?: string;
-  // Para el activador metabólico, podemos guardar las selecciones de sub-items
   homeopathySelection?: string;
   bachFlowersSelection?: string;
 }>;
