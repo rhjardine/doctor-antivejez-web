@@ -2,7 +2,7 @@
 'use client';
 
 import { PatientWithDetails } from '@/types';
-import { GuideCategory, GuideFormValues, StandardGuideItem, MetabolicActivator, RevitalizationGuideItem, GuideItemType } from '@/types/guide';
+import { GuideCategory, GuideFormValues, StandardGuideItem, MetabolicActivator, RevitalizationGuideItem, GuideItemType, RevitalizationFormItem, StandardFormItem } from '@/types/guide';
 import { FaPrint, FaTimes } from 'react-icons/fa';
 
 interface Props {
@@ -102,17 +102,22 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                       const details = selections[item.id];
                       let treatmentDetails = '';
 
+                      // ===== INICIO DE LA CORRECCIÓN =====
+                      // Se realiza una aserción de tipo para que TypeScript sepa qué propiedades esperar.
                       if(category.type === GuideItemType.REVITALIZATION) {
+                        const revitalizationDetails = details as RevitalizationFormItem;
                         treatmentDetails = [
-                            details.complejoB_cc ? `Complejo B: ${details.complejoB_cc}cc` : '',
-                            details.bioquel_cc ? `Bioquel: ${details.bioquel_cc}cc` : '',
-                            details.frequency ? `Frecuencia: ${details.frequency}` : ''
+                            revitalizationDetails.complejoB_cc ? `Complejo B: ${revitalizationDetails.complejoB_cc}cc` : '',
+                            revitalizationDetails.bioquel_cc ? `Bioquel: ${revitalizationDetails.bioquel_cc}cc` : '',
+                            revitalizationDetails.frequency ? `Frecuencia: ${revitalizationDetails.frequency}` : ''
                         ].filter(Boolean).join(' / ');
                       } else if ('dose' in item && item.dose) {
                         treatmentDetails = item.dose;
                       } else if (details) {
-                        treatmentDetails = [details.qty, details.freq, details.custom].filter(Boolean).join(' - ');
+                        const standardDetails = details as StandardFormItem;
+                        treatmentDetails = [standardDetails.qty, standardDetails.freq, standardDetails.custom].filter(Boolean).join(' - ');
                       }
+                      // ===== FIN DE LA CORRECCIÓN =====
                       
                       return (
                         <li key={item.id} className="text-gray-800">
