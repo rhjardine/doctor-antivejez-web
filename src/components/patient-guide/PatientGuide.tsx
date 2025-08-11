@@ -348,3 +348,4 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     </div>
   );
 }
+//Para hacer commit
