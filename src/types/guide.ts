@@ -1,47 +1,64 @@
 // src/types/guide.ts
 
-// Define los posibles tipos de ítems en la guía
-export enum GuideItemType {
-  SIMPLE = 'SIMPLE',
-  REVITALIZATION = 'REVITALIZATION',
+/**
+ * @interface BaseGuideItem
+ * @description Interfaz base para cualquier ítem individual en la guía.
+ * @property {string} id - Identificador único para el ítem.
+ * @property {string} name - Nombre del tratamiento o producto a mostrar.
+ */
+export interface BaseGuideItem {
+    id: string;
+    name: string;
 }
 
-// Interfaz base para todos los ítems
-interface BaseGuideItem {
-  id: string;
-  type: GuideItemType;
-  selected: boolean;
+/**
+ * @interface StandardGuideItem
+ * @description Extiende BaseGuideItem para ítems que tienen una dosis predefinida.
+ * @property {string} [dose] - Dosis o descripción opcional que se muestra junto al nombre.
+ */
+export interface StandardGuideItem extends BaseGuideItem {
+    dose?: string;
 }
 
-// Interfaz para un ítem simple (la mayoría de los casos)
-export interface SimpleGuideItem extends BaseGuideItem {
-  type: GuideItemType.SIMPLE;
-  text: string;
-  description?: string;
-}
+/**
+ * @interface MetabolicActivatorItem
+ * @description Tipo específico para los ítems dentro de la categoría 'Activador Metabólico'.
+ */
+export interface MetabolicActivatorItem extends BaseGuideItem {}
 
-// Interfaz específica para el ítem de la Fase de Revitalización
-export interface RevitalizationGuideItem extends BaseGuideItem {
-  type: GuideItemType.REVITALIZATION;
-  label: string; // "Complejo B + Bioquel"
-  complejoB_cc: string;
-  bioquel_cc: string;
-  frequency: string;
-}
+/**
+ * @interface RevitalizationGuideItem
+ * @description Tipo específico para el ítem de la 'Fase de Revitalización'.
+ */
+export interface RevitalizationGuideItem extends BaseGuideItem {}
 
-// Usamos una unión discriminada para que TypeScript entienda qué tipo de ítem es
-export type GuideItem = SimpleGuideItem | RevitalizationGuideItem;
-
-// La estructura de la categoría ahora contiene una lista de estos nuevos ítems
+/**
+ * @interface GuideCategory
+ * @description Define la estructura de una categoría principal en la guía.
+ * @property {'standard' | 'metabolic' | 'revitalization'} type - Discrimina el tipo de categoría para renderizarla correctamente.
+ * @property {Array | Object} items - Contiene los ítems. La estructura varía según el 'type'.
+ * - Para 'standard' y 'revitalization', es un array de ítems.
+ * - Para 'metabolic', es un objeto con sub-categorías ('homeopathy', 'bachFlowers').
+ */
 export interface GuideCategory {
-  id: string;
-  title: string;
-  items: GuideItem[];
-  isOpen: boolean;
+    id: string;
+    title: string;
+    type: 'standard' | 'metabolic' | 'revitalization';
+    items: StandardGuideItem[] | { homeopathy: MetabolicActivatorItem[], bachFlowers: MetabolicActivatorItem[] } | RevitalizationGuideItem[];
 }
 
-// El tipo principal para la guía del paciente
-export interface PatientGuide {
-  patientId: string;
-  categories: GuideCategory[];
-}
+/**
+ * @type Selections
+ * @description Define la forma del objeto de estado 'selections'.
+ * Almacena todas las entradas y selecciones del usuario para cada ítem de la guía.
+ * La clave del Record es el 'id' del ítem.
+ */
+export type Selections = Record<string, {
+  selected?: boolean;      // Para todos los checkboxes
+  qty?: string;            // Campo 'Cant.' para nutracéuticos
+  freq?: string;           // Campo 'Frecuencia' para nutracéuticos
+  custom?: string;         // Campo 'Personalizado' para nutracéuticos
+  complejoB_cc?: string;   // Campo 'Complejo B' para revitalización
+  bioquel_cc?: string;     // Campo 'Bioquel' para revitalización
+  frequency?: string;      // Campo 'Frecuencia' para revitalización
+}>;
