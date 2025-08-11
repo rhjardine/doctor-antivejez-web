@@ -15,9 +15,9 @@ const initialGuideData: GuideCategory[] = [
     title: 'Fase de Remoción',
     type: 'standard',
     items: [
-      { id: 'rem_1', name: 'Aceite de ricino', dose: '30 CC (adultos) / 15 CC (niños y ancianos) - Una vez en la noche' },
-      { id: 'rem_2', name: 'Leche de magnesia', dose: '30 CC (adultos) / 15 CC (niños y ancianos) - Una vez en la noche' },
-      { id: 'rem_3', name: 'Sal de higuera o sal de Epson', dose: '30 Grs en 1 litro de agua (adultos) - Una vez en la noche; Evitar en niños y ancianos debilitados' },
+      { id: 'rem_1', name: 'Aceite de ricino', dose: '03 Cucharadas (adultos) - Una vez en la noche' },
+      { id: 'rem_2', name: 'Leche de magnesia', dose: '06 Cucharadas (adultos) - Una vez en la noche' },
+      { id: 'rem_3', name: 'Otro(s)', dose: '30 Grs en 1 litro de agua (adultos) - Una vez en la noche; Evitar en niños y ancianos debilitados' },
     ],
   },
   {
@@ -162,7 +162,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         if (subCategory && newCat.type === 'metabolic') {
           (newCat.items as any)[subCategory].push(newItem);
         } else if (newCat.type === 'standard') {
-          (newCat.items as StandardGuideItem[]).push(newItem);
+          (newCat.items as StandardGuideItem[]).push(newItem as StandardGuideItem);
         }
         return newCat;
       }
@@ -201,8 +201,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const renderRevitalizationItem = (item: RevitalizationGuideItem) => (
     <div key={item.id} className="p-3 bg-blue-50 rounded-md transition-all border border-blue-200">
         <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
-            {/* --- INICIO DE LA CORRECCIÓN --- */}
-            {/* Se reemplaza el componente inexistente por un input HTML estándar */}
             <input 
                 type="checkbox" 
                 id={item.id} 
@@ -210,7 +208,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                 onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} 
                 className="w-5 h-5 accent-primary"
             />
-            {/* --- FIN DE LA CORRECCIÓN --- */}
             <label htmlFor={item.id} className="flex-grow font-semibold text-blue-800">{item.name}</label>
         </div>
         {selections[item.id]?.selected && (
@@ -348,4 +345,3 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     </div>
   );
 }
-//Para hacer commit
