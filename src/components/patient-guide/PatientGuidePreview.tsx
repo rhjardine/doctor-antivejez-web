@@ -99,11 +99,17 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                   <h3 className="text-xl font-semibold text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">{category.title}</h3>
                   <ul className="list-disc list-inside space-y-3 pl-2">
                     {selectedItems.map(item => {
+                      // ===== INICIO DE LA CORRECCIÓN =====
+                      // Se añade una guarda de tipo para asegurar que 'item' tenga la propiedad 'name'.
+                      // Esto satisface al compilador de TypeScript y previene errores.
+                      if (!('name' in item)) {
+                        return null;
+                      }
+                      // ===== FIN DE LA CORRECCIÓN =====
+
                       const details = selections[item.id];
                       let treatmentDetails = '';
 
-                      // ===== INICIO DE LA CORRECCIÓN =====
-                      // Se realiza una aserción de tipo para que TypeScript sepa qué propiedades esperar.
                       if(category.type === GuideItemType.REVITALIZATION) {
                         const revitalizationDetails = details as RevitalizationFormItem;
                         treatmentDetails = [
@@ -117,7 +123,6 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                         const standardDetails = details as StandardFormItem;
                         treatmentDetails = [standardDetails.qty, standardDetails.freq, standardDetails.custom].filter(Boolean).join(' - ');
                       }
-                      // ===== FIN DE LA CORRECCIÓN =====
                       
                       return (
                         <li key={item.id} className="text-gray-800">
