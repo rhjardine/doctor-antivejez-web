@@ -211,10 +211,12 @@ class PreciseBiophysicalAgeCalculator {
      * Interpola linealmente un valor para encontrar la edad correspondiente.
      * CORRECCIÓN: Redondea cada resultado individual para precisión exacta.
      */
-    private interpolate(value: number, minVal: number, maxVal: number, minAge: number, maxAge: number): number {
+    private interpolate(value: number, minVal: number, maxVal: number, minAge: number, maxAge: number, rounding: 'round' | 'ceil' | 'floor' = 'round'): number {
         if (Math.abs(maxVal - minVal) < 1e-9) return minAge; // Evita división por cero
         const ratio = (value - minVal) / (maxVal - minVal);
         const result = minAge + ratio * (maxAge - minAge);
+        if (rounding === 'ceil') return Math.ceil(result);
+        if (rounding === 'floor') return Math.floor(result);
         return Math.round(result); // REDONDEO INDIVIDUAL para valores exactos
     }
 
@@ -250,7 +252,7 @@ class PreciseBiophysicalAgeCalculator {
                 }
             }
         }
-        
+
         // 3. Fallback: si no cae en ningún rango, es un valor extremo
         return 120;
     }
@@ -261,7 +263,7 @@ class PreciseBiophysicalAgeCalculator {
     public calculate(formValues: FormValues, gender: string, isAthlete: boolean): CalculationResult {
         const genderKey = gender.startsWith('FEMENINO') ? 'Female' : 'Male';
         const athleteKey = isAthlete ? 'Athlete' : '';
-        
+
         const avgReflexes = ((formValues.digitalReflexes?.high || 0) + (formValues.digitalReflexes?.long || 0) + (formValues.digitalReflexes?.width || 0)) / 3;
         const avgBalance = ((formValues.staticBalance?.high || 0) + (formValues.staticBalance?.long || 0) + (formValues.staticBalance?.width || 0)) / 3;
 
@@ -284,7 +286,7 @@ class PreciseBiophysicalAgeCalculator {
         // CORRECCIÓN: Ahora los valores individuales ya están redondeados,
         // por lo que el promedio será más preciso
         const biologicalAge = validAges.reduce((sum, age) => sum + age, 0) / validAges.length;
-        
+
         // Redondeo final del promedio
         return { biologicalAge: Math.round(biologicalAge), differentialAge: 0, partialAges };
     }
@@ -302,7 +304,7 @@ export function calculateBiofisicaResults(
 ): CalculationResult {
     const calculator = new PreciseBiophysicalAgeCalculator();
     const results = calculator.calculate(formValues, gender, isAthlete);
-    
+
     // El diferencial se calcula aquí con el resultado ya redondeado.
     results.differentialAge = results.biologicalAge - chronologicalAge;
 
