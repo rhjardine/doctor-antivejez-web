@@ -209,11 +209,13 @@ class PreciseBiophysicalAgeCalculator {
 
     /**
      * Interpola linealmente un valor para encontrar la edad correspondiente.
+     * CORRECCIÓN: Redondea cada resultado individual para precisión exacta.
      */
     private interpolate(value: number, minVal: number, maxVal: number, minAge: number, maxAge: number): number {
         if (Math.abs(maxVal - minVal) < 1e-9) return minAge; // Evita división por cero
         const ratio = (value - minVal) / (maxVal - minVal);
-        return minAge + ratio * (maxAge - minAge);
+        const result = minAge + ratio * (maxAge - minAge);
+        return Math.round(result); // REDONDEO INDIVIDUAL para valores exactos
     }
 
     /**
@@ -279,9 +281,11 @@ class PreciseBiophysicalAgeCalculator {
             return { biologicalAge: 0, differentialAge: 0, partialAges };
         }
 
+        // CORRECCIÓN: Ahora los valores individuales ya están redondeados,
+        // por lo que el promedio será más preciso
         const biologicalAge = validAges.reduce((sum, age) => sum + age, 0) / validAges.length;
         
-        // CORRECCIÓN: Se redondea el resultado final para evitar el error de -1 año.
+        // Redondeo final del promedio
         return { biologicalAge: Math.round(biologicalAge), differentialAge: 0, partialAges };
     }
 }
