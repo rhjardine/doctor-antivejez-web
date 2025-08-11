@@ -8,7 +8,7 @@ import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperP
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
-// --- DATOS INICIALES CON LA NUEVA FASE DE REVITALIZACIÓN ---
+// --- DATOS INICIALES COMPLETOS Y RESTAURADOS, CON LA NUEVA FASE ---
 const initialGuideData: GuideCategory[] = [
   {
     id: 'cat_remocion',
@@ -20,20 +20,17 @@ const initialGuideData: GuideCategory[] = [
       { id: 'rem_3', name: 'Sal de higuera o sal de Epson', dose: '30 Grs en 1 litro de agua (adultos) - Una vez en la noche; Evitar en niños y ancianos debilitados' },
     ],
   },
-  // --- INICIO: NUEVA CATEGORÍA AÑADIDA ---
   {
     id: 'cat_revitalizacion',
     title: 'Fase de Revitalización',
-    type: 'revitalization', // Tipo especial para esta categoría
+    type: 'revitalization',
     items: [
         { 
             id: 'rev_1', 
             name: 'Complejo B + Bioquel',
-            // No necesita 'dose' aquí, los campos estarán en la UI
         }
     ],
   },
-  // --- FIN: NUEVA CATEGORÍA AÑADIDA ---
   {
     id: 'cat_nutra_primarios',
     title: 'Nutracéuticos Primarios',
@@ -52,13 +49,78 @@ const initialGuideData: GuideCategory[] = [
     items: {
       homeopathy: [
         { id: 'am_hom_1', name: 'Cardiovascular' }, { id: 'am_hom_2', name: 'Respiratorio' }, { id: 'am_hom_3', name: 'Digestivo' },
+        { id: 'am_hom_4', name: 'Neuro' }, { id: 'am_hom_5', name: 'Inmune' }, { id: 'am_hom_6', name: 'Inflamación' },
+        { id: 'am_hom_7', name: 'Glicólisis(m)' }, { id: 'am_hom_8', name: 'Ciclo Krebs(t)' }, { id: 'am_hom_9', name: 'Cadena Resp(n)' },
       ],
       bachFlowers: [
         { id: 'am_bach_1', name: 'Agrimonia' }, { id: 'am_bach_2', name: 'Brezo' }, { id: 'am_bach_3', name: 'Aspen' },
+        { id: 'am_bach_4', name: 'Acebo' }, { id: 'am_bach_5', name: 'Haya' }, { id: 'am_bach_6', name: 'Madreselva' },
+        { id: 'am_bach_7', name: 'Estrella de Belén' }, { id: 'am_bach_8', name: 'Centaura' }, { id: 'am_bach_9', name: 'Carpe' },
       ]
     }
   },
-    // ... (resto de categorías sin cambios)
+  {
+    id: 'cat_nutra_secundarios',
+    title: 'Nutracéuticos Secundarios',
+    type: 'standard',
+    items: [
+        { id: 'ns_1', name: 'Digestivo (Gases / Estreñimiento)' },
+        { id: 'ns_2', name: 'Femenino (Precursor hormonal mujer)' },
+        { id: 'ns_3', name: 'Osteo Articular (Regenerador Articular)' },
+        { id: 'ns_4', name: 'Inmune Booster (Estimula las defensas)' },
+        { id: 'ns_5', name: 'Inmune Modulador (Regulador Inflamatorio)' },
+        { id: 'ns_6', name: 'Masculino (Precursor hormonal masc)' },
+        { id: 'ns_7', name: 'Neuro Central (Regenerador Cerebral)' },
+        { id: 'ns_8', name: 'Neuro Emocional (Restaurador Emocional)' },
+        { id: 'ns_9', name: 'Próstata (Regenerador prostático)' },
+    ]
+  },
+  {
+    id: 'cat_nutra_complementarios',
+    title: 'Nutracéuticos Complementarios',
+    type: 'standard',
+    items: [
+        { id: 'nc_1', name: 'Aloe Vera' },
+        { id: 'nc_2', name: 'Antioxidante (Revierte la oxidación)' },
+        { id: 'nc_3', name: 'Colágeno' },
+        { id: 'nc_4', name: 'Energy' },
+        { id: 'nc_5', name: 'Immune Spray' },
+        { id: 'nc_6', name: 'Magnesio Quelatado' },
+        { id: 'nc_7', name: 'Vit C c/Zinc' },
+        { id: 'nc_8', name: 'Vit E c/Selenio' },
+        { id: 'nc_9', name: 'Zinc Quelatado' },
+    ]
+  },
+  {
+    id: 'cat_sueros',
+    title: 'Sueros - Shot Antivejez',
+    type: 'standard',
+    items: [
+        { id: 'suero_1', name: 'Antianémico' },
+        { id: 'suero_2', name: 'Pro Vital o Antienvejecimiento' },
+        { id: 'suero_3', name: 'Antiviral c/Ozono' },
+        { id: 'suero_4', name: 'Bioxigenación' },
+        { id: 'suero_5', name: 'CardioVascular' },
+        { id: 'suero_6', name: 'Energizante' },
+        { id: 'suero_7', name: 'Inmuno Estimulante' },
+        { id: 'suero_8', name: 'Inmuno Modular' },
+        { id: 'suero_9', name: 'Mega Vitamina C' },
+        { id: 'suero_10', name: 'Metabólico' },
+        { id: 'suero_11', name: 'Osteo Articular' },
+        { id: 'suero_12', name: 'Ozono' },
+        { id: 'suero_13', name: 'Pre Natal' },
+        { id: 'suero_14', name: 'Quelación' },
+    ]
+  },
+  {
+    id: 'cat_terapias',
+    title: 'Terapias Antienvejecimiento',
+    type: 'standard',
+    items: [
+      { id: 'terapia_1', name: 'Autovacuna (Inmunoterapia)' },
+      { id: 'terapia_2', name: 'Ozonoterapia (Oxigenación celular)' },
+    ]
+  }
 ];
 
 export default function PatientGuide({ patient }: { patient: PatientWithDetails }) {
@@ -112,7 +174,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const handleDeleteItem = (categoryId: string, itemId: string, subCategory?: 'homeopathy' | 'bachFlowers') => {
       setGuideData(prevData => prevData.map(cat => {
       if (cat.id === categoryId) {
-        const newCat = { ...cat, items: JSON.parse(JSON.stringify(cat.items)) }; // Deep copy
+        const newCat = { ...cat, items: JSON.parse(JSON.stringify(cat.items)) };
         if (subCategory && newCat.type === 'metabolic') {
           (newCat.items as any)[subCategory] = (newCat.items as any)[subCategory].filter((item: any) => item.id !== itemId);
         } else if (newCat.type === 'standard') {
@@ -136,10 +198,11 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
 
   const frequencyOptions = ["Mañana", "Noche", "30 min antes de Desayuno", "30 min antes de Cena", "Antes del Ejercicio", "Otros"];
   
-  // --- INICIO: RENDERIZADO PARA ITEM DE REVITALIZACIÓN ---
   const renderRevitalizationItem = (item: RevitalizationGuideItem) => (
     <div key={item.id} className="p-3 bg-blue-50 rounded-md transition-all border border-blue-200">
         <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
+            {/* --- INICIO DE LA CORRECCIÓN --- */}
+            {/* Se reemplaza el componente inexistente por un input HTML estándar */}
             <input 
                 type="checkbox" 
                 id={item.id} 
@@ -147,6 +210,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                 onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} 
                 className="w-5 h-5 accent-primary"
             />
+            {/* --- FIN DE LA CORRECCIÓN --- */}
             <label htmlFor={item.id} className="flex-grow font-semibold text-blue-800">{item.name}</label>
         </div>
         {selections[item.id]?.selected && (
@@ -188,7 +252,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         )}
     </div>
   );
-  // --- FIN: RENDERIZADO PARA ITEM DE REVITALIZACIÓN ---
 
   const renderItem = (item: StandardGuideItem | MetabolicActivatorItem, categoryId: string, subCategory?: 'homeopathy' | 'bachFlowers') => (
     <div key={item.id} className="p-3 bg-gray-50 rounded-md transition-all hover:bg-gray-100">
@@ -226,7 +289,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           </legend>
           {openCategories[category.id] && (
             <div className="p-4">
-              {/* --- INICIO: LÓGICA DE RENDERIZADO POR TIPO --- */}
               {category.type === 'standard' && (
                 <div className="space-y-4">
                   {(category.items as StandardGuideItem[]).map(item => renderItem(item, category.id))}
@@ -239,7 +301,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
               {category.type === 'revitalization' && (
                   <div className="space-y-4">
                       {(category.items as RevitalizationGuideItem[]).map(item => renderRevitalizationItem(item))}
-                      {/* Opcional: Si se quisiera añadir más items de revitalización dinámicamente, aquí iría el formulario */}
                   </div>
               )}
               {category.type === 'metabolic' && (
@@ -260,7 +321,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                   </div>
                 </div>
               )}
-              {/* --- FIN: LÓGICA DE RENDERIZADO POR TIPO --- */}
             </div>
           )}
         </div>
