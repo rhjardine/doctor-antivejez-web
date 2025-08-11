@@ -1,60 +1,72 @@
 // src/types/guide.ts
 
-// Se mantiene tu excelente enfoque con un enum para discriminar los tipos de ítem.
+/**
+ * Define los tipos de ítems que pueden existir en la guía.
+ * Esto permite renderizar diferentes campos para cada tipo.
+ */
 export enum GuideItemType {
-  SIMPLE = 'SIMPLE',
+  STANDARD = 'STANDARD',
   METABOLIC = 'METABOLIC',
   REVITALIZATION = 'REVITALIZATION',
 }
 
-// --- Interaces para cada tipo de ítem ---
+// --- Interfaces para la estructura de datos inicial ---
 
-// Interfaz base para todos los ítems
-interface BaseGuideItem {
+interface BaseItem {
   id: string;
   name: string;
+  dose?: string; // Para ítems con dosis predefinida como en "Fase de Remoción"
 }
 
-// CORRECCIÓN: Renombrado a StandardGuideItem para que coincida con la importación del componente.
-export interface StandardGuideItem extends BaseGuideItem {
-  type: GuideItemType.SIMPLE;
-  dose?: string;
+export interface StandardGuideItem extends BaseItem {}
+export interface RevitalizationGuideItem extends BaseItem {}
+export interface MetabolicSubItem extends BaseItem {}
+
+export interface MetabolicActivator {
+  id: 'cat_activador'; // ID Fijo para este ítem especial
+  homeopathy: MetabolicSubItem[];
+  bachFlowers: MetabolicSubItem[];
 }
 
-// CORRECCIÓN: Renombrado a MetabolicActivatorItem para que coincida con la importación del componente.
-export interface MetabolicActivatorItem extends BaseGuideItem {
-    type: GuideItemType.METABOLIC;
-    subItems: {
-        homeopathy: { id: string, name: string }[];
-        bachFlowers: { id: string, name: string }[];
-    }
-}
+// --- Interfaces para los datos del formulario (lo que maneja react-hook-form) ---
 
-// Interfaz específica para el ítem de la Fase de Revitalización
-export interface RevitalizationGuideItem extends BaseGuideItem {
-  type: GuideItemType.REVITALIZATION;
-}
-
-// Unión discriminada para que TypeScript entienda qué tipo de ítem es
-export type GuideItem = StandardGuideItem | MetabolicActivatorItem | RevitalizationGuideItem;
-
-// La estructura de la categoría ahora contiene una lista de estos nuevos ítems
-export interface GuideCategory {
-  id: string;
-  title: string;
-  items: GuideItem[];
-}
-
-// --- DEFINICIÓN CRÍTICA Y NECESARIA ---
-// Define la forma del objeto 'selections' que almacena las elecciones del usuario.
-export type Selections = Record<string, {
-  selected?: boolean;
+export interface StandardFormItem {
+  selected: boolean;
   qty?: string;
   freq?: string;
   custom?: string;
+}
+
+export interface RevitalizationFormItem {
+  selected: boolean;
   complejoB_cc?: string;
   bioquel_cc?: string;
   frequency?: string;
-  homeopathySelection?: string;
-  bachFlowersSelection?: string;
-}>;
+}
+
+export interface MetabolicFormItem {
+  selected: boolean;
+  // No necesita campos adicionales, la selección se hace a nivel de sub-ítem
+}
+
+// --- Estructura completa del formulario que se validará y guardará ---
+
+export type GuideFormValues = {
+  guideDate: string;
+  selections: Record<string, StandardFormItem | RevitalizationFormItem | MetabolicFormItem>;
+  // Estructura anidada para el Activador Metabólico
+  metabolic_activator?: {
+    homeopathy: Record<string, { selected: boolean }>;
+    bachFlowers: Record<string, { selected: boolean }>;
+  };
+};
+
+
+// --- Estructura para renderizar las categorías en la UI ---
+
+export interface GuideCategory {
+  id: string;
+  title: string;
+  type: GuideItemType;
+  items: (StandardGuideItem | RevitalizationGuideItem | MetabolicActivator)[];
+}
