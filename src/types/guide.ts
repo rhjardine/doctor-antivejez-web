@@ -49,16 +49,30 @@ export interface MetabolicFormItem {
   // No necesita campos adicionales, la selección se hace a nivel de sub-ítem
 }
 
+// --- INICIO DE LA CORRECCIÓN ---
+// Se añade el tipo para los ítems personalizados que se crean dinámicamente.
+export type CustomItem = {
+  categoryId: string;
+  name: string;
+  qty?: string;
+  freq?: string;
+  custom?: string;
+};
+// --- FIN DE LA CORRECCIÓN ---
+
 // --- Estructura completa del formulario que se validará y guardará ---
 
 export type GuideFormValues = {
   guideDate: string;
   selections: Record<string, StandardFormItem | RevitalizationFormItem | MetabolicFormItem>;
-  // Estructura anidada para el Activador Metabólico
   metabolic_activator?: {
     homeopathy: Record<string, { selected: boolean }>;
     bachFlowers: Record<string, { selected: boolean }>;
   };
+  // --- INICIO DE LA CORRECCIÓN ---
+  // Se añade la propiedad 'customItems' para que coincida con el uso en el componente.
+  customItems?: CustomItem[];
+  // --- FIN DE LA CORRECCIÓN ---
 };
 
 
