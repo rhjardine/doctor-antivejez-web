@@ -11,7 +11,7 @@ datasource db {
 }
 
 // =================================================================
-// ENUMS - Para consistencia y seguridad de tipos
+// ENUMS
 // =================================================================
 enum Role {
   MEDICO
@@ -29,6 +29,13 @@ enum AppointmentStatus {
   SCHEDULED
   COMPLETED
   CANCELLED
+}
+
+// Enum para los tipos de categorías de la guía
+enum GuideItemType {
+  STANDARD
+  METABOLIC
+  REVITALIZATION
 }
 
 // =================================================================
@@ -65,13 +72,13 @@ model Session {
 }
 
 model User {
-  id            String        @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String?
-  email         String?       @unique
+  email         String?   @unique
   emailVerified DateTime?
   image         String?
   password      String?
-  role          Role          @default(MEDICO)
+  role          Role      @default(MEDICO)
   accounts      Account[]
   sessions      Session[]
   patients      Patient[]
@@ -123,6 +130,7 @@ model Patient {
   biophysicsTests   BiophysicsTest[]
   biochemistryTests BiochemistryTest[]
   appointments      Appointment[]
+  guides            PatientGuide[] // Relación con las guías del paciente
 
   @@map("patients")
 }
@@ -166,9 +174,9 @@ model BiophysicsTest {
   systolicAge         Float?
   diastolicPressure   Float?
   diastolicAge        Float?
-  testDate            DateTime @default(now()) // <-- CAMPO RESTAURADO
+  testDate            DateTime @default(now())
   createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt      // <-- CAMPO RESTAURADO
+  updatedAt           DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
@@ -201,9 +209,9 @@ model BiochemistryTest {
   fshAge              Float?
   boneDensitometry    Float?
   boneDensitometryAge Float?
-  testDate            DateTime @default(now()) // <-- CAMPO RESTAURADO
+  testDate            DateTime @default(now())
   createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt      // <-- CAMPO RESTAURADO
+  updatedAt           DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
@@ -229,17 +237,73 @@ model Range {
 }
 
 model Board {
-  id       String    @id @default(cuid())
-  rangeId  Int
-  type     BoardType @default(FORM_BIOPHYSICS)
-  name     String
-  minValue Float
-  maxValue Float
-  inverse  Boolean   @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(cuid())
+  rangeId   Int
+  type      BoardType @default(FORM_BIOPHYSICS)
+  name      String
+  minValue  Float
+  maxValue  Float
+  inverse   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   range Range @relation(fields: [rangeId], references: [id])
 
   @@map("boards")
+}
+
+// =================================================================
+// Modelos para la Guía del Paciente
+// =================================================================
+
+model GuideCategory {
+  id    String      @id @default(cuid())
+  title String
+  type  GuideItemType
+  order Int         @default(0)
+  items GuideItem[]
+
+  @@map("guide_categories")
+}
+
+model GuideItem {
+  id         String   @id @default(cuid())
+  categoryId String
+  name       String
+  dose       String?
+  isDefault  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  category   GuideCategory           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  selections PatientGuideSelection[]
+
+  @@map("guide_items")
+}
+
+model PatientGuide {
+  id         String                  @id @default(cuid())
+  patientId  String
+  guideDate  DateTime
+  createdAt  DateTime                @default(now())
+  patient    Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  selections PatientGuideSelection[]
+
+  @@map("patient_guides")
+}
+
+model PatientGuideSelection {
+  id             String       @id @default(cuid())
+  patientGuideId String
+  guideItemId    String
+  qty            String?
+  freq           String?
+  custom         String?
+  complejoB_cc   String?
+  bioquel_cc     String?
+  frequency      String?
+
+  patientGuide PatientGuide @relation(fields: [patientGuideId], references: [id], onDelete: Cascade)
+  guideItem    GuideItem    @relation(fields: [guideItemId], references: [id], onDelete: Cascade)
+
+  @@map("patient_guide_selections")
 }
