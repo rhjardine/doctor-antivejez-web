@@ -62,7 +62,7 @@ export default function OrthomolecularTestView({ patient }: { patient: PatientWi
   });
 
   const watchedElements = form.watch('elements');
-  const chronologicalAge = patient.age; // Asumiendo que 'age' existe en el tipo PatientWithDetails
+  const chronologicalAge = patient.chronologicalAge; // Asumiendo que 'age' existe en el tipo PatientWithDetails
 
   const orthomolecularAge = useMemo(
     () => calculateOrthomolecularAge(watchedElements, chronologicalAge),
