@@ -1,21 +1,27 @@
 // src/types/guide.ts
 
-/**
- * Define los tipos de ítems que pueden existir en la guía.
- * Esto permite renderizar diferentes campos para cada tipo.
- */
-export enum GuideItemType {
-  STANDARD = 'STANDARD',
-  METABOLIC = 'METABOLIC',
-  REVITALIZATION = 'REVITALIZATION',
-}
+// --- INICIO DE LA CORRECCIÓN ---
+// Importamos el enum directamente desde el cliente de Prisma.
+// Esto asegura que nuestros tipos personalizados y los tipos de la base de datos
+// sean siempre compatibles.
+import type { GuideItemType as PrismaGuideItemType } from '@prisma/client';
 
-// --- Interfaces para la estructura de datos inicial ---
+// Re-exportamos el enum para usarlo en toda la aplicación.
+export const GuideItemType = {
+  STANDARD: 'STANDARD',
+  METABOLIC: 'METABOLIC',
+  REVITALIZATION: 'REVITALIZATION',
+} as const;
+export type GuideItemType = PrismaGuideItemType;
+// --- FIN DE LA CORRECCIÓN ---
+
+
+// --- Interfaces para la estructura de datos que viene de la BD ---
 
 interface BaseItem {
   id: string;
   name: string;
-  dose?: string; // Para ítems con dosis predefinida como en "Fase de Remoción"
+  dose?: string | null; // Permitir null desde la BD
 }
 
 export interface StandardGuideItem extends BaseItem {}
@@ -23,12 +29,20 @@ export interface RevitalizationGuideItem extends BaseItem {}
 export interface MetabolicSubItem extends BaseItem {}
 
 export interface MetabolicActivator {
-  id: 'cat_activador'; // ID Fijo para este ítem especial
+  id: 'cat_activador';
   homeopathy: MetabolicSubItem[];
   bachFlowers: MetabolicSubItem[];
 }
 
-// --- Interfaces para los datos del formulario (lo que maneja react-hook-form) ---
+export interface GuideCategory {
+  id: string;
+  title: string;
+  type: GuideItemType;
+  items: (StandardGuideItem | RevitalizationGuideItem | MetabolicActivator)[];
+}
+
+
+// --- Interfaces para los datos del formulario (react-hook-form) ---
 
 export interface StandardFormItem {
   selected: boolean;
@@ -46,11 +60,8 @@ export interface RevitalizationFormItem {
 
 export interface MetabolicFormItem {
   selected: boolean;
-  // No necesita campos adicionales, la selección se hace a nivel de sub-ítem
 }
 
-// --- INICIO DE LA CORRECCIÓN ---
-// Se añade el tipo para los ítems personalizados que se crean dinámicamente.
 export type CustomItem = {
   categoryId: string;
   name: string;
@@ -58,9 +69,6 @@ export type CustomItem = {
   freq?: string;
   custom?: string;
 };
-// --- FIN DE LA CORRECCIÓN ---
-
-// --- Estructura completa del formulario que se validará y guardará ---
 
 export type GuideFormValues = {
   guideDate: string;
@@ -69,18 +77,5 @@ export type GuideFormValues = {
     homeopathy: Record<string, { selected: boolean }>;
     bachFlowers: Record<string, { selected: boolean }>;
   };
-  // --- INICIO DE LA CORRECCIÓN ---
-  // Se añade la propiedad 'customItems' para que coincida con el uso en el componente.
   customItems?: CustomItem[];
-  // --- FIN DE LA CORRECCIÓN ---
 };
-
-
-// --- Estructura para renderizar las categorías en la UI ---
-
-export interface GuideCategory {
-  id: string;
-  title: string;
-  type: GuideItemType;
-  items: (StandardGuideItem | RevitalizationGuideItem | MetabolicActivator)[];
-}
