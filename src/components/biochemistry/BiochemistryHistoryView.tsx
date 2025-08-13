@@ -3,9 +3,9 @@
 // src/components/biochemistry/BiochemistryHistoryView.tsx
 import { useState, useMemo, useEffect } from 'react';
 // ===== INICIO DE LA CORRECCIÓN =====
-// Se importa PatientWithDetails desde '@/types' en lugar de '@/types/biochemistry'
-import { PatientWithDetails } from '@/types';
-import { BiochemistryTest, BIOCHEMISTRY_ITEMS } from '@/types/biochemistry';
+// Se importan PatientWithDetails y BiochemistryTest desde el archivo de tipos principal.
+import { PatientWithDetails, BiochemistryTest } from '@/types';
+import { BIOCHEMISTRY_ITEMS } from '@/types/biochemistry';
 // ===== FIN DE LA CORRECCIÓN =====
 import { formatDate, formatDateTime } from '@/utils/date';
 import { FaArrowLeft, FaChartLine, FaTrash, FaExclamationTriangle, FaFlask } from 'react-icons/fa';
