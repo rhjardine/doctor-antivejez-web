@@ -1,207 +1,200 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Patient } from '@/types';
 import {
   BIOCHEMISTRY_ITEMS,
   BiochemistryFormValues,
   BiochemistryCalculationResult,
   BoardWithRanges,
-  ResultStatus,
 } from '@/types/biochemistry';
-// ===== INICIO DE LA CORRECCIÓN =====
-// Se corrige el nombre de la función importada para que coincida con la exportada.
 import { calculateAndSaveBiochemistryTest, getBiochemistryBoardsAndRanges } from '@/lib/actions/biochemistry.actions';
-// ===== FIN DE LA CORRECCIÓN =====
-import { getStatusColor } from '@/utils/bioquimica-calculations';
 import { toast } from 'sonner';
-import { FaArrowLeft, FaSave, FaEdit, FaUndo, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaSave, FaEdit, FaUndo, FaCheckCircle, FaCalculator } from 'react-icons/fa';
 
-interface EdadBioquimicaTestViewProps {
-  patient: Patient;
-  onBack: () => void;
-  onTestComplete: () => void;
-}
+// --- Esquema de Validación con Zod ---
+const validationSchema = z.object(
+  Object.fromEntries(
+    BIOCHEMISTRY_ITEMS.map(item => [
+      item.key,
+      z.preprocess(
+        (val) => (String(val).trim() === '' ? undefined : Number(val)),
+        z.number({ invalid_type_error: 'Debe ser un número' })
+         .min(0, 'El valor no puede ser negativo')
+         .optional()
+      )
+    ])
+  )
+);
 
-function SuccessModal({ onClose }: { onClose: () => void }) {
+// --- Componente de Modal de Éxito ---
+function SuccessModal({ onClose, results }: { onClose: () => void, results: BiochemistryCalculationResult | null }) {
+  if (!results) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center relative animate-slideUp">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center relative animate-slideUp">
         <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-gray-800 mb-2">Operación Exitosa</h3>
-        <p className="text-gray-600 mb-6">El test bioquímico se ha guardado correctamente.</p>
-        <button onClick={onClose} className="btn-primary w-full">Aceptar</button>
+        <h3 className="text-2xl font-bold text-gray-800 mb-2">Test Guardado</h3>
+        <p className="text-gray-600 mb-6">El test bioquímico se ha calculado y guardado correctamente.</p>
+        <div className="grid grid-cols-2 gap-4 text-lg">
+            <div className="bg-gray-100 p-4 rounded-lg">
+                <p className="text-sm text-gray-500">Edad Bioquímica</p>
+                <p className="font-bold text-primary">{results.biologicalAge.toFixed(1)}</p>
+            </div>
+            <div className="bg-gray-100 p-4 rounded-lg">
+                <p className="text-sm text-gray-500">Diferencial</p>
+                <p className={`font-bold ${results.differentialAge > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                    {results.differentialAge > 0 ? '+' : ''}{results.differentialAge.toFixed(1)}
+                </p>
+            </div>
+        </div>
+        <button onClick={onClose} className="mt-6 w-full btn-primary">
+          Cerrar
+        </button>
       </div>
     </div>
   );
 }
 
-export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete }: EdadBioquimicaTestViewProps) {
+export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete }: { patient: Patient, onBack: () => void, onTestComplete: () => void }) {
   const [boards, setBoards] = useState<BoardWithRanges[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [calculated, setCalculated] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [results, setResults] = useState<BiochemistryCalculationResult | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const [formValues, setFormValues] = useState<BiochemistryFormValues>({});
-  const [results, setResults] = useState<Partial<BiochemistryCalculationResult>>({});
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<BiochemistryFormValues>({
+    resolver: zodResolver(validationSchema),
+    defaultValues: {},
+  });
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const boardsData = await getBiochemistryBoardsAndRanges();
-        setBoards(boardsData);
-      } catch (error) {
-        toast.error('Error al cargar los baremos del test.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadInitialData();
+  const formValues = watch();
+
+  const fetchBoards = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const fetchedBoards = await getBiochemistryBoardsAndRanges();
+      setBoards(fetchedBoards);
+    } catch (error) {
+      toast.error('Error al cargar los baremos. No se podrán realizar los cálculos.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const handleInputChange = (key: keyof BiochemistryFormValues, value: string) => {
-    setFormValues(prev => ({
-      ...prev,
-      [key]: value === '' ? undefined : parseFloat(value),
-    }));
-    setCalculated(false);
-    setIsSaved(false);
-  };
+  useEffect(() => {
+    fetchBoards();
+  }, [fetchBoards]);
 
-  const handleCalculateAndSave = async () => {
-    setProcessing(true);
-
-    const missingFields = BIOCHEMISTRY_ITEMS.filter(item => formValues[item.key] === undefined);
-    if (missingFields.length > 0) {
-      toast.error(`Por favor, complete todos los campos: ${missingFields.map(f => f.label).join(', ')}`);
-      setProcessing(false);
-      return;
-    }
-
+  const handleCalculateAndSave = async (data: BiochemistryFormValues) => {
+    setIsSaving(true);
     try {
       const result = await calculateAndSaveBiochemistryTest({
         patientId: patient.id,
         chronologicalAge: patient.chronologicalAge,
-        formValues,
+        formValues: data,
       });
 
       if (result.success && result.data) {
         setResults(result.data);
-        setCalculated(true);
-        setIsSaved(true);
-        setIsSuccessModalOpen(true);
-        onTestComplete();
+        setIsEditing(false);
+        setShowSuccessModal(true);
       } else {
-        toast.error(result.error || 'Ocurrió un error al procesar el test.');
+        toast.error(result.error || 'No se pudo calcular o guardar el test.');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Error inesperado.');
+    } catch (error) {
+      toast.error('Ocurrió un error inesperado.');
     } finally {
-      setProcessing(false);
+      setIsSaving(false);
     }
   };
 
-  const handleEdit = () => {
-    setIsSaved(false);
-    setCalculated(false);
-    toast.info("Formulario habilitado para edición.");
+  const handleModalClose = () => {
+    setShowSuccessModal(false);
+    onTestComplete();
   };
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-96"><div className="loader"></div></div>;
-  }
 
   return (
     <>
-      {isSuccessModalOpen && <SuccessModal onClose={() => setIsSuccessModalOpen(false)} />}
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Columna del Formulario */}
-        <div className="w-full md:w-1/2 bg-primary-dark rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between mb-6">
-            <button onClick={onBack} className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors">
-              <FaArrowLeft />
-              <span>Volver al Perfil</span>
-            </button>
-            <div className="text-right">
-              <h2 className="text-xl font-bold">{patient.firstName} {patient.lastName}</h2>
-              <p className="text-sm opacity-80">Edad: {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}</p>
-            </div>
+      {showSuccessModal && <SuccessModal onClose={handleModalClose} results={results} />}
+      <div className="p-6 bg-white rounded-xl shadow-lg animate-fadeIn">
+        <div className="flex items-center justify-between mb-6 border-b pb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Nuevo Test Bioquímico</h2>
+            <p className="text-gray-600">Paciente: {patient.firstName} {patient.lastName}</p>
           </div>
-          <h3 className="text-lg font-semibold mb-4">Test de Edad Bioquímica</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-2 max-h-[60vh] overflow-y-auto custom-scrollbar-tabs">
-            {BIOCHEMISTRY_ITEMS.map(item => (
-              <div key={item.key} className="bg-white/10 rounded-lg p-3">
-                <label className="block text-xs font-medium mb-1">{item.label} <span className="opacity-70">{item.unit && `(${item.unit})`}</span></label>
-                <input
-                  type="number"
-                  step="any"
-                  value={formValues[item.key] ?? ''}
-                  onChange={e => handleInputChange(item.key, e.target.value)}
-                  className="input text-sm"
-                  disabled={isSaved || processing}
+          <button onClick={onBack} className="btn-secondary flex items-center space-x-2">
+            <FaArrowLeft />
+            <span>Volver</span>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit(handleCalculateAndSave)}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {BIOCHEMISTRY_ITEMS.map((item) => (
+              <div key={item.key} className="flex flex-col">
+                <label htmlFor={item.key} className="label mb-1 text-sm font-medium text-gray-700">
+                  {item.label} <span className="text-gray-400">({item.unit})</span>
+                </label>
+                <Controller
+                  name={item.key}
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      id={item.key}
+                      type="number"
+                      step="any"
+                      className={`input ${errors[item.key] ? 'border-red-500' : ''}`}
+                      placeholder="0.00"
+                      disabled={!isEditing || isLoading}
+                      onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                    />
+                  )}
                 />
+                {errors[item.key] && <p className="text-red-500 text-xs mt-1">{errors[item.key]?.message}</p>}
+                <div className="text-xs text-gray-500 mt-1 h-4">
+                  {results && results.partialAges[`${item.key}Age` as keyof typeof results.partialAges] !== undefined && (
+                    <span>Edad calculada: <strong>{results.partialAges[`${item.key}Age` as keyof typeof results.partialAges]?.toFixed(1)}a</strong></span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button onClick={handleCalculateAndSave} disabled={processing || isSaved} className="btn-primary-white">
-              <FaSave className="mr-2" /> {processing ? 'Procesando...' : 'Calcular y Guardar'}
-            </button>
-            <button onClick={handleEdit} disabled={!isSaved || processing} className="btn-warning">
-              <FaEdit className="mr-2" /> Editar
-            </button>
-            <button onClick={onBack} disabled={processing} className="btn-secondary-dark">
-              <FaUndo className="mr-2" /> Volver
-            </button>
-          </div>
-        </div>
 
-        {/* Columna de Resultados */}
-        <div className="w-full md:w-1/2 space-y-6">
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Finales</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
-                <p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Edad Bioquímica</p>
-                <p className={`text-3xl font-bold ${calculated ? 'text-primary' : 'text-gray-400'}`}>
-                  {calculated ? results.biologicalAge?.toFixed(1) : '--'}
-                </p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Diferencial</p>
-                <p className={`text-3xl font-bold ${calculated ? 'text-gray-900' : 'text-gray-400'}`}>
-                  {calculated && results.differentialAge !== undefined ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge.toFixed(1)}` : '--'}
-                </p>
-              </div>
-            </div>
+          <div className="mt-8 pt-6 border-t flex items-center justify-end space-x-4">
+            {isEditing ? (
+              <button
+                type="submit"
+                className="btn-primary flex items-center space-x-2"
+                disabled={isLoading || isSaving}
+              >
+                <FaCalculator />
+                <span>{isSaving ? 'Calculando y Guardando...' : 'Calcular y Guardar'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="btn-secondary flex items-center space-x-2"
+              >
+                <FaEdit />
+                <span>Editar</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onBack}
+              className="btn-secondary"
+            >
+              Volver
+            </button>
           </div>
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados por Ítem</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {BIOCHEMISTRY_ITEMS.map(item => {
-                const status = calculated && results.statuses ? results.statuses[item.key] : undefined;
-                const statusColor = status ? getStatusColor(status) : 'bg-gray-300';
-                const statusText = status ? status.replace('_', ' ').replace('OPTIMAL', 'ÓPTIMO') : 'SIN CALCULAR';
-
-                return (
-                  <div key={item.key} className={`rounded-lg p-3 text-white transition-all ${statusColor}`}>
-                    <h4 className="font-bold text-sm truncate">{item.label}</h4>
-                    <p className="text-xs opacity-80 mb-1">Valor: {formValues[item.key] ?? '--'} {item.unit}</p>
-                    <div className="mt-1 pt-1 border-t border-white/20 text-center">
-                      <span className="text-xs font-semibold uppercase tracking-wider">{statusText}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        </form>
       </div>
     </>
   );
