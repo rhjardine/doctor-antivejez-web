@@ -1,29 +1,10 @@
 'use server';
 
+// src/lib/actions/biochemistry.actions.ts
 import { prisma } from '@/lib/db';
 import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
-import { BiochemistryFormValues } from '@/types/biochemistry';
+import { BiochemistryFormValues, BiochemistryCalculationResult } from '@/types/biochemistry';
 import { revalidatePath } from 'next/cache';
-
-/**
- * Obtiene los baremos y rangos para el test bioquímico.
- */
-export async function getBiochemistryBoardsAndRanges() {
-  try {
-    const boards = await prisma.board.findMany({
-      where: {
-        type: 'FORM_BIOCHEMISTRY',
-      },
-      include: {
-        range: true,
-      },
-    });
-    return boards;
-  } catch (error) {
-    console.error('Error fetching biochemistry boards:', error);
-    throw new Error('No se pudieron cargar los baremos bioquímicos.');
-  }
-}
 
 interface SaveTestParams {
   patientId: string;
@@ -38,22 +19,18 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
   const { patientId, chronologicalAge, formValues } = params;
 
   try {
-    // 1. Validar que todos los campos estén completos
-    for (const key in formValues) {
-      if (formValues[key as keyof BiochemistryFormValues] === undefined) {
-        return { success: false, error: `El campo ${key} es obligatorio.` };
+    // 1. Validar que todos los campos necesarios estén completos
+    const requiredFields = BIOCHEMISTRY_ITEMS.map(item => item.key);
+    for (const key of requiredFields) {
+      if (formValues[key as keyof BiochemistryFormValues] === undefined || formValues[key as keyof BiochemistryFormValues] === null) {
+        return { success: false, error: `El campo '${key}' es obligatorio.` };
       }
     }
 
-    // 2. Obtener los baremos de la base de datos
-    const allBoards = await getBiochemistryBoardsAndRanges();
+    // 2. Calcular los resultados usando la lógica centralizada
+    const results = calculateBioquimicaResults(formValues, chronologicalAge);
 
-    // 3. Calcular los resultados
-    const results = calculateBioquimicaResults(formValues, allBoards, chronologicalAge);
-
-    // 4. Preparar los datos para guardar en la base de datos
-    // ===== INICIO DE LA CORRECCIÓN =====
-    // Se renombra 'biologicalAge' a 'biochemicalAge' para que coincida con el schema.prisma
+    // 3. Preparar los datos para guardar en la base de datos
     const dbData = {
       patientId,
       chronologicalAge,
@@ -62,17 +39,16 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
       ...formValues,
       ...results.partialAges,
     };
-    // ===== FIN DE LA CORRECCIÓN =====
 
-    // 5. Crear el nuevo registro del test
+    // 4. Crear el nuevo registro del test
     await prisma.biochemistryTest.create({
       data: dbData,
     });
     
-    // 6. Revalidar la caché para que la UI se actualice
+    // 5. Revalidar la caché para que la UI se actualice
     revalidatePath(`/historias/${patientId}`);
 
-    // 7. Devolver los resultados completos para la UI
+    // 6. Devolver los resultados completos para la UI
     return { success: true, data: results };
 
   } catch (error: any) {
