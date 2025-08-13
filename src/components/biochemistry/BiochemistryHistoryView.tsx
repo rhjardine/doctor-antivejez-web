@@ -1,8 +1,12 @@
 'use client';
 
 // src/components/biochemistry/BiochemistryHistoryView.tsx
-import { useState, useMemo } from 'react';
-import { PatientWithDetails, BiochemistryTest, BIOCHEMISTRY_ITEMS } from '@/types/biochemistry';
+import { useState, useMemo, useEffect } from 'react';
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se importa PatientWithDetails desde '@/types' en lugar de '@/types/biochemistry'
+import { PatientWithDetails } from '@/types';
+import { BiochemistryTest, BIOCHEMISTRY_ITEMS } from '@/types/biochemistry';
+// ===== FIN DE LA CORRECCIÓN =====
 import { formatDate, formatDateTime } from '@/utils/date';
 import { FaArrowLeft, FaChartLine, FaTrash, FaExclamationTriangle, FaFlask } from 'react-icons/fa';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -67,7 +71,7 @@ export default function BiochemistryHistoryView({ patient, onBack, onHistoryChan
       const result = await deleteBiochemistryTest(testToDelete.id);
       if (result.success) {
         toast.success('Test eliminado exitosamente.');
-        setSelectedTest(null); // Deseleccionar para que se actualice al siguiente
+        setSelectedTest(null); 
         onHistoryChange();
       } else {
         toast.error(result.error || 'No se pudo eliminar el test.');
