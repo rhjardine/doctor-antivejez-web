@@ -1,4 +1,3 @@
-// src/types/guide.ts
 import type { GuideItemType as PrismaGuideItemType } from '@prisma/client';
 
 // Re-exportamos el enum para usarlo en toda la aplicación.
@@ -21,11 +20,9 @@ export interface StandardGuideItem extends BaseItem {}
 export interface RevitalizationGuideItem extends BaseItem {}
 export interface MetabolicSubItem extends BaseItem {}
 
-// ===== INICIO DE LA CORRECCIÓN =====
-// Se añade la exportación del tipo 'MetabolicActivatorItem' como un alias
-// de 'MetabolicSubItem' para resolver el error de importación en el componente.
+// ===== CORRECCIÓN 2: Exportar el tipo MetabolicActivatorItem para que pueda ser importado =====
 export type MetabolicActivatorItem = MetabolicSubItem;
-// ===== FIN DE LA CORRECCIÓN =====
+// ===== FIN DE LA CORRECCIÓN 2 =====
 
 export interface MetabolicActivator {
   id: 'cat_activador';
@@ -40,7 +37,7 @@ export interface GuideCategory {
   items: (StandardGuideItem | RevitalizationGuideItem | MetabolicActivator)[];
 }
 
-// --- Interfaces para los datos del formulario (react-hook-form) ---
+// --- Interfaces para los datos del formulario ---
 
 export interface StandardFormItem {
   selected?: boolean;

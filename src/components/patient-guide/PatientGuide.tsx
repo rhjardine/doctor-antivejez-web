@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import { PatientWithDetails } from '@/types';
-import { GuideCategory, Selections, StandardGuideItem, MetabolicActivatorItem, RevitalizationGuideItem, GuideItemType, StandardFormItem, RevitalizationFormItem } from '@/types/guide';
+import { GuideCategory, Selections, StandardGuideItem, MetabolicActivatorItem, RevitalizationGuideItem, GuideItemType, StandardFormItem, RevitalizationFormItem, MetabolicFormItem } from '@/types/guide';
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt } from 'react-icons/fa';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
-// --- DATOS INICIALES CORREGIDOS ---
 const initialGuideData: GuideCategory[] = [
   {
     id: 'cat_remocion',
@@ -137,15 +136,20 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
   };
 
-  // ===== INICIO DE LA CORRECCIÓN =====
-  // Se ha hecho el tipo del parámetro 'field' más flexible para aceptar una unión de todas las claves posibles.
-  const handleSelectionChange = (itemId: string, field: keyof (StandardFormItem | RevitalizationFormItem), value: any) => {
-  // ===== FIN DE LA CORRECCIÓN =====
+  // ===== CORRECCIÓN 1: Corregir la firma de la función para unir las claves correctamente =====
+  const handleSelectionChange = (
+    itemId: string,
+    field: keyof StandardFormItem | keyof RevitalizationFormItem | keyof MetabolicFormItem,
+    value: any
+  ) => {
+  // ===== FIN DE LA CORRECCIÓN 1 =====
     setSelections(prev => {
         const newSelections = { ...prev };
         if (!newSelections[itemId]) {
             newSelections[itemId] = {};
         }
+        // El uso de 'as any' aquí es pragmático debido a la estructura compleja del estado.
+        // Una refactorización futura podría usar type guards para mejorar la seguridad de tipos.
         (newSelections[itemId] as any)[field] = value;
         return newSelections;
     });
@@ -225,7 +229,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                         id={`${item.id}_complejoB`}
                         type="text" 
                         placeholder="cc" 
-                        value={(selections[item.id] as any)?.complejoB_cc || ''} 
+                        value={(selections[item.id] as RevitalizationFormItem)?.complejoB_cc || ''} 
                         onChange={(e) => handleSelectionChange(item.id, 'complejoB_cc', e.target.value)} 
                         className="input text-sm py-1 w-full" 
                     />
@@ -236,7 +240,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                         id={`${item.id}_bioquel`}
                         type="text" 
                         placeholder="cc" 
-                        value={(selections[item.id] as any)?.bioquel_cc || ''} 
+                        value={(selections[item.id] as RevitalizationFormItem)?.bioquel_cc || ''} 
                         onChange={(e) => handleSelectionChange(item.id, 'bioquel_cc', e.target.value)} 
                         className="input text-sm py-1 w-full" 
                     />
@@ -247,7 +251,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                         id={`${item.id}_frequency`}
                         type="text" 
                         placeholder="Ej: 10 dosis" 
-                        value={(selections[item.id] as any)?.frequency || ''} 
+                        value={(selections[item.id] as RevitalizationFormItem)?.frequency || ''} 
                         onChange={(e) => handleSelectionChange(item.id, 'frequency', e.target.value)} 
                         className="input text-sm py-1 w-full" 
                     />
@@ -267,12 +271,12 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
       </div>
       {selections[item.id]?.selected && !('dose' in item) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
-          <input type="text" placeholder="Cant." value={(selections[item.id] as any)?.qty || ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
-          <select value={(selections[item.id] as any)?.freq || ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
+          <input type="text" placeholder="Cant." value={(selections[item.id] as StandardFormItem)?.qty || ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
+          <select value={(selections[item.id] as StandardFormItem)?.freq || ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
             <option value="">Frecuencia...</option>
             {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
           </select>
-          <input type="text" placeholder="Suplemento personalizado" value={(selections[item.id] as any)?.custom || ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
+          <input type="text" placeholder="Suplemento personalizado" value={(selections[item.id] as StandardFormItem)?.custom || ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
         </div>
       )}
     </div>
