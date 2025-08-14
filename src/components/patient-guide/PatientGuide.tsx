@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { PatientWithDetails } from '@/types';
-import { GuideCategory, Selections, StandardGuideItem, MetabolicActivatorItem, RevitalizationGuideItem, GuideItemType } from '@/types/guide';
+import { GuideCategory, Selections, StandardGuideItem, MetabolicActivatorItem, RevitalizationGuideItem, GuideItemType, StandardFormItem, RevitalizationFormItem } from '@/types/guide';
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt } from 'react-icons/fa';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
@@ -138,9 +138,8 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   };
 
   // ===== INICIO DE LA CORRECCIÓN =====
-  // Se ha hecho el tipo del parámetro 'field' más flexible.
-  // Ahora acepta cualquier clave (key) de los posibles tipos de item en Selections.
-  const handleSelectionChange = (itemId: string, field: keyof Selections[string], value: any) => {
+  // Se ha hecho el tipo del parámetro 'field' más flexible para aceptar una unión de todas las claves posibles.
+  const handleSelectionChange = (itemId: string, field: keyof (StandardFormItem | RevitalizationFormItem), value: any) => {
   // ===== FIN DE LA CORRECCIÓN =====
     setSelections(prev => {
         const newSelections = { ...prev };
