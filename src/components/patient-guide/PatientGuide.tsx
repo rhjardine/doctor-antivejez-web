@@ -8,7 +8,6 @@ import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
 // --- DATOS INICIALES CORREGIDOS ---
-// Se han cambiado los valores de 'type' a mayúsculas para que coincidan con el enum de Prisma.
 const initialGuideData: GuideCategory[] = [
   {
     id: 'cat_remocion',
@@ -138,7 +137,11 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
   };
 
+  // ===== INICIO DE LA CORRECCIÓN =====
+  // Se ha hecho el tipo del parámetro 'field' más flexible.
+  // Ahora acepta cualquier clave (key) de los posibles tipos de item en Selections.
   const handleSelectionChange = (itemId: string, field: keyof Selections[string], value: any) => {
+  // ===== FIN DE LA CORRECCIÓN =====
     setSelections(prev => {
         const newSelections = { ...prev };
         if (!newSelections[itemId]) {
@@ -333,7 +336,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         <button type="button" onClick={() => setIsSendModalOpen(true)} className="btn-primary flex items-center gap-2"><FaPaperPlane /> Guardar y Enviar</button>
       </div>
 
-      {isPreviewOpen && <PatientGuidePreview patient={patient} selections={selections} guideData={guideData} formValues={{guideDate: new Date().toISOString(), selections: selections}} onClose={() => setIsPreviewOpen(false)} />}
+      {isPreviewOpen && <PatientGuidePreview patient={patient} formValues={{guideDate: new Date().toISOString(), selections: selections}} guideData={guideData} onClose={() => setIsPreviewOpen(false)} />}
 
       {isSendModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
