@@ -1,22 +1,14 @@
 'use server';
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getPatientDetails } from './patients.actions';
-
-// --- Inicialización del Cliente de Google AI ---
-// Se asegura de que la clave de API exista y, de lo contrario, lanza un error.
-const apiKey = process.env.GOOGLE_API_KEY;
-if (!apiKey) {
-  throw new Error('La variable de entorno GOOGLE_API_KEY no está definida.');
-}
-const genAI = new GoogleGenerativeAI(apiKey);
+import { PatientWithDetails } from '@/types';
 
 /**
  * Genera un prompt estructurado para el modelo de IA.
  * @param patient - El objeto completo del paciente con sus detalles.
  * @returns Un string formateado que sirve como prompt para el LLM.
  */
-const buildPrompt = (patient: any): string => {
+const buildPrompt = (patient: PatientWithDetails): string => {
   // Serializa los tests para incluirlos en el prompt de forma legible.
   const biophysicsSummary = patient.biophysicsTests.map((test: any) => ({
     fecha: new Date(test.testDate).toLocaleDateString('es-VE'),
@@ -26,7 +18,7 @@ const buildPrompt = (patient: any): string => {
 
   const biochemistrySummary = patient.biochemistryTests.map((test: any) => ({
     fecha: new Date(test.testDate).toLocaleDateString('es-VE'),
-    edadBioquimica: test.biologicalAge.toFixed(1),
+    edadBioquimica: test.biochemicalAge.toFixed(1),
     diferencial: test.differentialAge.toFixed(1),
   }));
 
@@ -74,21 +66,44 @@ export async function getAIResponse(patientId: string) {
     }
 
     // 2. Construir el prompt.
-    const prompt = buildPrompt(patientDetailsResult.patient);
+    const prompt = buildPrompt(patientDetailsResult.patient as PatientWithDetails);
 
-    // 3. Seleccionar el modelo y generar el contenido.
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+    // 3. Realizar la llamada a la API de Gemini usando fetch.
+    const payload = {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    };
+    const apiKey = process.env.GOOGLE_API_KEY || ""; 
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+    
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-    return { success: true, data: text };
+    if (!res.ok) {
+        const errorBody = await res.json();
+        console.error('Error from Gemini API:', errorBody);
+        const errorMessage = errorBody?.error?.message || 'Error en la API de Gemini.';
+        if (errorMessage.includes('API key not valid')) {
+            return { success: false, error: 'La clave de API de Google no es válida. Verifícala en tus variables de entorno.' };
+        }
+        return { success: false, error: `Error en la API de Gemini: ${res.statusText}` };
+    }
+
+    const result = await res.json();
+    
+    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content?.parts?.length > 0) {
+      const text = result.candidates[0].content.parts[0].text;
+      return { success: true, data: text };
+    } else {
+      console.error("Unexpected response structure from Gemini API:", result);
+      return { success: false, error: 'Respuesta inesperada del Agente IA.' };
+    }
+
   } catch (error: any) {
     console.error('Error al contactar la API de Google Gemini:', error);
-    // Devuelve un mensaje de error más específico si es posible.
-    const errorMessage = error.message?.includes('API key not valid')
-      ? 'La clave de API de Google no es válida. Verifícala en tus variables de entorno.'
-      : 'No se pudo obtener una respuesta del Agente IA.';
-    return { success: false, error: errorMessage };
+    return { success: false, error: 'No se pudo obtener una respuesta del Agente IA.' };
   }
 }
+ 
