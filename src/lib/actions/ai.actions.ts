@@ -1,74 +1,94 @@
-// src/lib/actions/ai.actions.ts
 'use server';
 
-import { z } from 'zod';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getPatientDetails } from './patients.actions';
 
-// Esquema para validar la entrada del usuario
-const chatSchema = z.object({
-  prompt: z.string().min(1, "El prompt no puede estar vacío."),
-  history: z.array(z.object({
-    role: z.enum(['user', 'model']),
-    text: z.string(),
-  })).optional(),
-});
-
-interface ChatMessage {
-    role: 'user' | 'model';
-    parts: { text: string }[];
+// --- Inicialización del Cliente de Google AI ---
+// Se asegura de que la clave de API exista y, de lo contrario, lanza un error.
+const apiKey = process.env.GOOGLE_API_KEY;
+if (!apiKey) {
+  throw new Error('La variable de entorno GOOGLE_API_KEY no está definida.');
 }
+const genAI = new GoogleGenerativeAI(apiKey);
 
 /**
- * Obtiene una respuesta de un modelo de lenguaje generativo (LLM).
- * Por ahora, simula la respuesta sin conectar a la base de datos.
- * @param prompt - La pregunta del usuario.
- * @param history - El historial de la conversación.
- * @returns Un objeto con la respuesta del modelo o un error.
+ * Genera un prompt estructurado para el modelo de IA.
+ * @param patient - El objeto completo del paciente con sus detalles.
+ * @returns Un string formateado que sirve como prompt para el LLM.
  */
-export async function getAiChatResponse(prompt: string, history: { role: 'user' | 'model'; text: string }[]) {
-  const validation = chatSchema.safeParse({ prompt, history });
+const buildPrompt = (patient: any): string => {
+  // Serializa los tests para incluirlos en el prompt de forma legible.
+  const biophysicsSummary = patient.biophysicsTests.map((test: any) => ({
+    fecha: new Date(test.testDate).toLocaleDateString('es-VE'),
+    edadBiologica: test.biologicalAge.toFixed(1),
+    diferencial: test.differentialAge.toFixed(1),
+  }));
 
-  if (!validation.success) {
-    return { success: false, error: "La entrada no es válida." };
-  }
+  const biochemistrySummary = patient.biochemistryTests.map((test: any) => ({
+    fecha: new Date(test.testDate).toLocaleDateString('es-VE'),
+    edadBioquimica: test.biologicalAge.toFixed(1),
+    diferencial: test.differentialAge.toFixed(1),
+  }));
 
-  // --- Construcción del Historial para la API ---
-  // Se añade un prompt de sistema para darle contexto al LLM sobre su rol.
-  const systemPrompt = `Eres un asistente experto en análisis de datos para un software de medicina antienvejecimiento llamado 'Doctor AntiVejez'. Tu propósito es ayudar a los profesionales de la salud a obtener información valiosa de sus pacientes. Responde de manera concisa, profesional y amigable. IMPORTANTE: Aún no tienes acceso a la base de datos real, por lo que tus respuestas sobre datos específicos de pacientes deben ser simuladas y debes indicar amablemente que la conexión a datos en tiempo real está en desarrollo.`;
-  
-  const chatHistory: ChatMessage[] = [
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      { role: 'model', parts: [{ text: "Entendido. Soy un asistente de IA para 'Doctor AntiVejez'. Mis respuestas sobre datos de pacientes serán simuladas hasta que se complete la integración." }] }
-  ];
+  return `
+    **Contexto:** Eres "Doctor AntiVejez IA", un asistente experto en medicina antienvejecimiento. Tu tarea es analizar los datos de un paciente y proporcionar un resumen claro, conciso y accionable para el médico tratante.
 
-  history.forEach(msg => {
-      chatHistory.push({
-          role: msg.role,
-          parts: [{ text: msg.text }]
-      });
-  });
-  chatHistory.push({ role: 'user', parts: [{ text: prompt }] });
+    **Datos del Paciente:**
+    - **Nombre:** ${patient.firstName} ${patient.lastName}
+    - **Edad Cronológica:** ${patient.chronologicalAge} años
+    - **Género:** ${patient.gender}
+    - **Resumen Historial Biofísico:** ${JSON.stringify(biophysicsSummary, null, 2)}
+    - **Resumen Historial Bioquímico:** ${JSON.stringify(biochemistrySummary, null, 2)}
+    - **Observaciones Generales:** ${patient.observations || 'No hay observaciones.'}
 
-  // --- Llamada a la API de Gemini (Simulada por ahora) ---
-  // En un futuro, aquí iría la llamada a la API de Google u otro proveedor.
-  // Por ahora, devolvemos una respuesta simulada para demostrar la funcionalidad.
+    **Tarea:**
+    Basado en los datos proporcionados, genera un informe con el siguiente formato Markdown:
+
+    ### 📝 Resumen Ejecutivo
+    Un párrafo breve que resuma la condición general del paciente, destacando la relación entre su edad cronológica y sus edades biológicas.
+
+    ### ⚠️ Puntos Críticos de Atención
+    Una lista de viñetas (bullet points) con los 3 a 5 hallazgos más importantes o preocupantes de sus últimos tests. Menciona los marcadores específicos que están fuera del rango óptimo.
+
+    ### 💡 Recomendaciones Sugeridas
+    Una lista de viñetas con recomendaciones claras y accionables para el médico. Sugiere posibles áreas de intervención, estudios adicionales o cambios en el estilo de vida que podrían beneficiar al paciente.
+
+    **Instrucciones Adicionales:**
+    - Utiliza un lenguaje profesional y técnico, pero claro.
+    - Sé objetivo y basa tus conclusiones únicamente en los datos proporcionados.
+    - No inventes información. Si faltan datos, menciónalo.
+  `;
+};
+
+/**
+ * Obtiene una respuesta del Agente IA basada en los datos de un paciente.
+ * @param patientId - El ID del paciente a analizar.
+ * @returns Un objeto con el estado del éxito y la respuesta del modelo o un mensaje de error.
+ */
+export async function getAIResponse(patientId: string) {
   try {
-    // Simulación de una llamada de red
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    let simulatedResponse = "Gracias por tu pregunta. ";
-
-    if (prompt.toLowerCase().includes("juan perez")) {
-        simulatedResponse = "El paciente Juan Pérez, de 55 años, ha mostrado una mejora en su perfil cardiovascular en los últimos 3 meses, con una reducción de 5 años en su edad biológica vascular. Se recomienda continuar con el tratamiento actual y reevaluar en 60 días.";
-    } else if (prompt.toLowerCase().includes("envejecimiento acelerado")) {
-        simulatedResponse = "He identificado a 3 pacientes que han mostrado un envejecimiento acelerado (diferencial de edad biológica > +5 años) en el último mes: María Rodríguez, Carlos Sánchez y Ana Gómez. Sugiero revisar sus últimos tests y guías de tratamiento.";
-    } else {
-        simulatedResponse += "Estoy aquí para ayudarte a analizar los datos de tus pacientes. Una vez que esté completamente integrado, podré darte información en tiempo real sobre la evolución, biomarcadores y mucho más.";
+    // 1. Obtener los detalles completos del paciente.
+    const patientDetailsResult = await getPatientDetails(patientId);
+    if (!patientDetailsResult.success || !patientDetailsResult.patient) {
+      return { success: false, error: 'No se pudieron obtener los datos del paciente.' };
     }
 
-    return { success: true, response: simulatedResponse };
+    // 2. Construir el prompt.
+    const prompt = buildPrompt(patientDetailsResult.patient);
 
-  } catch (error) {
-    console.error("Error en la simulación de IA:", error);
-    return { success: false, error: "El servicio de IA no está disponible en este momento." };
+    // 3. Seleccionar el modelo y generar el contenido.
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+
+    return { success: true, data: text };
+  } catch (error: any) {
+    console.error('Error al contactar la API de Google Gemini:', error);
+    // Devuelve un mensaje de error más específico si es posible.
+    const errorMessage = error.message?.includes('API key not valid')
+      ? 'La clave de API de Google no es válida. Verifícala en tus variables de entorno.'
+      : 'No se pudo obtener una respuesta del Agente IA.';
+    return { success: false, error: errorMessage };
   }
 }
