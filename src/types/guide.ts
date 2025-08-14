@@ -21,6 +21,12 @@ export interface StandardGuideItem extends BaseItem {}
 export interface RevitalizationGuideItem extends BaseItem {}
 export interface MetabolicSubItem extends BaseItem {}
 
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se añade la exportación del tipo 'MetabolicActivatorItem' como un alias
+// de 'MetabolicSubItem' para resolver el error de importación en el componente.
+export type MetabolicActivatorItem = MetabolicSubItem;
+// ===== FIN DE LA CORRECCIÓN =====
+
 export interface MetabolicActivator {
   id: 'cat_activador';
   homeopathy: MetabolicSubItem[];
@@ -54,11 +60,7 @@ export interface MetabolicFormItem {
   selected?: boolean;
 }
 
-// ===== INICIO DE LA CORRECCIÓN =====
-// Se añade y exporta el tipo 'Selections' que faltaba.
-// Este tipo representa el estado de las selecciones en el formulario de la guía.
 export type Selections = Record<string, StandardFormItem | RevitalizationFormItem | MetabolicFormItem>;
-// ===== FIN DE LA CORRECCIÓN =====
 
 export type CustomItem = {
   categoryId: string;
