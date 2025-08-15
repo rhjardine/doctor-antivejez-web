@@ -102,29 +102,38 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                 <div key={category.id}>
                   <h3 className="text-xl font-semibold text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">{category.title}</h3>
                   <ul className="list-disc list-inside space-y-3 pl-2">
-                    {selectedItems.map(item => {
-                      const details = selections[item.id];
-                      let treatmentDetails = '';
+                    {selectedItems
+                      .filter(
+                        (it): it is StandardGuideItem | RevitalizationGuideItem =>
+                          'name' in it && typeof it.name === 'string'
+                      )
+                      .map(item => {
+                        const details = selections[item.id];
+                        let treatmentDetails = '';
 
-                      if ('dose' in item && item.dose) {
-                        treatmentDetails = item.dose;
-                      } else if (category.type === 'REVITALIZATION') {
-                        const rev = details as RevitalizationFormItem;
-                        treatmentDetails = [rev.complejoB_cc, rev.bioquel_cc, rev.frequency]
-                          .filter(Boolean)
-                          .join(' / ');
-                      } else {
-                        const std = details as StandardFormItem;
-                        treatmentDetails = [std.qty, std.freq, std.custom].filter(Boolean).join(' - ');
-                      }
+                        if ('dose' in item && item.dose) {
+                          treatmentDetails = item.dose;
+                        } else if (category.type === 'REVITALIZATION') {
+                          const rev = details as RevitalizationFormItem;
+                          treatmentDetails = [rev.complejoB_cc, rev.bioquel_cc, rev.frequency]
+                            .filter(Boolean)
+                            .join(' / ');
+                        } else {
+                          const std = details as StandardFormItem;
+                          treatmentDetails = [std.qty, std.freq, std.custom]
+                            .filter(Boolean)
+                            .join(' - ');
+                        }
 
-                      return (
-                        <li key={item.id} className="text-gray-800">
-                          <span className="font-medium">{item.name}</span>
-                          {treatmentDetails && <span className="text-gray-600 ml-2">: {treatmentDetails}</span>}
-                        </li>
-                      );
-                    })}
+                        return (
+                          <li key={item.id} className="text-gray-800">
+                            <span className="font-medium">{item.name}</span>
+                            {treatmentDetails && (
+                              <span className="text-gray-600 ml-2">: {treatmentDetails}</span>
+                            )}
+                          </li>
+                        );
+                      })}
                   </ul>
                 </div>
               );
