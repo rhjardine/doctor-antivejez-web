@@ -1,8 +1,7 @@
 // src/types/guide.ts
-// 1. Re-exportamos el enum de Prisma para que coincida exactamente
 export { GuideItemType } from '@prisma/client';
 
-// 2. Modelos de datos de guía
+// Items
 export interface StandardGuideItem {
   id: string;
   name: string;
@@ -19,14 +18,13 @@ export interface MetabolicActivatorItem {
   name: string;
 }
 
-// Agrupación para METABOLIC
 export interface MetabolicActivator {
   id: 'cat_activador';
   homeopathy: MetabolicActivatorItem[];
   bachFlowers: MetabolicActivatorItem[];
 }
 
-// Categoría principal
+// Categorías
 export interface GuideCategory {
   id: string;
   title: string;
@@ -37,7 +35,7 @@ export interface GuideCategory {
     | [MetabolicActivator];
 }
 
-// 3. Formularios / selecciones
+// Formularios
 export interface StandardFormItem {
   selected?: boolean;
   qty?: string;
@@ -56,16 +54,12 @@ export interface MetabolicFormItem {
   selected?: boolean;
 }
 
-export type Selections = Record<
-  string,
-  StandardFormItem | RevitalizationFormItem | MetabolicFormItem
->;
+export type Selections = Record<string, StandardFormItem | RevitalizationFormItem | MetabolicFormItem>;
 
-// 4. Formulario global
 export interface GuideFormValues {
   guideDate: string;
   selections: Selections;
-  metabolicActivator?: {
+  metabolic_activator?: {
     homeopathy: Record<string, { selected: boolean }>;
     bachFlowers: Record<string, { selected: boolean }>;
   };
