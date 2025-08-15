@@ -379,6 +379,31 @@ body {
   background-color: rgb(35, 188, 239) !important;
 }
 
+/* Estilos mejorados para el scrollbar personalizado */
+.custom-scrollbar-tabs {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) #e2f5fd;
+}
+
+.custom-scrollbar-tabs::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar-tabs::-webkit-scrollbar-track {
+  background-color: #e2f5fd;
+  border-radius: 10px;
+}
+
+.custom-scrollbar-tabs::-webkit-scrollbar-thumb {
+  background-color: var(--primary-color);
+  border-radius: 10px;
+}
+
+.custom-scrollbar-tabs::-webkit-scrollbar-thumb:hover {
+  background-color: var(--primary-dark);
+}
+
 /* Scrollbar personalizado */
 ::-webkit-scrollbar {
   width: 8px;
