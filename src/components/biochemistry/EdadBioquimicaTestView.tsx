@@ -1,6 +1,5 @@
 'use client';
 
-// src/components/biochemistry/EdadBioquimicaTestView.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -121,114 +120,152 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
     <>
       {showSuccessModal && <SuccessModal onClose={handleModalClose} results={results} />}
       
-      <form onSubmit={handleSubmit(handleCalculateAndSave)} className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Columna Izquierda: Formulario */}
-        <div className="lg:col-span-3 bg-primary-dark rounded-xl p-6 text-white space-y-6">
-            <div className="flex items-center justify-between">
-                <button type="button" onClick={onBack} className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors">
-                    <FaArrowLeft />
-                    <span>Volver al Perfil</span>
-                </button>
-                <div className="text-right">
-                    <h2 className="text-xl font-bold">{patient.firstName} {patient.lastName}</h2>
-                    <p className="text-sm opacity-80">Edad: {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}</p>
-                </div>
+      <div className="space-y-6 animate-fadeIn">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button 
+              type="button" 
+              onClick={onBack} 
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <FaArrowLeft />
+              <span>Volver al Perfil</span>
+            </button>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Test de Edad Bioquímica</h2>
+              <p className="text-gray-600">{patient.firstName} {patient.lastName} - {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}</p>
             </div>
+          </div>
+        </div>
 
-            <h3 className="text-lg font-semibold">Test de Edad Bioquímica</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Formulario - Columna Izquierda */}
+          <div className="lg:col-span-2">
+            <form onSubmit={handleSubmit(handleCalculateAndSave)} className="bg-primary-dark rounded-xl p-6 text-white">
+              <h3 className="text-lg font-semibold mb-6">Biomarcadores Bioquímicos</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar-tabs">
                 {BIOCHEMISTRY_ITEMS.map((item) => (
-                    <div key={item.key}>
-                        <label htmlFor={item.key} className="block text-sm font-medium mb-2">{item.label} ({item.unit})</label>
-                        <Controller
-                            name={item.key}
-                            control={control}
-                            render={({ field }) => (
-                                <input
-                                    {...field}
-                                    id={item.key}
-                                    type="number"
-                                    step="any"
-                                    className={`input ${errors[item.key] ? 'border-red-500' : ''}`}
-                                    placeholder="0.00"
-                                    disabled={!isEditing}
-                                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                                />
-                            )}
+                  <div key={item.key}>
+                    <label htmlFor={item.key} className="block text-sm font-medium mb-2">
+                      {item.label} ({item.unit})
+                    </label>
+                    <Controller
+                      name={item.key}
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          {...field}
+                          id={item.key}
+                          type="number"
+                          step="any"
+                          className={`input ${errors[item.key] ? 'border-red-500' : ''}`}
+                          placeholder={item.placeholder}
+                          disabled={!isEditing}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                         />
-                        {errors[item.key] && <p className="text-red-300 text-xs mt-1">{errors[item.key]?.message}</p>}
-                    </div>
+                      )}
+                    />
+                    {errors[item.key] && <p className="text-red-300 text-xs mt-1">{errors[item.key]?.message}</p>}
+                  </div>
                 ))}
-            </div>
-            
-            {/* Botones de Acción */}
-            <div className="mt-6 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button type="submit" disabled={isSaving || !isEditing || !isValid} className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                    <FaSave />
-                    <span>{isSaving ? 'Guardando...' : 'Calcular y Guardar'}</span>
+              </div>
+              
+              {/* Botones de Acción */}
+              <div className="mt-6 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button 
+                  type="submit" 
+                  disabled={isSaving || !isEditing || !isValid} 
+                  className="w-full bg-white text-primary-dark font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  <FaSave />
+                  <span>{isSaving ? 'Guardando...' : 'Calcular y Guardar'}</span>
                 </button>
-                <button type="button" onClick={() => setIsEditing(true)} disabled={isEditing} className="w-full bg-yellow-500 text-white font-medium py-3 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                    <FaEdit />
-                    <span>Editar</span>
+                <button 
+                  type="button" 
+                  onClick={() => setIsEditing(true)} 
+                  disabled={isEditing} 
+                  className="w-full bg-yellow-500 text-white font-medium py-3 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  <FaEdit />
+                  <span>Editar</span>
                 </button>
-                <button type="button" onClick={onBack} disabled={isSaving} className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                    <FaUndo />
-                    <span>Volver</span>
+                <button 
+                  type="button" 
+                  onClick={onBack} 
+                  disabled={isSaving} 
+                  className="w-full bg-gray-600 text-white font-medium py-3 rounded-lg hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  <FaUndo />
+                  <span>Volver</span>
                 </button>
-            </div>
-        </div>
+              </div>
+            </form>
+          </div>
 
-        {/* Columna Derecha: Resultados */}
-        <div className="lg:col-span-2 space-y-6">
+          {/* Resultados - Columna Derecha */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Resultados Finales */}
             <div className="card">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Finales</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
-                        <p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 mb-1">Edad Bioquímica</p>
-                        <p className={`text-3xl font-bold ${currentResults ? getStatusColorClass(currentResults.status) : 'text-primary'}`}>
-                            {currentResults ? `${currentResults.biologicalAge.toFixed(1)}` : '--'}
-                        </p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 mb-1">Diferencial</p>
-                        <p className={`text-3xl font-bold ${currentResults ? getStatusColorClass(currentResults.status) : 'text-gray-900'}`}>
-                            {currentResults ? `${currentResults.differentialAge >= 0 ? '+' : ''}${currentResults.differentialAge.toFixed(1)}` : '--'}
-                        </p>
-                    </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Finales</h3>
+              <div className="grid grid-cols-1 gap-4 text-center">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
+                  <p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge}</p>
                 </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Edad Bioquímica</p>
+                  <p className={`text-3xl font-bold ${currentResults ? getStatusColorClass(currentResults.status) : 'text-primary'}`}>
+                    {currentResults ? `${currentResults.biologicalAge.toFixed(1)}` : '--'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Diferencial</p>
+                  <p className={`text-3xl font-bold ${currentResults ? getStatusColorClass(currentResults.status) : 'text-gray-900'}`}>
+                    {currentResults ? `${currentResults.differentialAge >= 0 ? '+' : ''}${currentResults.differentialAge.toFixed(1)}` : '--'}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="card">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados por Ítem</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {BIOCHEMISTRY_ITEMS.map(item => {
-                        const ageKey = `${item.key}Age` as keyof BiochemistryCalculationResult['partialAges'];
-                        const partialAge = currentResults?.partialAges[ageKey];
-                        const status = partialAge ? getBiochemistryStatus(partialAge, patient.chronologicalAge) : 'NO_DATA';
 
-                        return (
-                            <div key={item.key} className={`rounded-lg p-4 text-white transition-all ${getStatusColorClass(status, true)}`}>
-                                <h4 className="font-medium mb-2">{item.label}</h4>
-                                <div className="space-y-1 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="opacity-80">Edad Calc:</span>
-                                        <span className="font-medium">{partialAge ? `${partialAge.toFixed(1)} años` : '--'}</span>
-                                    </div>
-                                    <div className="mt-2 pt-2 border-t border-white/20">
-                                        <span className="text-xs uppercase tracking-wide">{status.replace('_', ' ')}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+            {/* Resultados por Ítem */}
+            <div className="card">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados por Ítem</h3>
+              <div className="grid grid-cols-1 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar-tabs">
+                {BIOCHEMISTRY_ITEMS.map(item => {
+                  const ageKey = `${item.key}Age` as keyof BiochemistryCalculationResult['partialAges'];
+                  const partialAge = currentResults?.partialAges[ageKey];
+                  const status = partialAge ? getBiochemistryStatus(partialAge, patient.chronologicalAge) : 'NO_DATA';
+
+                  return (
+                    <div key={item.key} className={`rounded-lg p-3 text-white transition-all ${getStatusColorClass(status, true)}`}>
+                      <h4 className="font-medium mb-2 text-sm">{item.label}</h4>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="opacity-80">Valor:</span>
+                          <span className="font-medium">{formValues[item.key] ? Number(formValues[item.key]).toFixed(2) : '--'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="opacity-80">Edad Calc:</span>
+                          <span className="font-medium">{partialAge ? `${partialAge.toFixed(1)} años` : '--'}</span>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-white/20">
+                          <span className="text-xs uppercase tracking-wide">
+                            {status === 'OPTIMAL' ? 'ÓPTIMO' : 
+                             status === 'SUBOPTIMAL' ? 'NORMAL' : 
+                             status === 'HIGH_RISK' ? 'RIESGO' : 'SIN CALCULAR'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+          </div>
         </div>
-      </form>
+      </div>
     </>
   );
 }

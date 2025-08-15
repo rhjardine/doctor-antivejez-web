@@ -167,7 +167,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
   };
 
-  // 🔒 Tipado seguro para cualquier sub-campo de las formas
   const handleSelectionChange = <K extends keyof (StandardFormItem & RevitalizationFormItem & MetabolicFormItem)>(
     itemId: string,
     field: K,
