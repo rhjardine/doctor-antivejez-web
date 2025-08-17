@@ -11,11 +11,12 @@ import {
   BiochemistryFormValues,
   BiochemistryCalculationResult,
   BiochemistryItem,
+  ResultStatus,
 } from '@/types/biochemistry';
 import { calculateAndSaveBiochemistryTest } from '@/lib/actions/biochemistry.actions';
 import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
 import { toast } from 'sonner';
-import { FaArrowLeft, FaSave, FaEdit, FaUndo, FaCheckCircle, FaCalculator } from 'react-icons/fa';
+import { FaArrowLeft, FaSave, FaEdit, FaUndo, FaCheckCircle } from 'react-icons/fa';
 
 // --- Esquema de Validación con Zod (sin cambios) ---
 const validationSchema = z.object(
@@ -64,7 +65,7 @@ function SuccessModal({ onClose, results }: { onClose: () => void, results: Bioc
   );
 }
 
-// ===== NUEVO: Subcomponente para la tarjeta de resultado por ítem =====
+// --- Subcomponente para la tarjeta de resultado por ítem ---
 interface ResultItemCardProps {
   item: BiochemistryItem;
   value?: number;
@@ -73,28 +74,36 @@ interface ResultItemCardProps {
 }
 
 function ResultItemCard({ item, value, calculatedAge, chronologicalAge }: ResultItemCardProps) {
-  const { status, color, label } = useMemo(() => {
-    if (calculatedAge === undefined || calculatedAge === null) {
-      return { status: 'SIN CALCULAR', color: 'gray', label: 'Sin Calcular' };
-    }
-    const diff = calculatedAge - chronologicalAge;
-    if (diff >= 7) return { status: 'ENVEJECIDO', color: 'red', label: 'Envejecido' };
-    if (diff > 0) return { status: 'NORMAL', color: 'yellow', label: 'Normal' };
-    return { status: 'REJUVENECIDO', color: 'green', label: 'Rejuvenecido' };
-  }, [calculatedAge, chronologicalAge]);
-
+  
   const colorClasses = {
     gray: 'bg-gray-100 border-gray-300',
     red: 'bg-red-50 border-red-400',
     yellow: 'bg-yellow-50 border-yellow-400',
     green: 'bg-green-50 border-green-400',
   };
+
+  // ===== SOLUCIÓN: Se define un tipo explícito para las claves de color =====
+  type ColorKey = keyof typeof colorClasses;
+  // =======================================================================
+
   const statusColorClasses = {
     gray: 'bg-gray-200 text-gray-700',
     red: 'bg-red-500 text-white',
     yellow: 'bg-yellow-500 text-white',
     green: 'bg-green-500 text-white',
   };
+
+  // ===== SOLUCIÓN: Se tipa el valor de retorno del hook useMemo =====
+  const { color, label } = useMemo((): { color: ColorKey; label: string } => {
+    if (calculatedAge === undefined || calculatedAge === null) {
+      return { color: 'gray', label: 'Sin Calcular' };
+    }
+    const diff = calculatedAge - chronologicalAge;
+    if (diff >= 7) return { color: 'red', label: 'Envejecido' };
+    if (diff > 0) return { color: 'yellow', label: 'Normal' };
+    return { color: 'green', label: 'Rejuvenecido' };
+  }, [calculatedAge, chronologicalAge]);
+  // ====================================================================
 
   return (
     <div className={`p-4 rounded-lg border ${colorClasses[color]}`}>
@@ -117,7 +126,7 @@ function ResultItemCard({ item, value, calculatedAge, chronologicalAge }: Result
 }
 
 
-// --- Componente Principal Refactorizado ---
+// --- Componente Principal (sin cambios en su lógica) ---
 export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete }: { patient: Patient, onBack: () => void, onTestComplete: () => void }) {
   const [isEditing, setIsEditing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -137,9 +146,7 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
       .filter(([, value]) => typeof value === 'number' && !isNaN(value))
       .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {} as BiochemistryFormValues);
     
-    // Solo calcula si al menos un campo tiene un valor numérico válido
     if (Object.keys(filledValues).length > 0) {
-        // Aseguramos que todos los campos requeridos para el cálculo tengan un valor, aunque sea 0 por defecto si no están llenos
         const completeFormValues = BIOCHEMISTRY_ITEMS.reduce((acc, item) => {
             acc[item.key] = filledValues[item.key] ?? 0;
             return acc;
@@ -194,14 +201,11 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
       <h1 className="text-2xl font-bold text-gray-800 mb-1">Test de Edad Bioquímica</h1>
       <p className="text-gray-600 mb-6">{patient.firstName} {patient.lastName} - {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}</p>
 
-      {/* ===== CAMBIO: Nuevo layout principal de 2 columnas ===== */}
       <form onSubmit={handleSubmit(handleCalculateAndSave)} className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
-        {/* Columna Izquierda: Formulario Vertical */}
         <div className="lg:col-span-2 card p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-6">Biomarcadores Bioquímicos</h3>
             
-            {/* ===== CAMBIO: Formulario ahora es vertical con space-y-5 ===== */}
             <div className="space-y-5">
                 {BIOCHEMISTRY_ITEMS.map((item) => (
                     <div key={item.key}>
@@ -227,7 +231,6 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
                 ))}
             </div>
             
-            {/* ===== CAMBIO: Botones de Acción en la parte inferior del formulario ===== */}
             <div className="mt-8 pt-6 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button type="submit" disabled={isSaving || !isEditing || !isValid} className="btn-success flex items-center justify-center space-x-2">
                     <FaSave />
@@ -244,9 +247,7 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
             </div>
         </div>
 
-        {/* Columna Derecha: Resultados */}
         <div className="lg:col-span-3 space-y-6">
-            {/* ===== CAMBIO: Resultados Finales Horizontales ===== */}
             <div className="card">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Resultados Finales</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
@@ -269,7 +270,6 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
                 </div>
             </div>
             
-            {/* ===== CAMBIO: Nuevas tarjetas de resultados por ítem ===== */}
             <div className="card">
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Resultados por Ítem</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
