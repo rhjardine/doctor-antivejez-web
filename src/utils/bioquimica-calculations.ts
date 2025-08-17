@@ -6,127 +6,63 @@ import {
   ResultStatus,
   BIOCHEMISTRY_ITEMS,
 } from '@/types/biochemistry';
-import { AGE_DIFF_RANGES } from '@/lib/constants';
 
-/**
- * Calcula la edad para un biomarcador específico basado en los baremos oficiales.
- * Implementa la lógica de interpolación lineal según la tabla de edad bioquímica.
- */
-function getAgeFromValue(value: number, key: keyof BiochemistryFormValues, chronologicalAge: number): number {
-    // Rangos de edad bioquímica (21-28, 28-35, ..., 112-120)
-    const ageRanges = [
-        [21, 28], [28, 35], [35, 42], [42, 49], [49, 56], [56, 63], [63, 70],
-        [70, 77], [77, 84], [84, 91], [91, 98], [98, 105], [105, 112], [112, 120]
-    ];
+// Rangos de edad definidos en la tabla
+const AGE_RANGES = [
+    [21, 28], [28, 35], [35, 42], [42, 49], [49, 56], [56, 63], [63, 70],
+    [70, 77], [77, 84], [84, 91], [91, 98], [98, 105], [105, 112], [112, 120]
+];
 
-    // Baremos específicos por biomarcador (basados en la tabla oficial)
-    const biomarkerRanges: Record<string, number[][]> = {
-        somatomedinC: [
-            [350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80],
-            [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]
-        ],
-        hba1c: [
-            [0, 0.5], [0.5, 1], [1, 1.5], [1.5, 3], [3, 5], [5, 6], [6, 7],
-            [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14]
-        ],
-        insulinBasal: [
-            [1, 2], [2, 5], [5, 7.5], [7.5, 10], [10, 15], [15, 30], [30, 40],
-            [40, 50], [50, 60], [60, 80], [80, 100], [100, 120], [120, 140], [140, 160]
-        ],
-        dheaS: [
-            [350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80],
-            [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]
-        ],
-        tgHdlRatio: [
-            [1, 2], [2, 3], [3, 4], [4, 5], [5, 7], [7, 10], [10, 13],
-            [13, 16], [16, 20], [20, 25], [25, 30], [30, 35], [35, 40], [40, 45]
-        ],
-        homocysteine: [
-            [0, 2.5], [2.5, 5], [5, 7.5], [7.5, 10], [10, 15], [15, 25], [25, 35],
-            [35, 45], [45, 55], [55, 60], [60, 65], [65, 70], [70, 85], [85, 100]
-        ]
-    };
+// Baremos oficiales extraídos de la tabla
+const BIOMARKER_RANGES: Record<string, { ranges: number[][], inverse: boolean }> = {
+    somatomedinC: { ranges: [[350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80], [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]], inverse: true },
+    hba1c: { ranges: [[0, 0.5], [0.5, 1], [1, 1.5], [1.5, 3], [3, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14]], inverse: false },
+    insulinBasal: { ranges: [[1, 2], [2, 5], [5, 7.5], [7.5, 10], [10, 15], [15, 30], [30, 40], [40, 50], [50, 60], [60, 80], [80, 100], [100, 120], [120, 140], [140, 160]], inverse: false },
+    postPrandial: { ranges: [[1, 4], [4, 8], [8, 12], [12, 16], [16, 20], [20, 25], [25, 30], [30, 40], [20, 60], [60, 90], [90, 120], [120, 140], [140, 160], [160, 200]], inverse: false },
+    tgHdlRatio: { ranges: [[1, 2], [2, 3], [3, 4], [4, 5], [5, 7], [7, 10], [10, 13], [13, 16], [16, 20], [20, 25], [25, 30], [30, 35], [35, 40], [40, 45]], inverse: false },
+    dheaS: { ranges: [[350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80], [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]], inverse: true },
+    homocysteine: { ranges: [[0, 2.5], [2.5, 5], [5, 7.5], [7.5, 10], [10, 15], [15, 25], [25, 35], [35, 45], [45, 55], [55, 60], [60, 65], [65, 70], [70, 85], [85, 100]], inverse: false },
+    psa: { ranges: [[30, 25], [25, 20], [20, 18], [18, 15], [15, 13], [13, 11], [10, 9], [9, 8], [8, 7], [7, 6], [6, 5], [5, 4], [4, 3], [3, 2]], inverse: true },
+    fsh: { ranges: [[1, 5], [5, 10], [10, 15], [15, 20], [20, 30], [30, 40], [40, 50], [50, 60], [60, 70], [70, 80], [80, 100], [100, 120], [120, 140], [140, 160]], inverse: false },
+    boneDensitometry: { ranges: [[1.41, 1.30], [1.30, 1.25], [1.25, 1.18], [1.18, 1.06], [1.06, 1.00], [1.00, 0.94], [0.94, 0.90], [0.90, 0.88], [0.88, 0.86], [0.86, 0.84], [0.84, 0.82], [0.82, 0.72], [0.72, 0.62], [0.62, 0.58]], inverse: true },
+};
 
-    // Obtener los rangos para este biomarcador
-    const ranges = biomarkerRanges[key];
-    if (!ranges) {
-        // Si no hay rangos definidos, usar una aproximación basada en la edad cronológica
-        return chronologicalAge + (Math.random() - 0.5) * 10;
-    }
+function getAgeFromValue(value: number, key: keyof BiochemistryFormValues): number | null {
+    const biomarkerData = BIOMARKER_RANGES[key];
+    if (!biomarkerData) return null; // No hay baremo para este ítem
 
-    // Buscar en qué rango cae el valor
+    const { ranges, inverse } = biomarkerData;
+
     for (let i = 0; i < ranges.length; i++) {
-        const [min, max] = ranges[i];
-        const [ageMin, ageMax] = ageRanges[i];
+        let [valMin, valMax] = ranges[i];
         
-        // Para biomarcadores inversos (como DHEA, Somatomedina C)
-        const isInverse = ['somatomedinC', 'dheaS'].includes(key);
-        
-        if (isInverse) {
-            if (value >= min && value <= max) {
-                // Interpolación lineal
-                const ratio = (value - max) / (min - max);
-                return ageMin + ratio * (ageMax - ageMin);
-            }
-        } else {
-            if (value >= min && value <= max) {
-                // Interpolación lineal
-                const ratio = (value - min) / (max - min);
-                return ageMin + ratio * (ageMax - ageMin);
-            }
+        // Si es inverso, los valores en la tabla van de mayor a menor
+        if (inverse) {
+            [valMin, valMax] = [valMax, valMin];
+        }
+
+        if (value >= valMin && value <= valMax) {
+            const [ageMin, ageMax] = AGE_RANGES[i];
+            const rangeWidth = valMax - valMin;
+            if (rangeWidth === 0) return ageMin; // Evitar división por cero
+
+            const ratio = (value - valMin) / rangeWidth;
+            
+            // La interpolación es la misma, la lógica inversa ya está en el orden de valMin/valMax
+            return ageMin + ratio * (ageMax - ageMin);
         }
     }
     
-    // Si no cae en ningún rango, asignar edad extrema
-    if (value < ranges[0][0]) {
-        return ageRanges[0][0]; // Edad mínima
-    } else {
-        return ageRanges[ageRanges.length - 1][1]; // Edad máxima
-    }
+    // Si el valor está fuera de todos los rangos, devolver la edad límite
+    const firstRange = inverse ? ranges[0].slice().reverse() : ranges[0];
+    const lastRange = inverse ? ranges[ranges.length - 1].slice().reverse() : ranges[ranges.length - 1];
+
+    if (value < firstRange[0]) return AGE_RANGES[0][0]; // Más joven que el rango mínimo
+    if (value > lastRange[1]) return AGE_RANGES[AGE_RANGES.length - 1][1]; // Más viejo que el rango máximo
+
+    return null;
 }
 
-/**
- * Determina el estado (Óptimo, Normal, Riesgo) de un biomarcador basado en la
- * diferencia entre su edad calculada y la edad cronológica del paciente.
- * ESTA ES LA LÓGICA SOLICITADA.
- */
-export function getBiochemistryStatus(
-  calculatedAge: number,
-  chronologicalAge: number
-): ResultStatus {
-  const difference = calculatedAge - chronologicalAge;
-
-  if (difference <= -7) {
-    return 'OPTIMAL'; // Rejuvenecido (Verde)
-  }
-  if (difference >= 7) {
-    return 'HIGH_RISK'; // Envejecido (Rojo)
-  }
-  if (difference >= -2 && difference <= 3) {
-    return 'SUBOPTIMAL'; // Normal (Amarillo)
-  }
-  return 'SUBOPTIMAL';
-}
-
-/**
- * Devuelve la clase de color de Tailwind CSS correspondiente a un estado.
- * @param isBackground - Si es true, devuelve la clase de fondo (bg-), si no, de texto (text-).
- */
-export function getStatusColorClass(status: ResultStatus, isBackground: boolean = false): string {
-  const colorMap = {
-    OPTIMAL: { bg: 'bg-green-500', text: 'text-green-500' },
-    SUBOPTIMAL: { bg: 'bg-yellow-500', text: 'text-yellow-500' },
-    HIGH_RISK: { bg: 'bg-red-500', text: 'text-red-500' },
-    NO_DATA: { bg: 'bg-gray-400', text: 'text-gray-400' },
-  };
-  const style = colorMap[status] || colorMap['NO_DATA'];
-  return isBackground ? style.bg : style.text;
-}
-
-/**
- * Función principal para calcular la edad bioquímica y otros resultados.
- * Utiliza la lógica de cálculo de ejemplo y la de estado solicitada.
- */
 export function calculateBioquimicaResults(
   formValues: BiochemistryFormValues,
   chronologicalAge: number,
@@ -140,23 +76,28 @@ export function calculateBioquimicaResults(
     const value = formValues[key];
 
     if (typeof value === 'number' && !isNaN(value)) {
-      const calculatedAge = getAgeFromValue(value, key, chronologicalAge);
-      const ageKey = `${key}Age` as keyof BiochemistryPartialAges;
-      partialAges[ageKey] = calculatedAge;
-      
-      totalAge += calculatedAge;
-      ageCount++;
+      const calculatedAge = getAgeFromValue(value, key);
+      if (calculatedAge !== null) {
+        const ageKey = `${key}Age` as keyof BiochemistryPartialAges;
+        partialAges[ageKey] = calculatedAge;
+        totalAge += calculatedAge;
+        ageCount++;
+      }
     }
   }
 
   const biologicalAge = ageCount > 0 ? totalAge / ageCount : chronologicalAge;
   const differentialAge = biologicalAge - chronologicalAge;
-  const overallStatus = getBiochemistryStatus(biologicalAge, chronologicalAge);
+
+  let status: ResultStatus = 'NORMAL';
+  if (differentialAge >= 7) status = 'ENVEJECIDO';
+  else if (differentialAge <= -7) status = 'REJUVENECIDO';
 
   return {
     biologicalAge,
     differentialAge,
+    chronologicalAge,
     partialAges,
-    status: overallStatus,
+    status,
   };
 }
