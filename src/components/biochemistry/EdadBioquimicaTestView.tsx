@@ -65,7 +65,7 @@ function SuccessModal({ onClose, results }: { onClose: () => void, results: Bioc
   );
 }
 
-// --- Subcomponente para la tarjeta de resultado por ítem ---
+// --- Subcomponente para la tarjeta de resultado por ítem (sin cambios) ---
 interface ResultItemCardProps {
   item: BiochemistryItem;
   value?: number;
@@ -74,26 +74,19 @@ interface ResultItemCardProps {
 }
 
 function ResultItemCard({ item, value, calculatedAge, chronologicalAge }: ResultItemCardProps) {
-  
   const colorClasses = {
     gray: 'bg-gray-100 border-gray-300',
     red: 'bg-red-50 border-red-400',
     yellow: 'bg-yellow-50 border-yellow-400',
     green: 'bg-green-50 border-green-400',
   };
-
-  // ===== SOLUCIÓN: Se define un tipo explícito para las claves de color =====
   type ColorKey = keyof typeof colorClasses;
-  // =======================================================================
-
   const statusColorClasses = {
     gray: 'bg-gray-200 text-gray-700',
     red: 'bg-red-500 text-white',
     yellow: 'bg-yellow-500 text-white',
     green: 'bg-green-500 text-white',
   };
-
-  // ===== SOLUCIÓN: Se tipa el valor de retorno del hook useMemo =====
   const { color, label } = useMemo((): { color: ColorKey; label: string } => {
     if (calculatedAge === undefined || calculatedAge === null) {
       return { color: 'gray', label: 'Sin Calcular' };
@@ -103,7 +96,6 @@ function ResultItemCard({ item, value, calculatedAge, chronologicalAge }: Result
     if (diff > 0) return { color: 'yellow', label: 'Normal' };
     return { color: 'green', label: 'Rejuvenecido' };
   }, [calculatedAge, chronologicalAge]);
-  // ====================================================================
 
   return (
     <div className={`p-4 rounded-lg border ${colorClasses[color]}`}>
@@ -126,7 +118,7 @@ function ResultItemCard({ item, value, calculatedAge, chronologicalAge }: Result
 }
 
 
-// --- Componente Principal (sin cambios en su lógica) ---
+// --- Componente Principal Refactorizado ---
 export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete }: { patient: Patient, onBack: () => void, onTestComplete: () => void }) {
   const [isEditing, setIsEditing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -203,53 +195,67 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
 
       <form onSubmit={handleSubmit(handleCalculateAndSave)} className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
-        <div className="lg:col-span-2 card p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-6">Biomarcadores Bioquímicos</h3>
+        {/* ===== AJUSTE 1: Formulario con fondo azul oscuro y texto claro ===== */}
+        <div className="lg:col-span-2 bg-[#293b64] rounded-xl p-6 text-white">
+            <h3 className="text-lg font-bold mb-6">Biomarcadores Bioquímicos</h3>
             
             <div className="space-y-5">
-                {BIOCHEMISTRY_ITEMS.map((item) => (
-                    <div key={item.key}>
-                        <label htmlFor={item.key} className="block text-sm font-medium mb-1 text-gray-700">{item.label} ({item.unit})</label>
-                        <Controller
-                            name={item.key}
-                            control={control}
-                            render={({ field }) => (
-                                <input
-                                    {...field}
-                                    id={item.key}
-                                    type="number"
-                                    step="any"
-                                    className={`input w-full ${errors[item.key] ? 'border-red-500' : ''}`}
-                                    placeholder="0.00"
-                                    disabled={!isEditing}
-                                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                                />
+                {BIOCHEMISTRY_ITEMS.map((item) => {
+                    const ageKey = `${item.key}Age` as keyof BiochemistryCalculationResult['partialAges'];
+                    const calculatedAge = currentResults?.partialAges[ageKey];
+                    
+                    return (
+                        <div key={item.key}>
+                            <label htmlFor={item.key} className="block text-sm font-medium mb-1 text-gray-200">{item.label} ({item.unit})</label>
+                            <Controller
+                                name={item.key}
+                                control={control}
+                                render={({ field }) => (
+                                    <input
+                                        {...field}
+                                        id={item.key}
+                                        type="number"
+                                        step="any"
+                                        className={`input w-full bg-gray-700/50 border-gray-500 text-white placeholder-gray-400 ${errors[item.key] ? 'border-red-500' : ''}`}
+                                        placeholder="0.00"
+                                        disabled={!isEditing}
+                                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                                    />
+                                )}
+                            />
+                            {/* ===== AJUSTE 5: Mostrar edad calculada debajo de cada ítem ===== */}
+                            {calculatedAge !== undefined && (
+                                <p className="text-right text-xs text-cyan-300 mt-1">
+                                    Edad Calculada: {calculatedAge.toFixed(1)} años
+                                </p>
                             )}
-                        />
-                        {errors[item.key] && <p className="text-red-500 text-xs mt-1">{errors[item.key]?.message}</p>}
-                    </div>
-                ))}
+                            {errors[item.key] && <p className="text-red-400 text-xs mt-1">{errors[item.key]?.message}</p>}
+                        </div>
+                    );
+                })}
             </div>
             
-            <div className="mt-8 pt-6 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button type="submit" disabled={isSaving || !isEditing || !isValid} className="btn-success flex items-center justify-center space-x-2">
+            {/* ===== AJUSTE 4: Botones estilizados profesionalmente ===== */}
+            <div className="mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <button type="submit" disabled={isSaving || !isEditing || !isValid} className="font-semibold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white disabled:bg-green-500/50 disabled:cursor-not-allowed">
                     <FaSave />
                     <span>{isSaving ? 'Guardando...' : 'Guardar'}</span>
                 </button>
-                <button type="button" onClick={() => setIsEditing(true)} disabled={isEditing} className="btn-warning flex items-center justify-center space-x-2">
+                <button type="button" onClick={() => setIsEditing(true)} disabled={isEditing} className="font-semibold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 bg-orange-500 hover:bg-orange-600 text-white disabled:bg-orange-500/50 disabled:cursor-not-allowed">
                     <FaEdit />
                     <span>Editar</span>
                 </button>
-                <button type="button" onClick={() => reset()} disabled={!isEditing} className="btn-info flex items-center justify-center space-x-2">
-                    <FaUndo />
-                    <span>Limpiar</span>
+                <button type="button" onClick={onBack} className="font-semibold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 bg-white hover:bg-gray-200 text-gray-700 border border-gray-300 shadow-sm">
+                    <FaArrowLeft />
+                    <span>Volver</span>
                 </button>
             </div>
         </div>
 
         <div className="lg:col-span-3 space-y-6">
-            <div className="card">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Resultados Finales</h3>
+            {/* ===== AJUSTE 2: Panel de resultados finales con fondo azul claro y texto blanco ===== */}
+            <div className="bg-[#23bcef] p-6 rounded-lg shadow-md">
+                <h3 className="text-lg font-bold text-white mb-4">Resultados Finales</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div className="bg-gray-100 rounded-lg p-4">
                         <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
@@ -271,7 +277,8 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
             </div>
             
             <div className="card">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Resultados por Ítem</h3>
+                {/* ===== AJUSTE 3: Cambio de texto a "Resultados por Parámetros" ===== */}
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Resultados por Parámetros</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     {BIOCHEMISTRY_ITEMS.map(item => {
                         const ageKey = `${item.key}Age` as keyof BiochemistryCalculationResult['partialAges'];
