@@ -29,14 +29,13 @@ const BIOMARKER_RANGES: Record<string, { ranges: number[][], inverse: boolean }>
 
 function getAgeFromValue(value: number, key: keyof BiochemistryFormValues): number | null {
     const biomarkerData = BIOMARKER_RANGES[key];
-    if (!biomarkerData) return null; // No hay baremo para este ítem
+    if (!biomarkerData) return null;
 
     const { ranges, inverse } = biomarkerData;
 
     for (let i = 0; i < ranges.length; i++) {
         let [valMin, valMax] = ranges[i];
         
-        // Si es inverso, los valores en la tabla van de mayor a menor
         if (inverse) {
             [valMin, valMax] = [valMax, valMin];
         }
@@ -44,24 +43,47 @@ function getAgeFromValue(value: number, key: keyof BiochemistryFormValues): numb
         if (value >= valMin && value <= valMax) {
             const [ageMin, ageMax] = AGE_RANGES[i];
             const rangeWidth = valMax - valMin;
-            if (rangeWidth === 0) return ageMin; // Evitar división por cero
+            if (rangeWidth === 0) return ageMin;
 
             const ratio = (value - valMin) / rangeWidth;
-            
-            // La interpolación es la misma, la lógica inversa ya está en el orden de valMin/valMax
             return ageMin + ratio * (ageMax - ageMin);
         }
     }
     
-    // Si el valor está fuera de todos los rangos, devolver la edad límite
     const firstRange = inverse ? ranges[0].slice().reverse() : ranges[0];
     const lastRange = inverse ? ranges[ranges.length - 1].slice().reverse() : ranges[ranges.length - 1];
 
-    if (value < firstRange[0]) return AGE_RANGES[0][0]; // Más joven que el rango mínimo
-    if (value > lastRange[1]) return AGE_RANGES[AGE_RANGES.length - 1][1]; // Más viejo que el rango máximo
+    if (value < firstRange[0]) return AGE_RANGES[0][0];
+    if (value > lastRange[1]) return AGE_RANGES[AGE_RANGES.length - 1][1];
 
     return null;
 }
+
+// ===== SOLUCIÓN: Se añade 'export' para que la función sea visible desde otros archivos =====
+export function getBiochemistryStatus(
+  calculatedAge: number,
+  chronologicalAge: number
+): ResultStatus {
+  const difference = calculatedAge - chronologicalAge;
+
+  if (difference >= 7) return 'ENVEJECIDO';
+  if (difference > 0) return 'NORMAL';
+  return 'REJUVENECIDO';
+}
+// ========================================================================================
+
+// ===== SOLUCIÓN: Se añade 'export' para que la función sea visible desde otros archivos =====
+export function getStatusColorClass(status: ResultStatus, isBackground: boolean = false): string {
+  const colorMap = {
+    REJUVENECIDO: { bg: 'bg-green-500', text: 'text-green-500' },
+    NORMAL: { bg: 'bg-yellow-500', text: 'text-yellow-500' },
+    ENVEJECIDO: { bg: 'bg-red-500', text: 'text-red-500' },
+    'SIN CALCULAR': { bg: 'bg-gray-400', text: 'text-gray-400' },
+  };
+  const style = colorMap[status] || colorMap['SIN CALCULAR'];
+  return isBackground ? style.bg : style.text;
+}
+// ========================================================================================
 
 export function calculateBioquimicaResults(
   formValues: BiochemistryFormValues,
@@ -88,16 +110,13 @@ export function calculateBioquimicaResults(
 
   const biologicalAge = ageCount > 0 ? totalAge / ageCount : chronologicalAge;
   const differentialAge = biologicalAge - chronologicalAge;
-
-  let status: ResultStatus = 'NORMAL';
-  if (differentialAge >= 7) status = 'ENVEJECIDO';
-  else if (differentialAge <= -7) status = 'REJUVENECIDO';
+  const overallStatus = getBiochemistryStatus(biologicalAge, chronologicalAge);
 
   return {
     biologicalAge,
     differentialAge,
     chronologicalAge,
     partialAges,
-    status,
+    status: overallStatus,
   };
 }

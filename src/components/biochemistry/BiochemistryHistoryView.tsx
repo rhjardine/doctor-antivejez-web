@@ -131,7 +131,7 @@ export default function BiochemistryHistoryView({ patient, onBack, onHistoryChan
                       {BIOCHEMISTRY_ITEMS.map(({ key, label }) => {
                         const value = (selectedTest as any)[key];
                         const ageValue = (selectedTest as any)[`${key}Age`];
-                        const status = ageValue ? getBiochemistryStatus(ageValue, selectedTest.chronologicalAge) : 'NO_DATA';
+                        const status = ageValue ? getBiochemistryStatus(ageValue, selectedTest.chronologicalAge) : 'SIN CALCULAR';
                         return (
                           <div key={key} className={`p-3 rounded-lg text-white ${getStatusColorClass(status, true)}`}>
                             <p className="text-sm font-medium">{label}</p>

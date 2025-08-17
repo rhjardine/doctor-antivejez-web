@@ -4,7 +4,6 @@
 import { prisma } from '@/lib/db';
 import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
 import { BiochemistryFormValues, BiochemistryCalculationResult } from '@/types/biochemistry';
-import { BIOCHEMISTRY_ITEMS } from '@/types/biochemistry';
 import { revalidatePath } from 'next/cache';
 
 interface SaveTestParams {
@@ -20,14 +19,15 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
   const { patientId, chronologicalAge, formValues } = params;
 
   try {
-    // 1. Validar que al menos algunos campos estén completos
-    const filledFields = Object.entries(formValues).filter(([, value]) => 
-      typeof value === 'number' && !isNaN(value)
+    // ===== CAMBIO: Se ajusta la validación para requerir al menos un campo =====
+    const filledFields = Object.values(formValues).filter(
+      value => typeof value === 'number' && !isNaN(value)
     );
     
     if (filledFields.length === 0) {
-      return { success: false, error: 'Debe completar al menos un biomarcador.' };
+      return { success: false, error: 'Debe completar al menos un biomarcador para guardar el test.' };
     }
+    // ========================================================================
 
     // 2. Calcular los resultados usando la lógica centralizada
     const results = calculateBioquimicaResults(formValues, chronologicalAge);
