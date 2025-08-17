@@ -4,6 +4,7 @@
 import { prisma } from '@/lib/db';
 import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
 import { BiochemistryFormValues, BiochemistryCalculationResult } from '@/types/biochemistry';
+import { BIOCHEMISTRY_ITEMS } from '@/types/biochemistry';
 import { revalidatePath } from 'next/cache';
 
 interface SaveTestParams {
@@ -19,12 +20,13 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
   const { patientId, chronologicalAge, formValues } = params;
 
   try {
-    // 1. Validar que todos los campos necesarios estén completos
-    const requiredFields = BIOCHEMISTRY_ITEMS.map(item => item.key);
-    for (const key of requiredFields) {
-      if (formValues[key as keyof BiochemistryFormValues] === undefined || formValues[key as keyof BiochemistryFormValues] === null) {
-        return { success: false, error: `El campo '${key}' es obligatorio.` };
-      }
+    // 1. Validar que al menos algunos campos estén completos
+    const filledFields = Object.entries(formValues).filter(([, value]) => 
+      typeof value === 'number' && !isNaN(value)
+    );
+    
+    if (filledFields.length === 0) {
+      return { success: false, error: 'Debe completar al menos un biomarcador.' };
     }
 
     // 2. Calcular los resultados usando la lógica centralizada
