@@ -100,37 +100,40 @@ model VerificationToken {
 // =================================================================
 
 model Patient {
-  id                String             @id @default(cuid())
-  controlNumber     Int                @default(autoincrement())
-  userId            String
-  photo             String?
-  nationality       String
-  identification    String             @unique
-  historyDate       DateTime
-  lastName          String
-  firstName         String
-  birthDate         DateTime
-  chronologicalAge  Int
-  gender            Gender
-  birthPlace        String
-  phone             String
-  maritalStatus     String
-  profession        String
-  country           String
-  state             String
-  city              String
-  address           String
-  bloodType         String
-  email             String
-  observations      String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  id                  String               @id @default(cuid())
+  controlNumber       Int                  @default(autoincrement())
+  userId              String
+  photo               String?
+  nationality         String
+  identification      String               @unique
+  historyDate         DateTime
+  lastName            String
+  firstName           String
+  birthDate           DateTime
+  chronologicalAge    Int
+  gender              Gender
+  birthPlace          String
+  phone               String
+  maritalStatus       String
+  profession          String
+  country             String
+  state               String
+  city                String
+  address             String
+  bloodType           String
+  email               String
+  observations        String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  biophysicsTests   BiophysicsTest[]
-  biochemistryTests BiochemistryTest[]
-  appointments      Appointment[]
-  guides            PatientGuide[] // Relación con las guías del paciente
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  biophysicsTests     BiophysicsTest[]
+  biochemistryTests   BiochemistryTest[]
+  // ===== RELACIÓN AÑADIDA: Se agrega la relación con el nuevo modelo de test =====
+  orthomolecularTests OrthomolecularTest[]
+  // ============================================================================
+  appointments        Appointment[]
+  guides              PatientGuide[]
 
   @@map("patients")
 }
@@ -217,6 +220,119 @@ model BiochemistryTest {
 
   @@map("biochemistry_tests")
 }
+
+// ===== NUEVO MODELO: Test Ortomolecular =====
+model OrthomolecularTest {
+  id                String   @id @default(cuid())
+  patientId         String
+  chronologicalAge  Float
+  orthomolecularAge Float
+  differentialAge   Float
+  testDate          DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // --- Parámetros del Test ---
+  aluminio          Float?
+  antimonio         Float?
+  arsenico          Float?
+  bario             Float?
+  berilio           Float?
+  bismuto           Float?
+  cadmio            Float?
+  mercurio          Float?
+  niquel            Float?
+  plata             Float?
+  platino           Float?
+  plomo             Float?
+  talio             Float?
+  tinio             Float?
+  titanio           Float?
+  torio             Float?
+  uranio            Float?
+  calcio            Float?
+  calcioAlt         Float?
+  magnesio          Float?
+  magnesioAlt       Float?
+  sodio             Float?
+  potasio           Float?
+  potasioAlt        Float?
+  cobre             Float?
+  cobreAlt          Float?
+  zinc              Float?
+  zincAlt           Float?
+  manganeso         Float?
+  manganesoAlt      Float?
+  cromo             Float?
+  cromoAlt          Float?
+  vanadio           Float?
+  molibdeno         Float?
+  boro              Float?
+  yodo              Float?
+  litio             Float?
+  phosphoro         Float?
+  selenio           Float?
+  estroncio         Float?
+  azufre            Float?
+  cobalto           Float?
+  hierro            Float?
+  germanio          Float?
+  rubidio           Float?
+  zirconio          Float?
+
+  // --- Edades Parciales Calculadas ---
+  aluminioAge       Float?
+  antimonioAge      Float?
+  arsenicoAge       Float?
+  barioAge          Float?
+  berilioAge        Float?
+  bismutoAge        Float?
+  cadmioAge         Float?
+  mercurioAge       Float?
+  niquelAge         Float?
+  plataAge          Float?
+  platinoAge        Float?
+  plomoAge          Float?
+  talioAge          Float?
+  tinioAge          Float?
+  titanioAge        Float?
+  torioAge          Float?
+  uranioAge         Float?
+  calcioAge         Float?
+  calcioAltAge      Float?
+  magnesioAge       Float?
+  magnesioAltAge    Float?
+  sodioAge          Float?
+  potasioAge        Float?
+  potasioAltAge     Float?
+  cobreAge          Float?
+  cobreAltAge       Float?
+  zincAge           Float?
+  zincAltAge        Float?
+  manganesoAge      Float?
+  manganesoAltAge   Float?
+  cromoAge          Float?
+  cromoAltAge       Float?
+  vanadioAge        Float?
+  molibdenoAge      Float?
+  boroAge           Float?
+  yodoAge           Float?
+  litioAge          Float?
+  phosphoroAge      Float?
+  selenioAge        Float?
+  estroncioAge      Float?
+  azufreAge         Float?
+  cobaltoAge        Float?
+  hierroAge         Float?
+  germanioAge       Float?
+  rubidioAge        Float?
+  zirconioAge       Float?
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("orthomolecular_tests")
+}
+// ============================================
 
 // =================================================================
 // Modelos para Baremos y Rangos

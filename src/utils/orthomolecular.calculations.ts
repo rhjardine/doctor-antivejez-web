@@ -1,96 +1,165 @@
 // src/utils/orthomolecular-calculations.ts
+import {
+  OrthomolecularFormValues,
+  OrthomolecularCalculationResult,
+  OrthomolecularPartialAges,
+  ResultStatus,
+  ORTHOMOLECULAR_ITEMS,
+} from '@/types/orthomolecular';
 
-import { OrthomolecularTestFormValues } from '@/types/orthomolecular';
+const AGE_RANGES = [
+    [21, 28], [28, 35], [35, 42], [42, 49], [49, 56], [56, 63], [63, 70],
+    [70, 77], [77, 84], [84, 91], [91, 98], [98, 105], [105, 112], [112, 120]
+];
 
-// --- ESTRUCTURA DE DATOS BASADA EN LA TABLA PROPORCIONADA ---
-// Cada elemento tiene una lista de "brackets" o rangos.
-// Cada bracket tiene un rango de valores [min, max] y un rango de edad [minAge, maxAge].
-const ageBrackets: Record<string, { range: [number, number]; age: [number, number] }[]> = {
-  aluminio: [
-    { range: [0, 1.75], age: [21, 28] }, { range: [1.75, 3.5], age: [28, 35] },
-    { range: [3.5, 5.25], age: [35, 42] }, { range: [5.25, 7], age: [42, 49] },
-    { range: [7, 7.9], age: [49, 56] }, { range: [7.9, 8.8], age: [56, 63] },
-    { range: [8.8, 9.7], age: [63, 70] }, { range: [9.7, 9.8], age: [70, 77] },
-    { range: [9.8, 9.9], age: [77, 84] }, { range: [9.9, 10], age: [84, 91] },
-    { range: [10, 10.1], age: [91, 98] }, { range: [10.1, 10.2], age: [98, 105] },
-    { range: [10.2, 10.3], age: [105, 112] }, { range: [10.3, Infinity], age: [112, 120] },
-  ],
-  arsenico: [
-    { range: [0, 0.02], age: [21, 28] }, { range: [0.02, 0.04], age: [28, 35] },
-    { range: [0.04, 0.06], age: [35, 42] }, { range: [0.06, 0.08], age: [42, 49] },
-    { range: [0.08, 0.09], age: [49, 56] }, { range: [0.09, 0.1], age: [56, 63] },
-    { range: [0.1, 0.11], age: [63, 70] }, { range: [0.11, 0.16], age: [70, 77] },
-    { range: [0.16, 0.17], age: [77, 84] }, { range: [0.17, 0.18], age: [84, 91] },
-    { range: [0.18, 0.19], age: [91, 98] }, { range: [0.19, 0.2], age: [98, 105] },
-    { range: [0.2, 0.21], age: [105, 112] }, { range: [0.21, Infinity], age: [112, 120] },
-  ],
-  plomo: [
-    { range: [0, 0.2], age: [21, 28] }, { range: [0.2, 0.4], age: [28, 35] },
-    { range: [0.4, 0.6], age: [35, 42] }, { range: [0.6, 0.8], age: [42, 49] },
-    { range: [0.8, 0.9], age: [49, 56] }, { range: [0.9, 1], age: [56, 63] },
-    { range: [1, 1.11], age: [63, 70] }, { range: [1.11, 1.12], age: [70, 77] },
-    { range: [1.12, 1.13], age: [77, 84] }, { range: [1.13, 1.14], age: [84, 91] },
-    { range: [1.14, 1.15], age: [91, 98] }, { range: [1.15, Infinity], age: [112, 120] },
-  ],
-  // --- Minerales con rangos de deficiencia y exceso ---
-  calcio: [
-    { range: [135, 200], age: [21, 28] }, // Deficiencia
-    { range: [200, 325], age: [21, 28] }, // Óptimo
-    { range: [325, 450], age: [28, 35] }, // Exceso
-    // ... y así sucesivamente para todos los rangos de la tabla.
-  ],
-  zinc: [
-    { range: [87.75, 130], age: [21, 28] }, // Deficiencia
-    { range: [130, 147.5], age: [21, 28] }, // Óptimo
-    { range: [147.5, 165], age: [28, 35] }, // Exceso
-     // ... y así sucesivamente.
-  ],
-  // ... Añadir aquí el resto de los elementos de la tabla de la misma manera.
+const BIOMARKER_RANGES: Record<string, { ranges: (number[] | string[])[], inverse: boolean }> = {
+    aluminio: { ranges: [[0, 1.75], [1.75, 3.5], [3.5, 5.25], [5.25, 7], [7, 7.9], [7.9, 8.8], [8.8, 9.7], [9.7, 9.8], [9.8, 9.9], ['9/9', 10], [10, 10.1], [10.1, 10.2], [10.2, 10.3], [10.3, '>10.4']], inverse: false },
+    antimonio: { ranges: [[0, 0.016], [0.016, 0.032], [0.032, 0.048], [0.048, 0.066], [0.066, 0.074], [0.074, 0.084], [0.084, 0.092], [0.092, 0.093], [0.093, 0.094], [0.094, 0.095], [0.095, 0.096], [0.096, 0.097], [0.097, 0.098], [0.098, 0.099]], inverse: false },
+    arsenico: { ranges: [[0, 0.020], [0.020, 0.040], [0.040, 0.060], [0.060, 0.080], [0.080, 0.090], [0.090, 0.1], [0.1, 0.11], [0.11, 0.16], [0.16, 0.17], [0.17, 0.18], [0.18, 0.19], [0.19, 0.2], [0.2, 0.21], [0.21, '>0.22']], inverse: false },
+    bario: { ranges: [[0, 0.25], [0.25, 0.5], [0.5, 0.75], [0.75, 1], [1, 1.15], [1.15, 1.30], [1.30, 1.45], [1.45, 1.47], [1.47, 1.49], [1.49, 1.51], [1.51, 1.53], [1.53, 1.55], [1.55, 1.57], [1.57, '>1.59']], inverse: false },
+    berilio: { ranges: [[0, 0.0005], [0.0005, 0.0010], [0.0010, 0.0015], [0.0015, 0.0020], [0.0020, 0.0022], [0.0022, 0.0025], [0.0025, 0.0028], [0.0028, 0.0029], [0.0029, 0.0030], [0.0030, 0.0031], [0.0031, 0.0032], [0.0032, 0.0033], [0.0033, 0.0034], [0.0034, '>0.0035']], inverse: false },
+    bismuto: { ranges: [[0, 0.5], [0.5, 1], [1, 1.5], [1.5, 2], [2, 2.26], [2.26, 2.52], [2.52, 2.79], [2.79, 2.81], [2.81, 2.83], [2.83, 2.85], [2.85, 2.87], [2.87, 2.89], [2.89, 2.91], [2.91, '>2.93']], inverse: false },
+    cadmio: { ranges: [[0, 0.016], [0.016, 0.032], [0.032, 0.048], [0.048, 0.065], [0.065, 0.073], [0.073, 0.081], [0.081, 0.090], [0.090, 0.091], [0.091, 0.092], [0.092, 0.093], [0.093, 0.094], [0.094, 0.095], [0.095, 0.096], [0.096, '>0.097']], inverse: false },
+    mercurio: { ranges: [[0, 0.2], [0.2, 0.4], [0.4, 0.6], [0.6, 0.8], [0.8, 0.9], [0.9, 1], [1, 1.11], [1.11, 1.12], [1.12, 1.13], [1.13, 1.14], [1.14, 1.15], [1.15, 1.16], [1.16, 1.17], [1.17, '>0.18']], inverse: false },
+    niquel: { ranges: [[0, 0.05], [0.05, 0.1], [0.1, 0.15], [0.15, 0.2], [0.2, 0.226], [0.226, 0.253], [0.253, 0.279], [0.279, 0.281], [0.281, 0.283], [0.283, 0.285], [0.285, 0.287], [0.287, 0.289], [0.289, 0.291], [0.291, '>0.293']], inverse: false },
+    plata: { ranges: [[0, 0.02], [0.02, 0.04], [0.04, 0.06], [0.06, 0.08], [0.08, 0.09], [0.09, 0.010], [0.010, 0.011], [0.011, 0.012], [0.012, 0.013], [0.013, 0.014], [0.014, 0.015], [0.015, 0.016], [0.016, 0.017], [0.017, '>0.018']], inverse: false },
+    platino: { ranges: [[0, 0.001], [0.001, 0.002], [0.002, 0.003], [0.003, 0.005], [0.005, 0.006], [0.006, 0.007], [0.007, 0.008], [0.008, 0.009], [0.009, 0.010], [0.010, 0.011], [0.011, 0.012], [0.012, 0.013], [0.013, 0.014], [0.014, 0.015]], inverse: false },
+    plomo: { ranges: [[0, 0.2], [0.2, 0.4], [0.4, 0.6], [0.6, 0.8], [0.8, 0.9], [0.9, 1], [1, 1.11], [1.11, 1.12], [1.12, 1.13], [1.12, 1.13], [1.12, 1.13], [1.13, 1.14], [1.14, 1.15], [1.15, '>0.16']], inverse: false },
+    talio: { ranges: [[0, 0.0005], [0.0005, 0.0010], [0.0010, 0.0015], [0.0015, 0.0020], [0.0020, 0.0022], [0.0022, 0.0025], [0.0025, 0.0028], [0.0028, 0.0029], [0.0029, 0.0030], [0.0030, 0.0031], [0.0031, 0.0032], [0.0032, 0.0033], [0.0033, 0.0034], [0.0034, '>0.0035']], inverse: false },
+    tinio: { ranges: [[0, 0.05], [0.05, 0.1], [0.1, 0.2], [0.2, 0.3], [0.3, 0.35], [0.35, 0.4], ['-0.41', 0.42], [0.42, 0.43], [0.43, 0.44], [0.44, 0.45], [0.45, 0.46], [0.46, 0.47], [0.47, 0.48], [0.48, '>0.49']], inverse: false },
+    titanio: { ranges: [[0, 0.15], [0.15, 0.3], [0.3, 0.45], [0.45, 0.6], [0.6, 0.68], [0.68, 0.76], [0.76, 0.84], [0.84, 0.85], [0.85, 0.86], [0.86, 0.87], [0.87, 0.88], [0.88, 0.89], [0.89, 0.90], [0.90, '>1.0']], inverse: false },
+    torio: { ranges: [[0, 0.0005], [0.0005, 0.0010], [0.0010, 0.0015], [0.0015, 0.0020], [0.0020, 0.0023], [0.0023, 0.0026], [0.0026, 0.0029], [0.0029, 0.0030], [0.0030, 0.0031], [0.0031, 0.0032], [0.0032, 0.0033], [0.0033, 0.0034], [0.0034, 0.0035], [0.0035, '>0.0036']], inverse: false },
+    uranio: { ranges: [[0, 0.015], [0.015, 0.030], [0.030, 0.045], [0.045, 0.060], [0.060, 0.068], [0.068, 0.076], [0.076, 0.084], [0.084, 0.085], [0.085, 0.086], [0.086, 0.087], [0.087, 0.088], [0.088, 0.089], [0.089, 0.090], [0.090, '>0.10']], inverse: false },
+    calcio: { ranges: [[200, 325], [325, 450], [450, 575], [575, 750], [750, 920], [920, 1090], [1090, 1260], [1260, 1290], [1290, 1320], [1320, 1350], [1350, 1380], [1380, 1410], [1410, 1440], [1440, '>1470']], inverse: false },
+    calcio_alt: { ranges: [[199.99, 135], [135, 70], [70, 35], [35, 5], [5, 4], [4, 4.5], [4.5, 3], [3, 2.5], [2.5, 2], [2, 1.5], [1.5, '<1']], inverse: true },
+    magnesio: { ranges: [[25, 37.5], [37.5, 50], [50, 62.5], [62.5, 75], [75, 92], [92, 109], [109, 126], [126, 129], [129, 132], [132, 135], [135, 139], [139, 141], [141, 144], [144, '>146']], inverse: false },
+    magnesio_alt: { ranges: [[24.99, 16], [16, 8], [8, 4], [4, 0.64], [0.64, 0.55], [0.55, 0.46], [0.46, 0.37], [0.37, 0.28], [0.28, 0.19], [0.19, '<0.10']], inverse: true },
+    sodio: { ranges: [[20, 60], [60, 100], [100, 140], [140, 180], [180, 220], [220, 260], [260, 302], [302, 308], [308, 316], [316, 322], [322, 330], [330, 338], [338, 346], [346, '>354']], inverse: false },
+    potasio: { ranges: [[9, 26], [26, 44], [44, 62], [62, 80], [80, 98], [98, 116], [116, 134], [134, 137], [137, 140], [140, 143], [143, 146], [146, 149], [149, 152], [152, '>155']], inverse: false },
+    potasio_alt: { ranges: [[19.99, 14], [14, 10], [10, 5], [5, 3], [3, 2.5], [2.5, 2], [2, 1.5], [1.5, 1], [1, 0.5], [0.5, 0]], inverse: true },
+    cobre: { ranges: [[11, 16], [16, 20], [20, 25], [25, 30], [30, 35], [35, 45], [45, 50], [50, 51], [51, 52], [52, 53], [53, 54], [54, 55], [55, 56], [56, '>58']], inverse: false },
+    cobre_alt: { ranges: [[8.99, 6.48], [6.48, 3.96], [3.96, 1.44], [1.44, 1.24], [1.24, 1.04], [1.04, 0.84], ['0.84-0', 64], [0.64, 0.44], [0.44, 0.24], [0.24, 0]], inverse: true },
+    zinc: { ranges: [[130, 147.5], [147.5, 165], [165, 182.5], [182.5, 200], [200, 245], [245, 290], [290, 336], [336, 343], [343, 350], [357, 364], [364, 371], [371, 378], [378, 385], [385, '>392']], inverse: false },
+    zinc_alt: { ranges: [[129.99, 87.75], [87.25, 45], [45, 3.25], [3.25, 2.75], [2.75, 2.25], [2.25, 1.75], [1.75, 1.25], [1.25, 0.75], [0.75, 0.25], [0.25, 0]], inverse: true },
+    manganeso: { ranges: [[0.08, 0.19], [0.19, 0.29], [0.29, 0.39], [0.39, 0.50], [0.50, 0.61], [0.61, 0.72], [0.72, 0.84], [0.84, 0.86], [0.86, 0.88], [0.88, 0.90], [0.90, 0.92], [0.92, 0.94], [0.94, 0.96], [0.96, '>0.98']], inverse: false },
+    manganeso_alt: { ranges: [[0.079, 0.060], [0.060, 0.040], [0.040, 0.020], [0.020, 0.018], [0.018, 0.016], [0.016, 0.014], [0.014, 0.012], [0.012, 0.010], [0.010, 0.008], [0.008, 0]], inverse: true },
+    cromo: { ranges: [[0.4, 0.45], [0.45, 0.55], [0.55, 0.60], [0.60, 0.70], [0.70, 0.86], [0.86, 1], [1, 1.18], [1.18, 1.21], [1.21, 1.24], [1.24, 1.27], [1.27, 1.30], [1.30, 1.33], [1.33, 1.36], [1.36, 1.39]], inverse: false },
+    cromo_alt: { ranges: [[0.39, 0.30], [0.30, 0.20], [0.20, 0.10], [0.10, 0.07], [0.07, 0.06], [0.06, 0.05], [0.05, 0.04], [0.04, 0.03], [0.03, 0.02], [0.02, 0]], inverse: true },
+    vanadio: { ranges: [[0.018, 0.030], [0.030, 0.042], [0.042, 0.054], [0.054, 0.065], [0.065, 0.077], [0.077, 0.088], [0.088, 0.10], [0.10, 0.11], [0.11, 0.12], [0.12, 0.13], [0.13, 0.14], [0.14, 0.15], [0.15, 0.16], [0.16, '>0.17']], inverse: false },
+    molibdeno: { ranges: [[0.025, 0.034], [0.034, 0.043], [0.043, 0.052], [0.052, 0.060], [0.060, 0.074], [0.074, 0.087], [0.087, 0.10], [0.10, 0.11], [0.11, 0.12], [0.12, 0.13], [0.13, 0.14], [0.14, 0.15], [0.15, 0.16], [0.16, '>0.17']], inverse: false },
+    boro: { ranges: [[0.4, 1], [1, 1.65], [1.65, 2.30], [2.30, 3], [3, 3.7], [3.7, 4.4], [4.4, 5], [5, 5.1], [5.1, 5.2], [5.2, 5.3], [5.3, 5.4], [5.4, 5.5], [5.5, 5.6], [5.6, '>5.7']], inverse: false },
+    yodo: { ranges: [[0.25, 0.65], [0.65, 1.10], [1.10, 1.40], [1.40, 1.80], [1.8, 2.2], [2.2, 2.6], [2.6, 3], [3, 3.1], [3.1, 3.2], [3.2, 3.3], [3.3, 3.4], [3.4, 3.5], [3.5, 3.6], [3.6, '>3.7']], inverse: false },
+    litio: { ranges: [[0.007, 0.010], [0.010, 0.013], [0.013, 0.016], [0.016, 0.020], [0.020, 0.025], [0.025, 0.030], [0.030, 0.034], [0.034, 0.035], [0.035, 0.036], [0.036, 0.037], [0.037, 0.038], [0.038, 0.039], [0.039, 0.040], [0.040, '>0.041']], inverse: false },
+    phosphoro: { ranges: [[150, 167.5], [167.5, 185], [185, 202.5], [202.5, 220], [220, 270], [270, 320], [320, 370], [370, 379], [379, 388], [388, 397], [397, 406], [406, 415], [415, 424], [424, '>433']], inverse: false },
+    selenio: { ranges: [[0.70, 0.82], [0.82, 0.94], [0.94, 1.07], [1.07, 1.20], [1.2, 1.5], [1.5, 1.7], [1.7, 2], [2, 2.05], [2.05, 2.10], [2.10, 2.15], [2.15, 2.20], [2.20, 2.25], [2.25, 2.30], [2.30, '>2.35']], inverse: false },
+    estroncio: { ranges: [[0.30, 0.85], [0.85, 1.4], [1.4, 2.25], [2.25, 2.5], [2.5, 3], [3, 3.5], [3.5, 4.0], [4.0, 4.1], [4.1, 4.2], [4.2, 4.3], [4.3, 4.4], [4.4, 4.5], [4.5, 4.6], [4.6, '>4.7']], inverse: false },
+    azufre: { ranges: [[44000, 45500], [45500, 47000], [47000, 48500], [48500, 50000], [50000, 61333], [61333, 72666], [72666, 84000], [84000, 85928], [85928, 87856], [87856, 89784], [89784, 91712], [91712, 93640], [93640, 95568], [95568, 97500]], inverse: false },
+    cobalto: { ranges: [[0.004, 0.008], [0.008, 0.012], [0.012, 0.016], [0.016, 0.020], [0.020, 0.025], [0.025, 0.030], [0.030, 0.034], [0.034, 0.035], [0.035, 0.036], [0.036, 0.037], [0.037, 0.038], [0.038, 0.039], [0.039, 0.040], [0.040, '>0.041']], inverse: false },
+    hierro: { ranges: [[7, 9.25], [9.25, 11.50], [11.50, 13.75], [13.75, 16], [16, 19], [19, 23], [23, 26.9], [26.9, 27.5], [27.5, 28.1], [28.1, 28.7], [28.7, 29.3], [29.3, 29.9], [29.9, 30.5], [30.5, '>31.2']], inverse: false },
+    germanio: { ranges: [[0.030, 0.033], [0.033, 0.035], [0.035, 0.038], [0.038, 0.040], [0.040, 0.049], [0.049, 0.058], [0.058, 0.067], [0.067, 0.069], [0.069, 0.071], [0.071, 0.073], [0.073, 0.075], [0.075, 0.077], [0.077, 0.079], [0.079, 0.081]], inverse: false },
+    rubidio: { ranges: [[0.011, 0.038], [0.044, 0.065], [0.065, 0.092], [0.092, 0.120], [0.12, 0.15], [0.15, 0.17], [0.17, 0.20], [0.20, 0.21], [0.21, 0.22], [0.22, 0.23], [0.23, 0.24], [0.24, 0.25], [0.25, 0.26], [0.26, '>0.27']], inverse: false },
+    zirconio: { ranges: [[0.020, 0.125], [0.125, 0.230], [0.230, 0.335], [0.335, 0.440], [0.44, 0.54], [0.54, 0.64], [0.64, 0.74], [0.74, 0.76], [0.76, 0.78], [0.78, 0.80], [0.80, 0.82], [0.82, 0.84], [0.84, 0.86], [0.86, '>0.88']], inverse: false },
 };
 
-/**
- * Calcula la Edad Orthomolecular basándose en los valores del test y la tabla de rangos.
- *
- * @param {OrthomolecularTestFormValues['elements']} elements - Objeto con los valores de cada elemento.
- * @param {number} chronologicalAge - La edad cronológica actual del paciente.
- * @returns {number} La edad orthomolecular calculada.
- */
-export const calculateOrthomolecularAge = (
-  elements: OrthomolecularTestFormValues['elements'],
-  chronologicalAge: number // La edad cronológica no se usa en este cálculo, pero se mantiene por si se necesita en el futuro.
-): number => {
-  if (!elements || Object.keys(elements).length === 0) {
-    return 0;
-  }
+function getAgeFromValue(value: number, key: keyof OrthomolecularFormValues): number | null {
+    const biomarkerData = BIOMARKER_RANGES[key];
+    if (!biomarkerData) return null;
 
-  const calculatedAges: number[] = [];
+    const { ranges, inverse } = biomarkerData;
 
-  // Iterar sobre cada elemento introducido en el formulario
-  for (const elementId in elements) {
-    const value = elements[elementId as keyof typeof elements];
+    for (let i = 0; i < ranges.length; i++) {
+        const range = ranges[i];
+        let [valMin, valMax] = range.map(v => {
+            if (typeof v === 'string') {
+                if (v.startsWith('>')) return parseFloat(v.substring(1));
+                if (v.startsWith('<')) return parseFloat(v.substring(1));
+                if (v.includes('/')) return parseFloat(v.split('/')[1]);
+            }
+            return v as number;
+        });
+
+        if (inverse) {
+            [valMin, valMax] = [valMax, valMin];
+        }
+
+        if (value >= valMin && value <= valMax) {
+            const [ageMin, ageMax] = AGE_RANGES[i];
+            const rangeWidth = valMax - valMin;
+            if (rangeWidth === 0) return ageMin;
+
+            const ratio = (value - valMin) / rangeWidth;
+            return ageMin + ratio * (ageMax - ageMin);
+        }
+    }
+
+    const firstRange = ranges[0];
+    let firstVal = typeof firstRange[0] === 'string' ? parseFloat(firstRange[0].replace(/[><]/, '')) : firstRange[0];
+    const lastRange = ranges[ranges.length - 1];
+    let lastVal = typeof lastRange[1] === 'string' ? parseFloat(lastRange[1].replace(/[><]/, '')) : lastRange[1];
     
-    // Asegurarse de que el valor no es nulo y que el elemento existe en nuestra tabla
-    if (value !== null && value !== undefined && ageBrackets[elementId]) {
-      const brackets = ageBrackets[elementId];
-      
-      // Encontrar el rango de edad correspondiente al valor del elemento
-      const matchingBracket = brackets.find(bracket => value >= bracket.range[0] && value <= bracket.range[1]);
+    if (inverse) {
+        [firstVal, lastVal] = [lastVal, firstVal];
+    }
 
-      if (matchingBracket) {
-        // Usamos el punto medio del rango de edad como la edad representativa para este elemento
-        const representativeAge = (matchingBracket.age[0] + matchingBracket.age[1]) / 2;
-        calculatedAges.push(representativeAge);
+    if (value < firstVal) return AGE_RANGES[0][0];
+    if (value > lastVal) return AGE_RANGES[AGE_RANGES.length - 1][1];
+
+    return null;
+}
+
+export function getOrthomolecularStatus(
+  calculatedAge: number,
+  chronologicalAge: number
+): ResultStatus {
+  const difference = calculatedAge - chronologicalAge;
+  if (difference >= 7) return 'ENVEJECIDO';
+  if (difference > 0) return 'NORMAL';
+  return 'REJUVENECIDO';
+}
+
+export function getStatusColorClass(status: ResultStatus, isBackground: boolean = false): string {
+  const colorMap = {
+    REJUVENECIDO: { bg: 'bg-green-500', text: 'text-green-500' },
+    NORMAL: { bg: 'bg-yellow-500', text: 'text-yellow-500' },
+    ENVEJECIDO: { bg: 'bg-red-500', text: 'text-red-500' },
+    'SIN CALCULAR': { bg: 'bg-gray-400', text: 'text-gray-400' },
+  };
+  const style = colorMap[status] || colorMap['SIN CALCULAR'];
+  return isBackground ? style.bg : style.text;
+}
+
+export function calculateOrthomolecularResults(
+  formValues: OrthomolecularFormValues,
+  chronologicalAge: number,
+): OrthomolecularCalculationResult {
+  const partialAges: OrthomolecularPartialAges = {};
+  let totalAge = 0;
+  let ageCount = 0;
+
+  for (const item of ORTHOMOLECULAR_ITEMS) {
+    const key = item.key;
+    const value = formValues[key];
+
+    if (typeof value === 'number' && !isNaN(value)) {
+      const calculatedAge = getAgeFromValue(value, key);
+      if (calculatedAge !== null) {
+        const ageKey = `${key}Age` as keyof OrthomolecularPartialAges;
+        partialAges[ageKey] = calculatedAge;
+        totalAge += calculatedAge;
+        ageCount++;
       }
     }
   }
 
-  // Si no se pudo calcular ninguna edad, devolver 0
-  if (calculatedAges.length === 0) {
-    return 0;
-  }
+  const biologicalAge = ageCount > 0 ? totalAge / ageCount : chronologicalAge;
+  const differentialAge = biologicalAge - chronologicalAge;
+  const overallStatus = getOrthomolecularStatus(biologicalAge, chronologicalAge);
 
-  // La edad orthomolecular final es el promedio de todas las edades calculadas
-  const averageAge = calculatedAges.reduce((sum, age) => sum + age, 0) / calculatedAges.length;
-
-  return Math.round(averageAge * 10) / 10; // Redondear a 1 decimal
-};
+  return {
+    biologicalAge,
+    differentialAge,
+    chronologicalAge,
+    partialAges,
+    status: overallStatus,
+  };
+}
