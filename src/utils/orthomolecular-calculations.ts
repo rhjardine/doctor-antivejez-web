@@ -14,9 +14,7 @@ const AGE_RANGES = [
     [70, 77], [77, 84], [84, 91], [91, 98], [98, 105], [105, 112], [112, 120]
 ];
 
-// ===== SOLUCIÓN: Se ajusta el tipo para permitir arrays con `string` y `number` mezclados =====
 const BIOMARKER_RANGES: Record<string, { ranges: (string | number)[][], inverse: boolean }> = {
-// =========================================================================================
     aluminio: { ranges: [[0, 1.75], [1.75, 3.5], [3.5, 5.25], [5.25, 7], [7, 7.9], [7.9, 8.8], [8.8, 9.7], [9.7, 9.8], [9.8, 9.9], ['9/9', 10], [10, 10.1], [10.1, 10.2], [10.2, 10.3], [10.3, '>10.4']], inverse: false },
     antimonio: { ranges: [[0, 0.016], [0.016, 0.032], [0.032, 0.048], [0.048, 0.066], [0.066, 0.074], [0.074, 0.084], [0.084, 0.092], [0.092, 0.093], [0.093, 0.094], [0.094, 0.095], [0.095, 0.096], [0.096, 0.097], [0.097, 0.098], [0.098, 0.099]], inverse: false },
     arsenico: { ranges: [[0, 0.020], [0.020, 0.040], [0.040, 0.060], [0.060, 0.080], [0.080, 0.090], [0.090, 0.1], [0.1, 0.11], [0.11, 0.16], [0.16, 0.17], [0.17, 0.18], [0.18, 0.19], [0.19, 0.2], [0.2, 0.21], [0.21, '>0.22']], inverse: false },
@@ -78,7 +76,6 @@ function getAgeFromValue(value: number, key: keyof OrthomolecularFormValues): nu
                 if (v.startsWith('>')) return parseFloat(v.substring(1));
                 if (v.startsWith('<')) return parseFloat(v.substring(1));
                 if (v.includes('/')) return parseFloat(v.split('/')[1]);
-                // Manejar rangos como '0.84-0'
                 if (v.includes('-') && parseFloat(v.split('-')[1]) === 0) return parseFloat(v.split('-')[0]);
             }
             return v as number;
