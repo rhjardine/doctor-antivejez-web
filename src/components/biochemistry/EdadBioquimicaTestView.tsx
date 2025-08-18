@@ -117,7 +117,6 @@ function ResultItemCard({ item, value, calculatedAge, chronologicalAge }: Result
   );
 }
 
-
 // --- Componente Principal Refactorizado ---
 export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete }: { patient: Patient, onBack: () => void, onTestComplete: () => void }) {
   const [isEditing, setIsEditing] = useState(true);
@@ -183,21 +182,20 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
     <>
       {showSuccessModal && <SuccessModal onClose={handleModalClose} results={results} />}
       
-      <div className="mb-4">
-        <button type="button" onClick={onBack} className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors p-2 hover:bg-gray-100 rounded-lg">
-            <FaArrowLeft />
-            <span>Volver al Perfil</span>
-        </button>
-      </div>
-
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Test de Edad Bioquímica</h1>
-      <p className="text-gray-600 mb-6">{patient.firstName} {patient.lastName} - {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}</p>
-
+      {/* ===== AJUSTE 2: Se elimina el espaciado superior excesivo (mb-4, mb-1, mb-6) ===== */}
       <form onSubmit={handleSubmit(handleCalculateAndSave)} className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
         {/* ===== AJUSTE 1: Formulario con fondo azul oscuro y texto claro ===== */}
         <div className="lg:col-span-2 bg-[#293b64] rounded-xl p-6 text-white">
-            <h3 className="text-lg font-bold mb-6">Biomarcadores Bioquímicos</h3>
+            {/* ===== AJUSTE 2: Se mueve el header DENTRO del formulario para alinear con el Test Biofísico ===== */}
+            <div className="mb-6">
+                <button type="button" onClick={onBack} className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors mb-4">
+                    <FaArrowLeft />
+                    <span>Volver al Perfil Medico</span>
+                </button>
+                <h1 className="text-2xl font-bold text-white mb-1">Test de Edad Bioquímica</h1>
+                <p className="text-gray-300">{patient.firstName} {patient.lastName} - {patient.chronologicalAge} años | {patient.gender.replace(/_/g, ' ')}</p>
+            </div>
             
             <div className="space-y-5">
                 {BIOCHEMISTRY_ITEMS.map((item) => {
@@ -211,6 +209,7 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
                                 name={item.key}
                                 control={control}
                                 render={({ field }) => (
+                                    // ===== AJUSTE 1: Se añade `text-white` para que el texto ingresado sea visible =====
                                     <input
                                         {...field}
                                         id={item.key}
@@ -223,7 +222,6 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
                                     />
                                 )}
                             />
-                            {/* ===== AJUSTE 5: Mostrar edad calculada debajo de cada ítem ===== */}
                             {calculatedAge !== undefined && (
                                 <p className="text-right text-xs text-cyan-300 mt-1">
                                     Edad Calculada: {calculatedAge.toFixed(1)} años
