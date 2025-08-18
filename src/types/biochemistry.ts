@@ -3,7 +3,7 @@
 // ===== CAMBIO: Se actualiza la lista para que coincida con la tabla oficial =====
 export const BIOCHEMISTRY_ITEMS = [
   { key: 'somatomedinC', label: 'Somatomedina C (IGF-1)', unit: 'ng/ml' },
-  { key: 'hba1c', label: 'Hemoglobina Glicosilada (HbA1c)', unit: '%' },
+  { key: 'hba1c', label: 'Hb Glicosilada %(HbA1c)', unit: '%' },
   { key: 'insulinBasal', label: 'Insulina Basal', unit: 'mUI/ml' },
   { key: 'postPrandial', label: 'Post Prandial', unit: 'mui/ml' },
   { key: 'tgHdlRatio', label: 'Relación TG/HDL', unit: 'mg/dl / mg/dl' },
