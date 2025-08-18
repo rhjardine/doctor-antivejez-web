@@ -3,25 +3,34 @@
 import { PatientWithDetails } from '@/types';
 import { FaHeartbeat, FaFlask, FaDna, FaAtom, FaHistory } from 'react-icons/fa';
 
+// ===== MODIFICADO: Se añade la prop `onOrthomolecularTestClick` a la interfaz =====
 interface EdadBiologicaMainProps {
   patient: PatientWithDetails;
   onTestClick: () => void;
   onBiochemistryTestClick: () => void;
+  onOrthomolecularTestClick: () => void; // <-- Nueva prop
   onHistoryClick: () => void;
   onBiochemistryHistoryClick: () => void;
-  onGeneticTestClick: () => void; // <-- CORRECCIÓN: Se añade la prop que faltaba
+  onGeneticTestClick: () => void;
 }
+// =================================================================================
 
 export default function EdadBiologicaMain({
   patient,
   onTestClick,
   onBiochemistryTestClick,
+  onOrthomolecularTestClick, // <-- Se recibe la nueva prop
   onHistoryClick,
   onBiochemistryHistoryClick,
   onGeneticTestClick,
 }: EdadBiologicaMainProps) {
-  const lastBiophysicsTest = patient.biophysicsTests?.[0];
-  const lastBiochemistryTest = patient.biochemistryTests?.[0];
+  // Se mantiene la lógica para los tests existentes
+  const lastBiophysicsTest = patient.biophysicsTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
+  const lastBiochemistryTest = patient.biochemistryTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
+
+  // ===== NUEVO: Se añade la lógica para obtener el último test ortomolecular =====
+  const lastOrthomolecularTest = patient.orthomolecularTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
+  // ============================================================================
 
   const testCards = [
     {
@@ -29,6 +38,7 @@ export default function EdadBiologicaMain({
       title: 'EDAD BIOFÍSICA',
       icon: FaHeartbeat,
       value: lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge) : '--',
+      difference: lastBiophysicsTest?.differentialAge,
       isClickable: true,
       onClick: onTestClick,
       color: 'bg-primary',
@@ -40,28 +50,33 @@ export default function EdadBiologicaMain({
       title: 'EDAD BIOQUÍMICA',
       icon: FaFlask,
       value: lastBiochemistryTest?.biochemicalAge ? Math.round(lastBiochemistryTest.biochemicalAge) : '--',
+      difference: lastBiochemistryTest?.differentialAge,
       isClickable: true,
       onClick: onBiochemistryTestClick,
       color: 'bg-primary',
       hasHistory: patient.biochemistryTests && patient.biochemistryTests.length > 0,
       onHistoryClick: onBiochemistryHistoryClick,
     },
+    // ===== MODIFICADO: La tarjeta Ortomolecular ahora es dinámica =====
     {
       id: 'orthomolecular',
       title: 'EDAD ORTHOMOLECULAR',
       icon: FaAtom,
-      value: '--',
-      isClickable: false,
-      onClick: undefined,
-      color: 'bg-gray-400',
-      hasHistory: false,
+      value: lastOrthomolecularTest?.orthomolecularAge ? Math.round(lastOrthomolecularTest.orthomolecularAge) : '--',
+      difference: lastOrthomolecularTest?.differentialAge,
+      isClickable: true, // Se habilita el clic
+      onClick: onOrthomolecularTestClick, // Se conecta la función
+      color: 'bg-primary', // Se cambia el color a azul primario
+      hasHistory: false, // La funcionalidad de historial se puede añadir en el futuro
       onHistoryClick: undefined,
     },
+    // =================================================================
     {
       id: 'genetica',
       title: 'EDAD GENÉTICA',
       icon: FaDna,
       value: 'Ver', 
+      difference: undefined,
       isClickable: true,
       onClick: onGeneticTestClick,
       color: 'bg-primary', 
@@ -113,8 +128,8 @@ export default function EdadBiologicaMain({
           {testCards.map((card) => {
             const Icon = card.icon;
             return (
-              <div key={card.id} className={`${card.color} rounded-xl p-6 text-white flex flex-col justify-between transition-all duration-300`}>
-                <div onClick={card.onClick} className={card.isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}>
+              <div key={card.id} className={`${card.color} rounded-xl p-6 text-white flex flex-col justify-between transition-all duration-300 ${card.isClickable ? 'hover:shadow-lg hover:-translate-y-1' : ''}`}>
+                <div onClick={card.isClickable ? card.onClick : undefined} className={card.isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}>
                   <div className="flex items-center justify-between mb-4">
                     <Icon className="text-4xl opacity-80" />
                     {!card.isClickable && (
@@ -125,16 +140,13 @@ export default function EdadBiologicaMain({
                   <p className="text-3xl font-bold">
                     {card.value !== '--' && card.value !== 'Ver' ? `${card.value} años` : card.value}
                   </p>
-                  {card.id === 'biofisica' && lastBiophysicsTest && (
+                  {/* ===== MODIFICADO: Se añade la lógica para mostrar la diferencia del test ortomolecular ===== */}
+                  {card.difference !== undefined && card.difference !== null && (
                     <p className="text-sm mt-2 opacity-80">
-                      Diferencia: {lastBiophysicsTest.differentialAge > 0 ? '+' : ''}{Math.round(lastBiophysicsTest.differentialAge)} años
+                      Diferencia: {card.difference > 0 ? '+' : ''}{Math.round(card.difference)} años
                     </p>
                   )}
-                  {card.id === 'bioquimica' && lastBiochemistryTest && (
-                    <p className="text-sm mt-2 opacity-80">
-                      Diferencia: {lastBiochemistryTest.differentialAge > 0 ? '+' : ''}{Math.round(lastBiochemistryTest.differentialAge)} años
-                    </p>
-                  )}
+                  {/* ======================================================================================== */}
                 </div>
                 {card.hasHistory && card.onHistoryClick && (
                   <button

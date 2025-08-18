@@ -14,7 +14,8 @@ import {
   FaChartLine,
   FaFileMedicalAlt,
   FaHistory,
-  FaEdit
+  FaEdit,
+  FaAtom // ===== NUEVO: Icono para Ortomolecular =====
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
@@ -25,12 +26,17 @@ import ClinicalSummary from '@/components/patients/ClinicalSummary';
 import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
 import BiochemistryHistoryView from '@/components/biochemistry/BiochemistryHistoryView';
 import GeneticTestView from '@/components/genetics/GeneticTestView';
+// ===== NUEVO: Importar el componente del Test Ortomolecular =====
+import OrthomolecularTestView from '@/components/orthomolecular/OrthomolecularTestView';
+// ===============================================================
 import { telotestReportData } from '@/lib/mock-data';
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
-type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'biofisica_history' | 'bioquimica_history' | 'genetica';
+// ===== MODIFICADO: Se añade 'orthomolecular' a los tipos de vistas de test =====
+type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'orthomolecular' | 'biofisica_history' | 'bioquimica_history' | 'genetica';
+// ==============================================================================
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -44,10 +50,6 @@ export default function PatientDetailPage() {
   const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
   const [isEditing, setIsEditing] = useState(false);
 
-  // ===== INICIO DE LA CORRECCIÓN: Lógica de recarga de datos mejorada =====
-
-  // Función para recargar los datos del paciente en segundo plano SIN mostrar el loader principal.
-  // Esto evita que el componente del test se desmonte y pierda su estado.
   const refreshPatientData = useCallback(async () => {
     if (!patientId) return;
     try {
@@ -62,7 +64,6 @@ export default function PatientDetailPage() {
     }
   }, [patientId]);
 
-  // Función para la carga inicial de datos (esta sí muestra el loader).
   const loadPatient = useCallback(async () => {
     if (!patientId) return;
     setLoading(true);
@@ -81,8 +82,6 @@ export default function PatientDetailPage() {
     }
   }, [patientId, router]);
   
-  // ===== FIN DE LA CORRECCIÓN =====
-
   useEffect(() => {
     const tab = searchParams.get('tab');
     const view = searchParams.get('view');
@@ -102,7 +101,7 @@ export default function PatientDetailPage() {
 
   const handleUpdateSuccess = () => {
     setIsEditing(false);
-    refreshPatientData(); // Usar la función de refresco
+    refreshPatientData();
   };
 
   if (loading) {
@@ -137,16 +136,22 @@ export default function PatientDetailPage() {
             patient={patient} 
             onTestClick={() => setActiveTestView('biofisica')} 
             onBiochemistryTestClick={() => setActiveTestView('bioquimica')}
+            // ===== NUEVO: Se añade el handler para el clic en la tarjeta ortomolecular =====
+            onOrthomolecularTestClick={() => setActiveTestView('orthomolecular')}
+            // ==============================================================================
             onHistoryClick={() => setActiveTestView('biofisica_history')}
             onBiochemistryHistoryClick={() => setActiveTestView('bioquimica_history')}
             onGeneticTestClick={() => setActiveTestView('genetica')}
           />
         );
-      // --- Se pasa la nueva función `refreshPatientData` a los componentes de test ---
       case 'biofisica':
         return <EdadBiofisicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'bioquimica':
         return <EdadBioquimicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
+      // ===== NUEVO: Se añade el caso para renderizar la vista del Test Ortomolecular =====
+      case 'orthomolecular':
+        return <OrthomolecularTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
+      // =================================================================================
       case 'biofisica_history':
         return <BiophysicsHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={refreshPatientData} />;
       case 'bioquimica_history':
