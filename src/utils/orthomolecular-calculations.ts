@@ -75,8 +75,9 @@ function getAgeFromValue(value: number, key: keyof OrthomolecularFormValues): nu
             if (typeof v === 'string') {
                 if (v.startsWith('>')) return parseFloat(v.substring(1));
                 if (v.startsWith('<')) return parseFloat(v.substring(1));
-                if (v.includes('/')) return parseFloat(v.split('/')[1]);
+                if (v.includes('/')) return parseFloat(v.split('/')[0]);
                 if (v.includes('-') && parseFloat(v.split('-')[1]) === 0) return parseFloat(v.split('-')[0]);
+                return parseFloat(v);
             }
             return v as number;
         });
@@ -100,9 +101,11 @@ function getAgeFromValue(value: number, key: keyof OrthomolecularFormValues): nu
     const lastRange = ranges[ranges.length - 1];
     let lastVal = typeof lastRange[1] === 'string' ? parseFloat(lastRange[1].replace(/[><]/, '')) : lastRange[1];
     
+    // ===== SOLUCIÓN: Se corrige el ámbito de las variables y la lógica de inversión =====
     if (inverse) {
-        [valMin, valMax] = [valMax, valMin];
+        [firstVal, lastVal] = [lastVal, firstVal];
     }
+    // =================================================================================
 
     if (value < firstVal) return AGE_RANGES[0][0];
     if (value > lastVal) return AGE_RANGES[AGE_RANGES.length - 1][1];
