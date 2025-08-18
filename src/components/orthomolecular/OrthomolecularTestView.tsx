@@ -182,12 +182,9 @@ export default function OrthomolecularTestView({ patient, onBack, onTestComplete
     <>
       {showSuccessModal && <SuccessModal onClose={handleModalClose} results={results} />}
       
-      {/* ===== AJUSTE 2: Se elimina el espaciado superior excesivo ===== */}
       <form onSubmit={handleSubmit(handleCalculateAndSave)} className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
-        {/* ===== AJUSTE 1: Formulario con fondo azul oscuro y texto claro ===== */}
         <div className="lg:col-span-2 bg-[#293b64] rounded-xl p-6 text-white">
-            {/* ===== AJUSTE 2: Se mueve el header DENTRO del formulario ===== */}
             <div className="mb-6">
                 <button type="button" onClick={onBack} className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors mb-4">
                     <FaArrowLeft />
@@ -209,13 +206,17 @@ export default function OrthomolecularTestView({ patient, onBack, onTestComplete
                                 name={item.key}
                                 control={control}
                                 render={({ field }) => (
-                                    // ===== AJUSTE 1: Se añade `text-white` para que el texto ingresado sea visible =====
+                                    // ===== CORRECCIÓN: Se cambia el estilo del input para que el texto sea visible =====
                                     <input
                                         {...field}
                                         id={item.key}
                                         type="number"
                                         step="any"
-                                        className={`input w-full bg-gray-700/50 border-gray-500 text-white placeholder-gray-400 ${errors[item.key] ? 'border-red-500' : ''}`}
+                                        className={`input w-full placeholder-gray-400 ${
+                                            isEditing 
+                                            ? 'bg-white text-black' // Estilo en modo edición
+                                            : 'bg-gray-700/50 border-gray-500 text-white' // Estilo en modo no edición
+                                        } ${errors[item.key] ? 'border-red-500' : ''}`}
                                         placeholder="0.00"
                                         disabled={!isEditing}
                                         onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
@@ -223,7 +224,6 @@ export default function OrthomolecularTestView({ patient, onBack, onTestComplete
                                     />
                                 )}
                             />
-                            {/* ===== AJUSTE 6: Mostrar edad calculada debajo de cada ítem ===== */}
                             {calculatedAge !== undefined && (
                                 <p className="text-right text-xs text-cyan-300 mt-1">
                                     Edad Calculada: {calculatedAge.toFixed(1)} años
@@ -235,7 +235,6 @@ export default function OrthomolecularTestView({ patient, onBack, onTestComplete
                 })}
             </div>
             
-            {/* ===== AJUSTE 5: Botones estilizados profesionalmente ===== */}
             <div className="mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button type="submit" disabled={isSaving || !isEditing || !isValid} className="font-semibold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white disabled:bg-green-500/50 disabled:cursor-not-allowed">
                     <FaSave />
@@ -253,7 +252,6 @@ export default function OrthomolecularTestView({ patient, onBack, onTestComplete
         </div>
 
         <div className="lg:col-span-3 space-y-6">
-            {/* ===== AJUSTE 3: Panel de resultados finales con fondo azul claro y texto blanco ===== */}
             <div className="bg-[#23bcef] p-6 rounded-lg shadow-md">
                 <h3 className="text-lg font-bold text-white mb-4">Resultados Finales</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
@@ -277,7 +275,6 @@ export default function OrthomolecularTestView({ patient, onBack, onTestComplete
             </div>
             
             <div className="card">
-                {/* ===== AJUSTE 4: Cambio de texto a "Resultados por Parámetros" ===== */}
                 <h3 className="text-lg font-bold text-gray-800 mb-4">Resultados por Parámetros</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     {ORTHOMOLECULAR_ITEMS.map(item => {
