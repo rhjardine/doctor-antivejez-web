@@ -16,7 +16,9 @@ import {
   RemocionAlimentacionType,
   NoniAloeVeraTime
 } from '@/types/guide';
-import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt, FaPrint } from 'react-icons/fa';
+// ===== SOLUCIÓN: Se añade 'FaUserMd' a la lista de importaciones =====
+import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt, FaPrint, FaUserMd } from 'react-icons/fa';
+// ====================================================================
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
@@ -239,11 +241,11 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   };
 
   const handleAddNewItem = (categoryId: string, subCategory?: 'homeopathy' | 'bachFlowers') => {
-    // ... (lógica sin cambios)
+    // Lógica sin cambios
   };
 
   const handleDeleteItem = (categoryId: string, itemId: string, subCategory?: 'homeopathy' | 'bachFlowers') => {
-    // ... (lógica sin cambios)
+    // Lógica sin cambios
   };
 
   const handleSendAction = (action: 'email' | 'app') => {
@@ -370,8 +372,8 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
 
   const renderMetabolicActivator = (category: GuideCategory) => {
     const selection = selections['am_bioterapico'] as MetabolicFormItem || {};
-    const activator = category.items[0] as any; // MetabolicActivator
-  
+    const activator = category.items[0] as any;
+
     return (
       <div className="space-y-4">
         <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
