@@ -3,7 +3,13 @@ export { GuideItemType } from '@prisma/client';
 
 // --- Nuevos tipos para campos específicos ---
 export type RemocionAlimentacionType = 'Niño' | 'Antienvejecimiento' | 'Antidiabética' | 'Metabólica' | 'Citostática' | 'Renal';
-export type NoniAloeVeraTime = '30 minutos antes de Desayuno' | 'Desayuno y Cena' | 'Cena';
+
+// ===== SOLUCIÓN: Se actualiza el tipo para que coincida con los valores del componente =====
+export type NoniAloeVeraTime = 
+  | '30 minutos antes de Desayuno' 
+  | '30 minutos antes de Desayuno y Cena' 
+  | '30 minutos antes de la Cena';
+// ====================================================================================
 
 // --- Items de la Guía ---
 export interface StandardGuideItem {
@@ -59,14 +65,12 @@ export interface RevitalizationFormItem {
   frequency?: '1 vez por semana por 10 dosis' | '2 veces por semana por 10 dosis' | '';
 }
 
-// ===== NUEVO: Se añade el tipo para el formulario del Activador Metabólico =====
 export interface MetabolicFormItem {
   selected?: boolean;
   gotas?: number;
   vecesAlDia?: number;
-  horario?: 'Desayuno y Cena' | 'Emergencia';
+  horario?: ('Desayuno y Cena' | 'Emergencia')[]; // Ahora es un array
 }
-// ========================================================================
 
 export interface RemocionFormItem {
   selected?: boolean;
