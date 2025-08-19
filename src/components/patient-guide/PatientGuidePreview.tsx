@@ -9,6 +9,7 @@ import {
   RevitalizationGuideItem,
   StandardFormItem,
   RevitalizationFormItem,
+  RemocionFormItem, // Importar el nuevo tipo
 } from '@/types/guide';
 import { FaPrint, FaTimes } from 'react-icons/fa';
 
@@ -22,8 +23,10 @@ interface Props {
 export default function PatientGuidePreview({ patient, guideData, formValues, onClose }: Props) {
   const handlePrint = () => window.print();
 
-  // ✅ usamos la prop opcional y damos un default vacío para evitar undefined
-  const { selections, metabolic_activator = { homeopathy: {}, bachFlowers: {} } } = formValues;
+  // ===== SOLUCIÓN: Se elimina la desestructuración de 'metabolic_activator' =====
+  // Ahora solo extraemos 'selections' y 'observaciones' del objeto formValues.
+  const { selections, observaciones } = formValues;
+  // ============================================================================
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fadeIn">
@@ -61,15 +64,14 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
 
           <div className="space-y-8">
             {guideData.map(category => {
-              const selectedItems = category.items.filter(item => selections?.[item.id]?.selected);
-
+              // ===== LÓGICA MODIFICADA: Ahora se obtiene todo desde 'selections' =====
               if (category.type === 'METABOLIC') {
                 const activator = category.items[0] as MetabolicActivator;
                 const selectedHomeopathy = activator.homeopathy.filter(
-                  subItem => metabolic_activator.homeopathy?.[subItem.id]?.selected
+                  subItem => selections?.[subItem.id]?.selected
                 );
                 const selectedBach = activator.bachFlowers.filter(
-                  subItem => metabolic_activator.bachFlowers?.[subItem.id]?.selected
+                  subItem => selections?.[subItem.id]?.selected
                 );
                 if (selectedHomeopathy.length === 0 && selectedBach.length === 0) return null;
 
@@ -95,7 +97,9 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                   </div>
                 );
               }
+              // ========================================================================
 
+              const selectedItems = category.items.filter(item => selections?.[item.id]?.selected);
               if (selectedItems.length === 0) return null;
 
               return (
@@ -138,6 +142,14 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                 </div>
               );
             })}
+            
+            {/* Mostrar observaciones si existen */}
+            {observaciones && (
+                <div>
+                    <h3 className="text-xl font-semibold text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">Observaciones</h3>
+                    <p className="text-gray-800 whitespace-pre-wrap">{observaciones}</p>
+                </div>
+            )}
           </div>
         </div>
       </div>
