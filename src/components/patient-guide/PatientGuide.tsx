@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { PatientWithDetails } from '@/types';
 import { 
   GuideCategory, 
@@ -83,7 +83,7 @@ const initialGuideData: GuideCategory[] = [
     items: [
       {
         id: 'cat_activador',
-        homeopathy: [], // Se deja vacío, se renderiza desde homeopathicStructure
+        homeopathy: [], // Se renderiza desde homeopathicStructure
         bachFlowers: bachFlowersList,
       }
     ]
@@ -226,10 +226,41 @@ const initialGuideData: GuideCategory[] = [
   }
 ];
 
+// ===== SOLUCIÓN: Se define el subcomponente ANTES del componente principal que lo usa =====
+const HomeopathySelector = ({ selections, handleSelectionChange }: { selections: Selections, handleSelectionChange: Function }) => {
+  return (
+    <div className="space-y-4">
+      {Object.entries(homeopathicStructure).map(([category, items]) => (
+        <div key={category} className="p-3 bg-gray-100 rounded-md">
+          <h5 className="font-semibold text-gray-800 mb-2">{category}</h5>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+            {items.map(item => {
+              const itemId = `am_hom_${item.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
+              return (
+                <label key={itemId} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    id={itemId}
+                    checked={selections[itemId]?.selected || false}
+                    onChange={(e) => handleSelectionChange(itemId, 'selected', e.target.checked)}
+                    className="w-4 h-4 accent-primary"
+                  />
+                  <span>{item}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+// =======================================================================================
+
 // --- Componente Principal ---
 export default function PatientGuide({ patient }: { patient: PatientWithDetails }) {
   const [guideData, setGuideData] = useState<GuideCategory[]>(initialGuideData);
-  const [selections, setSelections] = useState<Selections>({});
+  const [selections, setSelections] useState<Selections>({});
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({ 'cat_remocion': true });
   const [newItemInputs, setNewItemInputs] = useState<Record<string, string>>({});
   const [observaciones, setObservaciones] = useState('');
