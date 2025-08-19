@@ -10,8 +10,7 @@ import {
   StandardFormItem,
   RevitalizationFormItem,
   RemocionFormItem,
-  MetabolicFormItem,
-  RemocionItem
+  MetabolicFormItem
 } from '@/types/guide';
 import { FaPrint, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
@@ -25,12 +24,7 @@ interface Props {
 
 export default function PatientGuidePreview({ patient, guideData, formValues, onClose }: Props) {
   const handlePrint = () => {
-    const elementsToHide = document.querySelectorAll('.no-print');
-    elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
-    
     window.print();
-
-    elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
   };
 
   const { selections, observaciones } = formValues;
@@ -50,6 +44,25 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
           </div>
         </div>
 
+        <style jsx global>{`
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            #printable-guide, #printable-guide * {
+              visibility: visible;
+            }
+            #printable-guide {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+            }
+            .no-print {
+              display: none;
+            }
+          }
+        `}</style>
         <div id="printable-guide" className="p-8 overflow-y-auto">
           <header className="flex justify-between items-center mb-8">
             <div className="w-48">
@@ -77,8 +90,16 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
               if (category.type === 'METABOLIC') {
                 const activator = category.items[0] as MetabolicActivator;
                 const bioTerapicoSelection = selections['am_bioterapico'] as MetabolicFormItem;
-                const selectedHomeopathy = activator.homeopathy.filter(subItem => selections?.[subItem.id]?.selected);
-                const selectedBach = activator.bachFlowers.filter(subItem => selections?.[subItem.id]?.selected);
+                const selectedHomeopathy = Object.keys(homeopathicStructure)
+                  .flatMap(cat => homeopathicStructure[cat as keyof typeof homeopathicStructure])
+                  .map(name => `am_hom_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`)
+                  .filter(id => selections[id]?.selected)
+                  .map(id => {
+                    const name = Object.values(homeopathicStructure).flat().find(n => `am_hom_${n.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}` === id);
+                    return { id, name };
+                  });
+
+                const selectedBach = bachFlowersList.filter(subItem => selections?.[subItem.id]?.selected);
                 
                 if (!bioTerapicoSelection?.selected && selectedHomeopathy.length === 0 && selectedBach.length === 0) return null;
 
@@ -90,9 +111,11 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                         <span className="font-medium">Bioterápico + Bach:</span>
                         <span className="text-gray-600 ml-2">
                           {bioTerapicoSelection.gotas} gotas, {bioTerapicoSelection.vecesAlDia} veces al día. 
-                          {bioTerapicoSelection.horario === 'Desayuno y Cena' 
+                          {(Array.isArray(bioTerapicoSelection.horario) ? bioTerapicoSelection.horario : [bioTerapicoSelection.horario]).map(h => 
+                            h === 'Desayuno y Cena' 
                             ? ' 30 min antes de Desayuno y Cena.' 
-                            : ' Cada 15 min por 1h en crisis.'}
+                            : ' Cada 15 min por 1h en crisis.'
+                          ).join(' y ')}
                         </span>
                       </div>
                     )}
@@ -123,7 +146,6 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                 <div key={category.id}>
                   <h3 className="text-xl font-semibold text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">{category.title}</h3>
                   <ul className="list-disc list-inside space-y-3 pl-2">
-                    {/* ===== SOLUCIÓN: Se añade un type guard con .filter() para asegurar que 'item' tiene la propiedad 'name' ===== */}
                     {selectedItems
                       .filter(
                         (it): it is StandardGuideItem | RevitalizationGuideItem | RemocionItem => 'name' in it
@@ -132,7 +154,6 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                         const details = selections[item.id];
                         let treatmentDetails = '';
 
-                        // Lógica para construir los detalles del tratamiento...
                         if ('dose' in item && item.dose) {
                           treatmentDetails = item.dose;
                         } else if (category.type === 'REVITALIZATION') {
@@ -142,7 +163,7 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                             .join(' / ');
                         } else if (category.type === 'REMOCION') {
                             const rem = details as RemocionFormItem;
-                            // Construir detalles para Fase de Remoción
+                            // Lógica para mostrar detalles de remoción
                         } else {
                           const std = details as StandardFormItem;
                           treatmentDetails = [std.qty, std.freq, std.custom]

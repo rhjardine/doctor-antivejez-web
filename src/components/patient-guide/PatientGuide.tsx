@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PatientWithDetails } from '@/types';
 import { 
   GuideCategory, 
@@ -16,13 +16,37 @@ import {
   RemocionAlimentacionType,
   NoniAloeVeraTime
 } from '@/types/guide';
-// ===== SOLUCIÓN: Se añade 'FaUserMd' a la lista de importaciones =====
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt, FaPrint, FaUserMd } from 'react-icons/fa';
-// ====================================================================
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
-// --- Datos Iniciales Completamente Reestructurados y Completados ---
+// --- Estructura de Datos para el Activador Metabólico Jerárquico ---
+const homeopathicStructure = {
+  'Sistemas': ['Inflamación', 'Glicólisis (m)', 'Ciclo Krebs(t)', 'Cadena Resp (n)'],
+  'Humorales': ['Excreción', 'Inflamación'],
+  'Mesenquimáticos': ['Deposición', 'Impregnación'],
+  'Celulares': ['Degeneración', 'Dediferencial'],
+  'Nervioso': ['SN Central', 'SN Autónomo', 'Ansiedad', 'Depresión', 'Visión', 'Audición', 'Olfato', 'Gusto'],
+  'Endocrino': ['Pineal', 'Hipófisis', 'Tiroides', 'Timo', 'Páncreas', 'Suprarrenal', 'Ovarios', 'Testículos'],
+  'Inmunológico': ['Inflam. severa', 'Inflam. media', 'Inflama leve', 'Alérgico', 'Estimula basal', 'Estimula viral', 'Estimula bact', 'Estimula cell'],
+  'Cardiovascular': ['Sangre', 'Corazón', 'Circ. arterial', 'Circ. venosa', 'Micro circulatorio'],
+  'Digestivo': ['Superior', 'Inferior', 'Hígado', 'Vías biliares', 'Páncreas', 'Bazo'],
+  'Óseo Articular': ['Huesos', 'Cartílagos y lig.', 'Discos', 'Occipital', 'Cervical', 'Dorsal', 'Lumbar'],
+  'Respiratorio': ['Superior', 'Medio', 'Inferior'],
+  'Urinario': ['Riñón', 'Vejiga'],
+  'Muscular': ['Inflamatorio', 'Degenerativo'],
+  'Linfático Adiposo': ['Congestivo', 'Degenerativo', 'Sobrepeso', 'Obesidad'],
+  'Reproductor': ['Femenino', 'Masculino', 'Próstata'],
+  'Piel': ['Inflamatorio', 'Degenerativo', 'Cabellos / Uñas'],
+  'Especiales': ['Diarrea', 'Fiebre', 'Post Vacuna', 'Bacteriosis', 'Micosis', 'Protozoarios', 'Parasitosis', 'GPDF'],
+  'Neuro': ['Leptosomica melanc. joven', 'Leptosomica melanc. mayor', 'Picnica flem. joven', 'Picnica flem. mayor'],
+  'Vegetativo': ['Atlética colérica joven', 'Atlética colérica mayor', 'Robusta sang. joven', 'Robusta sang. mayor'],
+};
+
+const bachFlowersList: MetabolicActivatorItem[] = [
+  { id: 'am_bach_1', name: 'Agrimony' }, { id: 'am_bach_2', name: 'Aspen' }, { id: 'am_bach_3', name: 'Beech' }, { id: 'am_bach_4', name: 'Centaury' }, { id: 'am_bach_5', name: 'Cerato' }, { id: 'am_bach_6', name: 'Cherry plum' }, { id: 'am_bach_7', name: 'Chestnut bud' }, { id: 'am_bach_8', name: 'Chicory' }, { id: 'am_bach_9', name: 'Clematis' }, { id: 'am_bach_10', name: 'Crab apple' }, { id: 'am_bach_11', name: 'Elm' }, { id: 'am_bach_12', name: 'Gentian' }, { id: 'am_bach_13', name: 'Gorse' }, { id: 'am_bach_14', name: 'Heather' }, { id: 'am_bach_15', name: 'Holly' }, { id: 'am_bach_16', name: 'Honeysuckle' }, { id: 'am_bach_17', name: 'Hornbeam' }, { id: 'am_bach_18', name: 'Impatiens' }, { id: 'am_bach_19', name: 'Larch' }, { id: 'am_bach_20', name: 'Mimulus' }, { id: 'am_bach_21', name: 'Mustard' }, { id: 'am_bach_22', name: 'Oak' }, { id: 'am_bach_23', name: 'Olive' }, { id: 'am_bach_24', name: 'Pine' }, { id: 'am_bach_25', name: 'Red chestnut' }, { id: 'am_bach_26', name: 'Rock rose' }, { id: 'am_bach_27', name: 'Rock water' }, { id: 'am_bach_28', name: 'Scleranthus' }, { id: 'am_bach_29', name: 'Star of Bethlehem' }, { id: 'am_bach_30', name: 'Sweet chestnut' }, { id: 'am_bach_31', name: 'Vervain' }, { id: 'am_bach_32', name: 'Vine' }, { id: 'am_bach_33', name: 'Walnut' }, { id: 'am_bach_34', name: 'Water violet' }, { id: 'am_bach_35', name: 'White chestnut' }, { id: 'am_bach_36', name: 'Wild oat' }, { id: 'am_bach_37', name: 'Wild rose' }, { id: 'am_bach_38', name: 'Willow' }, { id: 'am_bach_39', name: 'Rescue Remedy' },
+];
+
 const initialGuideData: GuideCategory[] = [
   {
     id: 'cat_remocion',
@@ -59,17 +83,8 @@ const initialGuideData: GuideCategory[] = [
     items: [
       {
         id: 'cat_activador',
-        homeopathy: [
-          // Columna 1
-          { id: 'am_hom_1', name: 'Inflamación' }, { id: 'am_hom_2', name: 'Glicólisis (m)' }, { id: 'am_hom_3', name: 'Humorales' }, { id: 'am_hom_4', name: 'Excreción' }, { id: 'am_hom_5', name: 'Nervioso' }, { id: 'am_hom_6', name: 'SN Central' }, { id: 'am_hom_7', name: 'SN Autónomo' }, { id: 'am_hom_8', name: 'Ansiedad' }, { id: 'am_hom_9', name: 'Depresión' }, { id: 'am_hom_10', name: 'Visión' }, { id: 'am_hom_11', name: 'Audición' }, { id: 'am_hom_12', name: 'Olfato' }, { id: 'am_hom_13', name: 'Gusto' }, { id: 'am_hom_14', name: 'Cardiovascular' }, { id: 'am_hom_15', name: 'Sangre' }, { id: 'am_hom_16', name: 'Corazón' }, { id: 'am_hom_17', name: 'Circ. arterial' }, { id: 'am_hom_18', name: 'Circ. venosa' }, { id: 'am_hom_19', name: 'Micro circulatorio' }, { id: 'am_hom_20', name: 'Respiratorio' }, { id: 'am_hom_21', name: 'Superior' }, { id: 'am_hom_22', name: 'Medio' }, { id: 'am_hom_23', name: 'Inferior' }, { id: 'am_hom_24', name: 'Linfático Adiposo' }, { id: 'am_hom_25', name: 'Congestivo' }, { id: 'am_hom_26', name: 'Degenerativo' }, { id: 'am_hom_27', name: 'Sobrepeso' }, { id: 'am_hom_28', name: 'Obesidad' }, { id: 'am_hom_29', name: 'Especiales' }, { id: 'am_hom_30', name: 'Diarrea' }, { id: 'am_hom_31', name: 'Fiebre' }, { id: 'am_hom_32', name: 'Post Vacuna' }, { id: 'am_hom_33', name: 'Bacteriosis' }, { id: 'am_hom_34', name: 'Micosis' }, { id: 'am_hom_35', name: 'Protozoarios' }, { id: 'am_hom_36', name: 'Parasitosis' }, { id: 'am_hom_37', name: 'GPDF' },
-          // Columna 2
-          { id: 'am_hom_38', name: 'Ciclo Krebs(t)' }, { id: 'am_hom_39', name: 'Mesenquimáticos' }, { id: 'am_hom_40', name: 'Deposición' }, { id: 'am_hom_41', name: 'Impregnación' }, { id: 'am_hom_42', name: 'Endocrino' }, { id: 'am_hom_43', name: 'Pineal' }, { id: 'am_hom_44', name: 'Hipófisis' }, { id: 'am_hom_45', name: 'Tiroides' }, { id: 'am_hom_46', name: 'Timo' }, { id: 'am_hom_47', name: 'Páncreas' }, { id: 'am_hom_48', name: 'Suprarrenal' }, { id: 'am_hom_49', name: 'Ovarios' }, { id: 'am_hom_50', name: 'Testículos' }, { id: 'am_hom_51', name: 'Digestivo' }, { id: 'am_hom_52', name: 'Superior' }, { id: 'am_hom_53', name: 'Inferior' }, { id: 'am_hom_54', name: 'Hígado' }, { id: 'am_hom_55', name: 'Vías biliares' }, { id: 'am_hom_56', name: 'Páncreas' }, { id: 'am_hom_57', name: 'Bazo' }, { id: 'am_hom_58', name: 'Urinario' }, { id: 'am_hom_59', name: 'Riñón' }, { id: 'am_hom_60', name: 'Vejiga' }, { id: 'am_hom_61', name: 'Reproductor' }, { id: 'am_hom_62', name: 'Femenino' }, { id: 'am_hom_63', name: 'Masculino' }, { id: 'am_hom_64', name: 'Próstata' }, { id: 'am_hom_65', name: 'Neuro' }, { id: 'am_hom_66', name: 'Leptosomica melanc. joven' }, { id: 'am_hom_67', name: 'Leptosomica melanc. mayor' }, { id: 'am_hom_68', name: 'Picnica flem. joven' }, { id: 'am_hom_69', name: 'Picnica flem. mayor' },
-          // Columna 3
-          { id: 'am_hom_70', name: 'Degeneración' }, { id: 'am_hom_71', name: 'Cadena Resp (n)' }, { id: 'am_hom_72', name: 'Celulares' }, { id: 'am_hom_73', name: 'Dediferencial' }, { id: 'am_hom_74', name: 'Inmunológico' }, { id: 'am_hom_75', name: 'Inflam. severa' }, { id: 'am_hom_76', name: 'Inflam. media' }, { id: 'am_hom_77', name: 'Inflama leve' }, { id: 'am_hom_78', name: 'Alérgico' }, { id: 'am_hom_79', name: 'Estimula basal' }, { id: 'am_hom_80', name: 'Estimula viral' }, { id: 'am_hom_81', name: 'Estimula bact' }, { id: 'am_hom_82', name: 'Estimula cell' }, { id: 'am_hom_83', name: 'Óseo Articular' }, { id: 'am_hom_84', name: 'Huesos' }, { id: 'am_hom_85', name: 'Cartílagos y lig.' }, { id: 'am_hom_86', name: 'Discos' }, { id: 'am_hom_87', name: 'Occipital' }, { id: 'am_hom_88', name: 'Cervical' }, { id: 'am_hom_89', name: 'Dorsal' }, { id: 'am_hom_90', name: 'Lumbar' }, { id: 'am_hom_91', name: 'Muscular' }, { id: 'am_hom_92', name: 'Inflamatorio' }, { id: 'am_hom_93', name: 'Degenerativo' }, { id: 'am_hom_94', name: 'Piel' }, { id: 'am_hom_95', name: 'Inflamatorio' }, { id: 'am_hom_96', name: 'Degenerativo' }, { id: 'am_hom_97', name: 'Cabellos / Uñas' }, { id: 'am_hom_98', name: 'Vegetativo' }, { id: 'am_hom_99', name: 'Atlética colérica joven' }, { id: 'am_hom_100', name: 'Atlética colérica mayor' }, { id: 'am_hom_101', name: 'Robusta sang. joven' }, { id: 'am_hom_102', name: 'Robusta sang. mayor' },
-        ],
-        bachFlowers: [
-          { id: 'am_bach_1', name: 'Agrimony' }, { id: 'am_bach_2', name: 'Aspen' }, { id: 'am_bach_3', name: 'Beech' }, { id: 'am_bach_4', name: 'Centaury' }, { id: 'am_bach_5', name: 'Cerato' }, { id: 'am_bach_6', name: 'Cherry plum' }, { id: 'am_bach_7', name: 'Chestnut bud' }, { id: 'am_bach_8', name: 'Chicory' }, { id: 'am_bach_9', name: 'Clematis' }, { id: 'am_bach_10', name: 'Crab apple' }, { id: 'am_bach_11', name: 'Elm' }, { id: 'am_bach_12', name: 'Gentian' }, { id: 'am_bach_13', name: 'Gorse' }, { id: 'am_bach_14', name: 'Heather' }, { id: 'am_bach_15', name: 'Holly' }, { id: 'am_bach_16', name: 'Honeysuckle' }, { id: 'am_bach_17', name: 'Hornbeam' }, { id: 'am_bach_18', name: 'Impatiens' }, { id: 'am_bach_19', name: 'Larch' }, { id: 'am_bach_20', name: 'Mimulus' }, { id: 'am_bach_21', name: 'Mustard' }, { id: 'am_bach_22', name: 'Oak' }, { id: 'am_bach_23', name: 'Olive' }, { id: 'am_bach_24', name: 'Pine' }, { id: 'am_bach_25', name: 'Red chestnut' }, { id: 'am_bach_26', name: 'Rock rose' }, { id: 'am_bach_27', name: 'Rock water' }, { id: 'am_bach_28', name: 'Scleranthus' }, { id: 'am_bach_29', name: 'Star of Bethlehem' }, { id: 'am_bach_30', name: 'Sweet chestnut' }, { id: 'am_bach_31', name: 'Vervain' }, { id: 'am_bach_32', name: 'Vine' }, { id: 'am_bach_33', name: 'Walnut' }, { id: 'am_bach_34', name: 'Water violet' }, { id: 'am_bach_35', name: 'White chestnut' }, { id: 'am_bach_36', name: 'Wild oat' }, { id: 'am_bach_37', name: 'Wild rose' }, { id: 'am_bach_38', name: 'Willow' }, { id: 'am_bach_39', name: 'Rescue Remedy' },
-        ]
+        homeopathy: [], // Se deja vacío, se renderiza desde homeopathicStructure
+        bachFlowers: bachFlowersList,
       }
     ]
   },
@@ -201,13 +216,13 @@ const initialGuideData: GuideCategory[] = [
     id: 'cat_terapia_bioneural',
     title: 'Terapia BioNeural',
     type: 'STANDARD',
-    items: [] // Se llena dinámicamente
+    items: []
   },
   {
     id: 'cat_control_terapia',
     title: 'Control de Terapia',
     type: 'STANDARD',
-    items: [] // Se llena dinámicamente
+    items: []
   }
 ];
 
@@ -240,12 +255,51 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     });
   };
 
-  const handleAddNewItem = (categoryId: string, subCategory?: 'homeopathy' | 'bachFlowers') => {
-    // Lógica sin cambios
+  const handleMetabolicHorarioChange = (horario: 'Desayuno y Cena' | 'Emergencia') => {
+    const currentSelection = selections['am_bioterapico'] as MetabolicFormItem || {};
+    const currentHorarios = Array.isArray(currentSelection.horario) ? currentSelection.horario : (currentSelection.horario ? [currentSelection.horario] : []);
+    
+    let newHorarios;
+    if (currentHorarios.includes(horario)) {
+      newHorarios = currentHorarios.filter(h => h !== horario);
+    } else {
+      newHorarios = [...currentHorarios, horario];
+    }
+    handleSelectionChange('am_bioterapico', 'horario', newHorarios);
   };
 
-  const handleDeleteItem = (categoryId: string, itemId: string, subCategory?: 'homeopathy' | 'bachFlowers') => {
-    // Lógica sin cambios
+  const handleAddNewItem = (categoryId: string) => {
+    const newItemName = newItemInputs[categoryId];
+    if (!newItemName?.trim()) return;
+
+    const newItem = {
+      id: `${categoryId}_${Date.now()}`,
+      name: newItemName.trim(),
+    };
+
+    setGuideData(prevData => prevData.map(cat => {
+      if (cat.id === categoryId) {
+        const newItems = [...(cat.items as StandardGuideItem[]), newItem];
+        return { ...cat, items: newItems };
+      }
+      return cat;
+    }));
+    setNewItemInputs(prev => ({ ...prev, [categoryId]: '' }));
+  };
+
+  const handleDeleteItem = (categoryId: string, itemId: string) => {
+    setGuideData(prevData => prevData.map(cat => {
+      if (cat.id === categoryId) {
+        const newItems = (cat.items as StandardGuideItem[]).filter(item => item.id !== itemId);
+        return { ...cat, items: newItems };
+      }
+      return cat;
+    }));
+    setSelections(prev => {
+      const newSelections = { ...prev };
+      delete newSelections[itemId];
+      return newSelections;
+    });
   };
 
   const handleSendAction = (action: 'email' | 'app') => {
@@ -255,11 +309,15 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
 
   const nutraFrequencyOptions = ["Mañana", "Noche", "30 min antes de Desayuno", "30 min antes de Cena", "30 min antes de Desayuno y Cena", "Antes del Ejercicio", "Otros"];
   const sueroTerapiaFrequencyOptions = ["Diaria", "Semanal", "Quincenal", "Mensual"];
+  const noniAloeTimeOptions: NoniAloeVeraTime[] = [
+    '30 minutos antes de Desayuno', 
+    '30 minutos antes de Desayuno y Cena',
+    '30 minutos antes de la Cena'
+  ];
 
   const renderRemocionItem = (item: RemocionItem) => {
     const selection = selections[item.id] as RemocionFormItem || {};
     const alimentacionOptions: RemocionAlimentacionType[] = ['Niño', 'Antienvejecimiento', 'Antidiabética', 'Metabólica', 'Citostática', 'Renal'];
-    const noniAloeTimeOptions: NoniAloeVeraTime[] = ['30 minutos antes de Desayuno', 'Desayuno y Cena', 'Cena'];
 
     return (
       <div key={item.id} className="p-3 bg-gray-50 rounded-md">
@@ -370,9 +428,10 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     );
   };
 
-  const renderMetabolicActivator = (category: GuideCategory) => {
+  const renderMetabolicActivator = () => {
+    const [activeSubTab, setActiveSubTab] = useState<'homeopatia' | 'bach'>('homeopatia');
     const selection = selections['am_bioterapico'] as MetabolicFormItem || {};
-    const activator = category.items[0] as any;
+    const currentHorarios = Array.isArray(selection.horario) ? selection.horario : (selection.horario ? [selection.horario] : []);
 
     return (
       <div className="space-y-4">
@@ -393,47 +452,62 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                 <input type="number" value={selection.gotas || ''} onChange={e => handleSelectionChange('am_bioterapico', 'gotas', parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="Gotas"/>
                 <span>gotas</span>
                 <input type="number" value={selection.vecesAlDia || ''} onChange={e => handleSelectionChange('am_bioterapico', 'vecesAlDia', parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="Veces"/>
-                <span>veces al día debajo de la lengua 30 minutos antes de:</span>
+                <span>veces al día debajo de la lengua:</span>
               </p>
               <div className="flex gap-4 text-sm">
                 <label className="flex items-center gap-2">
-                  <input type="radio" name="horario_bioterapico" value="Desayuno y Cena" checked={selection.horario === 'Desayuno y Cena'} onChange={e => handleSelectionChange('am_bioterapico', 'horario', e.target.value as any)}/>
-                  Desayuno y Cena
+                  <input type="checkbox" checked={currentHorarios.includes('Desayuno y Cena')} onChange={() => handleMetabolicHorarioChange('Desayuno y Cena')}/>
+                  30 min antes de Desayuno y Cena
                 </label>
                 <label className="flex items-center gap-2">
-                  <input type="radio" name="horario_bioterapico" value="Emergencia" checked={selection.horario === 'Emergencia'} onChange={e => handleSelectionChange('am_bioterapico', 'horario', e.target.value as any)}/>
+                  <input type="checkbox" checked={currentHorarios.includes('Emergencia')} onChange={() => handleMetabolicHorarioChange('Emergencia')}/>
                   o cada 15 min / 1h en crisis
                 </label>
               </div>
             </div>
           )}
         </div>
-  
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <h4 className="font-semibold text-gray-700 mb-2">Homeopatía</h4>
-            <div className="space-y-1 max-h-60 overflow-y-auto pr-2">
-              {activator.homeopathy.map((item: MetabolicActivatorItem) => renderStandardItem(item, category.id, [], 'homeopathy'))}
-            </div>
-          </div>
-          <div className="lg:col-span-2">
-            <h4 className="font-semibold text-gray-700 mb-2">Flores de Bach</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 max-h-60 overflow-y-auto pr-2">
-              {activator.bachFlowers.map((item: MetabolicActivatorItem) => renderStandardItem(item, category.id, [], 'bachFlowers'))}
-            </div>
-          </div>
+        
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-4">
+            <button onClick={() => setActiveSubTab('homeopatia')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'homeopatia' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+              Homeopatía
+            </button>
+            <button onClick={() => setActiveSubTab('bach')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'bach' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+              Flores de Bach
+            </button>
+          </nav>
         </div>
+
+        {activeSubTab === 'homeopatia' && <HomeopathySelector selections={selections} handleSelectionChange={handleSelectionChange} />}
+        
+        {activeSubTab === 'bach' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {bachFlowersList.map(item => (
+              <label key={item.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded-md">
+                <input
+                  type="checkbox"
+                  id={item.id}
+                  checked={selections[item.id]?.selected || false}
+                  onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span>{item.name}</span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
 
-  const renderStandardItem = (item: StandardGuideItem | MetabolicActivatorItem, categoryId: string, frequencyOptions: string[], subCategory?: 'homeopathy' | 'bachFlowers') => (
+  const renderStandardItem = (item: StandardGuideItem | MetabolicActivatorItem, categoryId: string, frequencyOptions: string[]) => (
     <div key={item.id} className="p-3 bg-gray-50 rounded-md transition-all hover:bg-gray-100">
       <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
         <input type="checkbox" id={item.id} checked={selections[item.id]?.selected || false} onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} className="w-5 h-5 accent-primary"/>
         <label htmlFor={item.id} className="flex-grow font-medium text-gray-800 text-sm">{item.name}</label>
         {'dose' in item && item.dose && <span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">{item.dose}</span>}
-        <button type="button" onClick={() => handleDeleteItem(categoryId, item.id, subCategory)} className="text-gray-400 hover:text-red-500 transition-colors ml-auto"><FaTrash /></button>
+        <button type="button" onClick={() => handleDeleteItem(categoryId, item.id)} className="text-gray-400 hover:text-red-500 transition-colors ml-auto"><FaTrash /></button>
       </div>
       {selections[item.id]?.selected && !('dose' in item) && frequencyOptions.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
@@ -465,7 +539,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
             <div className="p-4">
               {category.type === 'REMOCION' && <div className="space-y-4">{(category.items as RemocionItem[]).map(item => renderRemocionItem(item))}</div>}
               {category.type === 'REVITALIZATION' && <div className="space-y-4">{(category.items as RevitalizationGuideItem[]).map(item => renderRevitalizationItem(item))}</div>}
-              {category.type === 'METABOLIC' && renderMetabolicActivator(category)}
+              {category.type === 'METABOLIC' && renderMetabolicActivator()}
               {category.type === 'STANDARD' && (
                 <div className="space-y-4">
                   {(category.items as StandardGuideItem[]).map(item => {
