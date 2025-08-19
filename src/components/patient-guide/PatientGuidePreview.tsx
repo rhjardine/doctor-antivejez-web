@@ -10,7 +10,8 @@ import {
   StandardFormItem,
   RevitalizationFormItem,
   RemocionFormItem,
-  MetabolicFormItem
+  MetabolicFormItem,
+  RemocionItem
 } from '@/types/guide';
 import { FaPrint, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
@@ -24,13 +25,11 @@ interface Props {
 
 export default function PatientGuidePreview({ patient, guideData, formValues, onClose }: Props) {
   const handlePrint = () => {
-    // Ocultar elementos no deseados antes de imprimir
     const elementsToHide = document.querySelectorAll('.no-print');
     elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
     
     window.print();
 
-    // Volver a mostrar los elementos después de imprimir
     elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
   };
 
@@ -39,7 +38,6 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fadeIn no-print">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        {/* Header no imprimible */}
         <div className="p-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">Vista Previa de la Guía</h2>
           <div className="flex items-center gap-4">
@@ -52,7 +50,6 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
           </div>
         </div>
 
-        {/* Contenido Imprimible */}
         <div id="printable-guide" className="p-8 overflow-y-auto">
           <header className="flex justify-between items-center mb-8">
             <div className="w-48">
@@ -126,12 +123,32 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                 <div key={category.id}>
                   <h3 className="text-xl font-semibold text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">{category.title}</h3>
                   <ul className="list-disc list-inside space-y-3 pl-2">
-                    {selectedItems.map(item => {
+                    {/* ===== SOLUCIÓN: Se añade un type guard con .filter() para asegurar que 'item' tiene la propiedad 'name' ===== */}
+                    {selectedItems
+                      .filter(
+                        (it): it is StandardGuideItem | RevitalizationGuideItem | RemocionItem => 'name' in it
+                      )
+                      .map(item => {
                         const details = selections[item.id];
                         let treatmentDetails = '';
 
                         // Lógica para construir los detalles del tratamiento...
-                        // (Esta parte se mantiene igual que en tu versión anterior)
+                        if ('dose' in item && item.dose) {
+                          treatmentDetails = item.dose;
+                        } else if (category.type === 'REVITALIZATION') {
+                          const rev = details as RevitalizationFormItem;
+                          treatmentDetails = [rev.complejoB_cc, rev.bioquel_cc, rev.frequency]
+                            .filter(Boolean)
+                            .join(' / ');
+                        } else if (category.type === 'REMOCION') {
+                            const rem = details as RemocionFormItem;
+                            // Construir detalles para Fase de Remoción
+                        } else {
+                          const std = details as StandardFormItem;
+                          treatmentDetails = [std.qty, std.freq, std.custom]
+                            .filter(Boolean)
+                            .join(' - ');
+                        }
 
                         return (
                           <li key={item.id} className="text-gray-800">
