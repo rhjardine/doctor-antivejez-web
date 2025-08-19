@@ -12,7 +12,6 @@ export interface StandardGuideItem {
   dose?: string | null;
 }
 
-// --- Tipos específicos para la Fase de Remoción ---
 export interface RemocionItem extends StandardGuideItem {
   subType: 'aceite_ricino' | 'leche_magnesia' | 'detox_alcalina' | 'noni_aloe';
 }
@@ -60,20 +59,21 @@ export interface RevitalizationFormItem {
   frequency?: '1 vez por semana por 10 dosis' | '2 veces por semana por 10 dosis' | '';
 }
 
+// ===== NUEVO: Se añade el tipo para el formulario del Activador Metabólico =====
 export interface MetabolicFormItem {
   selected?: boolean;
+  gotas?: number;
+  vecesAlDia?: number;
+  horario?: 'Desayuno y Cena' | 'Emergencia';
 }
+// ========================================================================
 
-// --- Nuevos tipos para el formulario de la Fase de Remoción ---
 export interface RemocionFormItem {
   selected?: boolean;
-  // Aceite de Ricino / Leche de Magnesia
   cucharadas?: number;
   horario?: 'Dia' | 'Tarde' | 'Noche';
-  // Detox Alcalina
   semanas?: number;
   alimentacionTipo?: RemocionAlimentacionType[];
-  // Noni/Aloe Vera
   tacita?: NoniAloeVeraTime;
   frascos?: number;
 }
@@ -91,7 +91,6 @@ export interface GuideFormValues {
   controlTerapia?: {
     fecha: string;
     terapia: string;
-
     coach: string;
   }[];
 }
