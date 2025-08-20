@@ -21,7 +21,8 @@ import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
 // --- Estructura de Datos para el Activador Metabólico Jerárquico ---
-const homeopathicStructure = {
+// Exportar estas constantes para que puedan ser importadas en PatientGuidePreview.tsx
+export const homeopathicStructure = { // ADDED 'export'
   'Sistemas': ['Inflamación', 'Glicólisis (m)', 'Ciclo Krebs(t)', 'Cadena Resp (n)'],
   'Humorales': ['Excreción', 'Inflamación'],
   'Mesenquimáticos': ['Deposición', 'Impregnación'],
@@ -43,7 +44,7 @@ const homeopathicStructure = {
   'Vegetativo': ['Atlética colérica joven', 'Atlética colérica mayor', 'Robusta sang. joven', 'Robusta sang. mayor'],
 };
 
-const bachFlowersList: MetabolicActivatorItem[] = [
+export const bachFlowersList: MetabolicActivatorItem[] = [ // ADDED 'export'
   { id: 'am_bach_1', name: 'Agrimony' }, { id: 'am_bach_2', name: 'Aspen' }, { id: 'am_bach_3', name: 'Beech' }, { id: 'am_bach_4', name: 'Centaury' }, { id: 'am_bach_5', name: 'Cerato' }, { id: 'am_bach_6', name: 'Cherry plum' }, { id: 'am_bach_7', name: 'Chestnut bud' }, { id: 'am_bach_8', name: 'Chicory' }, { id: 'am_bach_9', name: 'Clematis' }, { id: 'am_bach_10', name: 'Crab apple' }, { id: 'am_bach_11', name: 'Elm' }, { id: 'am_bach_12', name: 'Gentian' }, { id: 'am_bach_13', name: 'Gorse' }, { id: 'am_bach_14', name: 'Heather' }, { id: 'am_bach_15', name: 'Holly' }, { id: 'am_bach_16', name: 'Honeysuckle' }, { id: 'am_bach_17', name: 'Hornbeam' }, { id: 'am_bach_18', name: 'Impatiens' }, { id: 'am_bach_19', name: 'Larch' }, { id: 'am_bach_20', name: 'Mimulus' }, { id: 'am_bach_21', name: 'Mustard' }, { id: 'am_bach_22', name: 'Oak' }, { id: 'am_bach_23', name: 'Olive' }, { id: 'am_bach_24', name: 'Pine' }, { id: 'am_bach_25', name: 'Red chestnut' }, { id: 'am_bach_26', name: 'Rock rose' }, { id: 'am_bach_27', name: 'Rock water' }, { id: 'am_bach_28', name: 'Scleranthus' }, { id: 'am_bach_29', name: 'Star of Bethlehem' }, { id: 'am_bach_30', name: 'Sweet chestnut' }, { id: 'am_bach_31', name: 'Vervain' }, { id: 'am_bach_32', name: 'Vine' }, { id: 'am_bach_33', name: 'Walnut' }, { id: 'am_bach_34', name: 'Water violet' }, { id: 'am_bach_35', name: 'White chestnut' }, { id: 'am_bach_36', name: 'Wild oat' }, { id: 'am_bach_37', name: 'Wild rose' }, { id: 'am_bach_38', name: 'Willow' }, { id: 'am_bach_39', name: 'Rescue Remedy' },
 ];
 
@@ -260,7 +261,7 @@ const HomeopathySelector = ({ selections, handleSelectionChange }: { selections:
 // --- Componente Principal ---
 export default function PatientGuide({ patient }: { patient: PatientWithDetails }) {
   const [guideData, setGuideData] = useState<GuideCategory[]>(initialGuideData);
-  const [selections, setSelections] = useState<Selections>({}); // FIX: Added missing =
+  const [selections, setSelections] = useState<Selections>({}); 
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({ 'cat_remocion': true });
   const [newItemInputs, setNewItemInputs] = useState<Record<string, string>>({});
   const [observaciones, setObservaciones] = useState('');
