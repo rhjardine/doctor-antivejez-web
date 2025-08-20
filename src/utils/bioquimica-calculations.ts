@@ -33,33 +33,58 @@ function getAgeFromValue(value: number, key: keyof BiochemistryFormValues): numb
 
     const { ranges, inverse } = biomarkerData;
 
+    // Determine the effective value range and age range for interpolation
     for (let i = 0; i < ranges.length; i++) {
-        let [valMin, valMax] = ranges[i];
-        
-        if (inverse) {
-            [valMin, valMax] = [valMax, valMin];
-        }
+        let [rangeVal1, rangeVal2] = ranges[i]; // These are the values from the table definition
+        const [ageMin, ageMax] = AGE_RANGES[i]; // Corresponding age range
 
-        if (value >= valMin && value <= valMax) {
-            const [ageMin, ageMax] = AGE_RANGES[i];
-            const rangeWidth = valMax - valMin;
-            if (rangeWidth === 0) return ageMin;
+        // Determine the actual min and max values for the current biomarker range
+        // This ensures currentValMin is always the smaller number and currentValMax is the larger number
+        const currentValMin = Math.min(rangeVal1, rangeVal2);
+        const currentValMax = Math.max(rangeVal1, rangeVal2);
 
-            const ratio = (value - valMin) / rangeWidth;
-            return ageMin + ratio * (ageMax - ageMin);
+        if (value >= currentValMin && value <= currentValMax) {
+            const rangeWidth = currentValMax - currentValMin;
+            if (rangeWidth === 0) { // Handle single-point ranges or exact matches
+                // For exact matches or single-point ranges, return the age corresponding to the first value in the age range if not inverse, or the second if inverse.
+                return inverse ? ageMax : ageMin; 
+            }
+
+            let interpolatedAge;
+            if (inverse) {
+                // For inverse ranges, higher value maps to lower age, so interpolate inversely
+                // (value - currentValMin) / rangeWidth gives ratio from min to max.
+                // We want to map this ratio from (ageMax to ageMin).
+                const ratio = (value - currentValMin) / rangeWidth;
+                interpolatedAge = ageMax - ratio * (ageMax - ageMin);
+            } else {
+                // For normal ranges, lower value maps to lower age
+                const ratio = (value - currentValMin) / rangeWidth;
+                interpolatedAge = ageMin + ratio * (ageMax - ageMin);
+            }
+            return Math.round(interpolatedAge); // Round the interpolated age
         }
     }
-    
-    const firstRange = inverse ? ranges[0].slice().reverse() : ranges[0];
-    const lastRange = inverse ? ranges[ranges.length - 1].slice().reverse() : ranges[ranges.length - 1];
 
-    if (value < firstRange[0]) return AGE_RANGES[0][0];
-    if (value > lastRange[1]) return AGE_RANGES[AGE_RANGES.length - 1][1];
+    // Handle values outside all defined ranges
+    // Find the overall minimum and maximum values across all ranges for the current biomarker
+    const allMinVals = ranges.map(r => Math.min(r[0], r[1]));
+    const allMaxVals = ranges.map(r => Math.max(r[0], r[1]));
+    const overallMinVal = Math.min(...allMinVals);
+    const overallMaxVal = Math.max(...allMaxVals);
 
-    return null;
+    if (value < overallMinVal) {
+        // If value is below the overall minimum defined value
+        return inverse ? AGE_RANGES[AGE_RANGES.length - 1][1] : AGE_RANGES[0][0]; // 120 (oldest) if inverse, 21 (youngest) if normal
+    }
+    if (value > overallMaxVal) {
+        // If value is above the overall maximum defined value
+        return inverse ? AGE_RANGES[0][0] : AGE_RANGES[AGE_RANGES.length - 1][1]; // 21 (youngest) if inverse, 120 (oldest) if normal
+    }
+
+    return null; // Should ideally not be reached if ranges cover all possibilities
 }
 
-// ===== SOLUCIÓN: Se añade 'export' para que la función sea visible desde otros archivos =====
 export function getBiochemistryStatus(
   calculatedAge: number,
   chronologicalAge: number
@@ -67,12 +92,10 @@ export function getBiochemistryStatus(
   const difference = calculatedAge - chronologicalAge;
 
   if (difference >= 7) return 'ENVEJECIDO';
-  if (difference > 0) return 'NORMAL';
+  if (difference > 0) return 'NORMAL'; // Changed from > -2 to > 0 for normal range
   return 'REJUVENECIDO';
 }
-// ========================================================================================
 
-// ===== SOLUCIÓN: Se añade 'export' para que la función sea visible desde otros archivos =====
 export function getStatusColorClass(status: ResultStatus, isBackground: boolean = false): string {
   const colorMap = {
     REJUVENECIDO: { bg: 'bg-green-500', text: 'text-green-500' },
@@ -83,7 +106,6 @@ export function getStatusColorClass(status: ResultStatus, isBackground: boolean 
   const style = colorMap[status] || colorMap['SIN CALCULAR'];
   return isBackground ? style.bg : style.text;
 }
-// ========================================================================================
 
 export function calculateBioquimicaResults(
   formValues: BiochemistryFormValues,

@@ -260,7 +260,7 @@ const HomeopathySelector = ({ selections, handleSelectionChange }: { selections:
 // --- Componente Principal ---
 export default function PatientGuide({ patient }: { patient: PatientWithDetails }) {
   const [guideData, setGuideData] = useState<GuideCategory[]>(initialGuideData);
-  const [selections, setSelections] useState<Selections>({});
+  const [selections, setSelections] = useState<Selections>({}); // FIX: Added missing =
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({ 'cat_remocion': true });
   const [newItemInputs, setNewItemInputs] = useState<Record<string, string>>({});
   const [observaciones, setObservaciones] = useState('');
@@ -562,7 +562,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
 
       {guideData.map((category) => (
         <div key={category.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div onClick={() => toggleCategory(category.id)} className="w-full flex justify-between items-center p-4 cursor-pointer bg-primary-dark text-white rounded-t-lg">
+          <div onClick={() => toggleCategory(category.id)} className="w-full flex justify-between items-center p-4 bg-primary-dark text-white rounded-t-lg">
             <h3 className="font-semibold">{category.title}</h3>
             {openCategories[category.id] ? <FaChevronUp /> : <FaChevronDown />}
           </div>
