@@ -14,13 +14,14 @@ const AGE_RANGES = [
 ];
 
 // Baremos oficiales extraídos de la tabla
+// Se han ajustado las claves para que coincidan con el schema de Prisma y los tipos actualizados.
 const BIOMARKER_RANGES: Record<string, { ranges: number[][], inverse: boolean }> = {
-    somatomedinC: { ranges: [[350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80], [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]], inverse: true },
+    somatomedin: { ranges: [[350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80], [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]], inverse: true },
     hba1c: { ranges: [[0, 0.5], [0.5, 1], [1, 1.5], [1.5, 3], [3, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14]], inverse: false },
-    insulinBasal: { ranges: [[1, 2], [2, 5], [5, 7.5], [7.5, 10], [10, 15], [15, 30], [30, 40], [40, 50], [50, 60], [60, 80], [80, 100], [100, 120], [120, 140], [140, 160]], inverse: false },
+    insulin: { ranges: [[1, 2], [2, 5], [5, 7.5], [7.5, 10], [10, 15], [15, 30], [30, 40], [40, 50], [50, 60], [60, 80], [80, 100], [100, 120], [120, 140], [140, 160]], inverse: false },
     postPrandial: { ranges: [[1, 4], [4, 8], [8, 12], [12, 16], [16, 20], [20, 25], [25, 30], [30, 40], [20, 60], [60, 90], [90, 120], [120, 140], [140, 160], [160, 200]], inverse: false },
     tgHdlRatio: { ranges: [[1, 2], [2, 3], [3, 4], [4, 5], [5, 7], [7, 10], [10, 13], [13, 16], [16, 20], [20, 25], [25, 30], [30, 35], [35, 40], [40, 45]], inverse: false },
-    dheaS: { ranges: [[350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80], [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]], inverse: true },
+    dhea: { ranges: [[350, 325], [325, 300], [300, 250], [250, 200], [200, 150], [150, 100], [100, 80], [80, 60], [60, 50], [50, 40], [40, 30], [30, 20], [20, 10], [10, 0]], inverse: true },
     homocysteine: { ranges: [[0, 2.5], [2.5, 5], [5, 7.5], [7.5, 10], [10, 15], [15, 25], [25, 35], [35, 45], [45, 55], [55, 60], [60, 65], [65, 70], [70, 85], [85, 100]], inverse: false },
     psa: { ranges: [[30, 25], [25, 20], [20, 18], [18, 15], [15, 13], [13, 11], [10, 9], [9, 8], [8, 7], [7, 6], [6, 5], [5, 4], [4, 3], [3, 2]], inverse: true },
     fsh: { ranges: [[1, 5], [5, 10], [10, 15], [15, 20], [20, 30], [30, 40], [40, 50], [50, 60], [60, 70], [70, 80], [80, 100], [100, 120], [120, 140], [140, 160]], inverse: false },
@@ -33,13 +34,11 @@ function getAgeFromValue(value: number, key: keyof BiochemistryFormValues): numb
 
     const { ranges, inverse } = biomarkerData;
 
-    // Determine the effective value range and age range for interpolation
     for (let i = 0; i < ranges.length; i++) {
-        let [rangeVal1, rangeVal2] = ranges[i]; // These are the values from the table definition
+        const [rangeVal1, rangeVal2] = ranges[i]; // These are the values from the table definition
         const [ageMin, ageMax] = AGE_RANGES[i]; // Corresponding age range
 
-        // Determine the actual min and max values for the current biomarker range
-        // This ensures currentValMin is always the smaller number and currentValMax is the larger number
+        // Ensure currentValMin is always the smaller number and currentValMax is the larger number
         const currentValMin = Math.min(rangeVal1, rangeVal2);
         const currentValMax = Math.max(rangeVal1, rangeVal2);
 
@@ -47,14 +46,13 @@ function getAgeFromValue(value: number, key: keyof BiochemistryFormValues): numb
             const rangeWidth = currentValMax - currentValMin;
             if (rangeWidth === 0) { // Handle single-point ranges or exact matches
                 // For exact matches or single-point ranges, return the age corresponding to the first value in the age range if not inverse, or the second if inverse.
-                return inverse ? ageMax : ageMin; 
+                return inverse ? AGE_RANGES[i][1] : AGE_RANGES[i][0]; 
             }
 
             let interpolatedAge;
             if (inverse) {
-                // For inverse ranges, higher value maps to lower age, so interpolate inversely
-                // (value - currentValMin) / rangeWidth gives ratio from min to max.
-                // We want to map this ratio from (ageMax to ageMin).
+                // For inverse ranges, higher value maps to lower age.
+                // Interpolate from (currentValMax -> currentValMin) to (ageMin -> ageMax)
                 const ratio = (value - currentValMin) / rangeWidth;
                 interpolatedAge = ageMax - ratio * (ageMax - ageMin);
             } else {
@@ -75,11 +73,11 @@ function getAgeFromValue(value: number, key: keyof BiochemistryFormValues): numb
 
     if (value < overallMinVal) {
         // If value is below the overall minimum defined value
-        return inverse ? AGE_RANGES[AGE_RANGES.length - 1][1] : AGE_RANGES[0][0]; // 120 (oldest) if inverse, 21 (youngest) if normal
+        return inverse ? AGE_RANGES[AGE_RANGES.length - 1][1] : AGE_RANGES[0][0]; // Oldest age (120) if inverse, Youngest age (21) if normal
     }
     if (value > overallMaxVal) {
         // If value is above the overall maximum defined value
-        return inverse ? AGE_RANGES[0][0] : AGE_RANGES[AGE_RANGES.length - 1][1]; // 21 (youngest) if inverse, 120 (oldest) if normal
+        return inverse ? AGE_RANGES[0][0] : AGE_RANGES[AGE_RANGES.length - 1][1]; // Youngest age (21) if inverse, Oldest age (120) if normal
     }
 
     return null; // Should ideally not be reached if ranges cover all possibilities
@@ -92,8 +90,9 @@ export function getBiochemistryStatus(
   const difference = calculatedAge - chronologicalAge;
 
   if (difference >= 7) return 'ENVEJECIDO';
-  if (difference > 0) return 'NORMAL'; // Changed from > -2 to > 0 for normal range
-  return 'REJUVENECIDO';
+  if (difference > 0) return 'NORMAL'; // If difference is positive but less than 7, it's normal.
+  if (difference >= -2 && difference <= 0) return 'NORMAL'; // If difference is slightly negative or zero, it's normal.
+  return 'REJUVENECIDO'; // If difference is less than -2, it's rejuvenated.
 }
 
 export function getStatusColorClass(status: ResultStatus, isBackground: boolean = false): string {

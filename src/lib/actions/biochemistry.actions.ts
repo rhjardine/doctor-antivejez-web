@@ -3,7 +3,7 @@
 // src/lib/actions/biochemistry.actions.ts
 import { prisma } from '@/lib/db';
 import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
-import { BiochemistryFormValues, BiochemistryCalculationResult } from '@/types/biochemistry';
+import { BiochemistryFormValues, BiochemistryCalculationResult, BIOCHEMISTRY_ITEMS } from '@/types/biochemistry'; // Import BIOCHEMISTRY_ITEMS
 import { revalidatePath } from 'next/cache';
 
 interface SaveTestParams {
@@ -33,13 +33,27 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
     const results = calculateBioquimicaResults(formValues, chronologicalAge);
 
     // 3. Preparar los datos para guardar en la base de datos
+    // Mapear formValues y partialAges a los nombres de campo correctos para Prisma
+    const mappedFormValues = BIOCHEMISTRY_ITEMS.reduce((acc, item) => {
+      // @ts-ignore - Dynamic key access
+      acc[item.key] = formValues[item.key];
+      return acc;
+    }, {} as Record<string, number | undefined>);
+
+    const mappedPartialAges = BIOCHEMISTRY_ITEMS.reduce((acc, item) => {
+      const ageKey = `${item.key}Age` as keyof BiochemistryCalculationResult['partialAges'];
+      // @ts-ignore - Dynamic key access
+      acc[ageKey] = results.partialAges[ageKey];
+      return acc;
+    }, {} as Record<string, number | undefined>);
+
     const dbData = {
       patientId,
       chronologicalAge,
       biochemicalAge: results.biologicalAge,
       differentialAge: results.differentialAge,
-      ...formValues,
-      ...results.partialAges,
+      ...mappedFormValues, // Usar los valores mapeados
+      ...mappedPartialAges, // Usar las edades parciales mapeadas
     };
 
     // 4. Crear el nuevo registro del test
