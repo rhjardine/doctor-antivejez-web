@@ -7,13 +7,18 @@ import {
   StandardGuideItem,
   MetabolicActivator,
   RevitalizationGuideItem,
+  RemocionItem,
   StandardFormItem,
   RevitalizationFormItem,
+  MetabolicFormItem,
   RemocionFormItem,
-  MetabolicFormItem
+  RemocionAlimentacionType,
+  NoniAloeVeraTime
 } from '@/types/guide';
 import { FaPrint, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
+// IMPORTAR las constantes desde PatientGuide.tsx
+import { homeopathicStructure, bachFlowersList } from './PatientGuide'; // ADDED IMPORT
 
 interface Props {
   patient: PatientWithDetails;
