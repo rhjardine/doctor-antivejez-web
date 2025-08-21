@@ -7,7 +7,7 @@ import {
   StandardGuideItem,
   MetabolicActivator,
   RevitalizationGuideItem,
-  RemocionItem,
+  RemocionItem, // Ensure RemocionItem is imported
   StandardFormItem,
   RevitalizationFormItem,
   MetabolicFormItem,
@@ -25,6 +25,11 @@ interface Props {
   guideData: GuideCategory[];
   formValues: GuideFormValues;
   onClose: () => void;
+}
+
+// Type guard to check if an item is a RemocionItem
+function isRemocionItem(item: StandardGuideItem | RevitalizationGuideItem | RemocionItem): item is RemocionItem {
+  return (item as RemocionItem).subType !== undefined;
 }
 
 export default function PatientGuidePreview({ patient, guideData, formValues, onClose }: Props) {
@@ -168,11 +173,13 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                             .join(' / ');
                         } else if (category.type === 'REMOCION') {
                             const rem = details as RemocionFormItem;
-                            if (item.subType === 'aceite_ricino' || item.subType === 'leche_magnesia') {
+                            // Explicitly cast 'item' to RemocionItem here
+                            const remocionItem = item as RemocionItem; 
+                            if (remocionItem.subType === 'aceite_ricino' || remocionItem.subType === 'leche_magnesia') {
                                 treatmentDetails = `${rem.cucharadas || ''} Cucharadas en ${rem.horario || ''}`;
-                            } else if (item.subType === 'detox_alcalina') {
+                            } else if (remocionItem.subType === 'detox_alcalina') {
                                 treatmentDetails = `${rem.semanas ? `${rem.semanas} semana(s)` : ''} ${rem.alimentacionTipo?.join(', ') || ''}`;
-                            } else if (item.subType === 'noni_aloe') {
+                            } else if (remocionItem.subType === 'noni_aloe') {
                                 treatmentDetails = `${rem.tacita || ''} (${rem.frascos || ''} frasco(s))`;
                             }
                         } else {
