@@ -18,7 +18,7 @@ import {
 import { FaPrint, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
 // IMPORTAR las constantes desde PatientGuide.tsx
-import { homeopathicStructure, bachFlowersList } from './PatientGuide'; // ADDED IMPORT
+import { homeopathicStructure, bachFlowersList } from './PatientGuide'; 
 
 interface Props {
   patient: PatientWithDetails;
@@ -168,7 +168,13 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                             .join(' / ');
                         } else if (category.type === 'REMOCION') {
                             const rem = details as RemocionFormItem;
-                            // Lógica para mostrar detalles de remoción
+                            if (item.subType === 'aceite_ricino' || item.subType === 'leche_magnesia') {
+                                treatmentDetails = `${rem.cucharadas || ''} Cucharadas en ${rem.horario || ''}`;
+                            } else if (item.subType === 'detox_alcalina') {
+                                treatmentDetails = `${rem.semanas ? `${rem.semanas} semana(s)` : ''} ${rem.alimentacionTipo?.join(', ') || ''}`;
+                            } else if (item.subType === 'noni_aloe') {
+                                treatmentDetails = `${rem.tacita || ''} (${rem.frascos || ''} frasco(s))`;
+                            }
                         } else {
                           const std = details as StandardFormItem;
                           treatmentDetails = [std.qty, std.freq, std.custom]

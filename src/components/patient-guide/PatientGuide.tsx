@@ -367,15 +367,23 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           <div className="mt-3 pl-9 space-y-3">
             { (item.subType === 'aceite_ricino' || item.subType === 'leche_magnesia') && (
               <div className="grid grid-cols-2 gap-4">
-                <select value={selection.cucharadas || ''} onChange={e => handleSelectionChange(item.id, 'cucharadas', parseInt(e.target.value))} className="input text-sm py-1">
+                <select 
+                  value={selection.cucharadas ?? ''} // Use nullish coalescing for controlled component
+                  onChange={e => handleSelectionChange(item.id, 'cucharadas', e.target.value === '' ? undefined : parseInt(e.target.value))} 
+                  className="input text-sm py-1"
+                >
                   <option value="">Cucharadas...</option>
                   {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
-                <select value={selection.horario || ''} onChange={e => handleSelectionChange(item.id, 'horario', e.target.value as any)} className="input text-sm py-1">
+                <select 
+                  value={selection.horario ?? ''} // Use nullish coalescing
+                  onChange={e => handleSelectionChange(item.id, 'horario', e.target.value === '' ? undefined : e.target.value as any)} 
+                  className="input text-sm py-1"
+                >
                   <option value="">Horario...</option>
-                  <option value="Dia">Día</option>
-                  <option value="Tarde">Tarde</option>
-                  <option value="Noche">Noche</option>
+                  <option value="el día">el día</option>
+                  <option value="la tarde">la tarde</option>
+                  <option value="la noche al acostarse">la noche al acostarse</option>
                 </select>
               </div>
             )}
