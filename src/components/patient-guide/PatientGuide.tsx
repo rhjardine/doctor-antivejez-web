@@ -391,13 +391,13 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span>Por</span>
-                  <input type="number" value={selection.semanas || ''} onChange={e => handleSelectionChange(item.id, 'semanas', parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="N°"/>
+                  <input type="number" value={selection.semanas ?? ''} onChange={e => handleSelectionChange(item.id, 'semanas', e.target.value === '' ? undefined : parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="N°"/>
                   <span>semana(s)</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {alimentacionOptions.map(opt => (
                     <label key={opt} className="flex items-center gap-1 text-sm">
-                      <input type="checkbox" checked={selection.alimentacionTipo?.includes(opt)} onChange={e => {
+                      <input type="checkbox" checked={selection.alimentacionTipo?.includes(opt) || false} onChange={e => {
                         const current = selection.alimentacionTipo || [];
                         const newSelection = e.target.checked ? [...current, opt] : current.filter(x => x !== opt);
                         handleSelectionChange(item.id, 'alimentacionTipo', newSelection);
@@ -410,11 +410,11 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
             )}
             { item.subType === 'noni_aloe' && (
               <div className="grid grid-cols-2 gap-4">
-                 <select value={selection.tacita || ''} onChange={e => handleSelectionChange(item.id, 'tacita', e.target.value as any)} className="input text-sm py-1">
+                 <select value={selection.tacita ?? ''} onChange={e => handleSelectionChange(item.id, 'tacita', e.target.value as any)} className="input text-sm py-1">
                   <option value="">Tomar...</option>
                   {noniAloeTimeOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
-                <select value={selection.frascos || ''} onChange={e => handleSelectionChange(item.id, 'frascos', parseInt(e.target.value))} className="input text-sm py-1">
+                <select value={selection.frascos ?? ''} onChange={e => handleSelectionChange(item.id, 'frascos', e.target.value === '' ? undefined : parseInt(e.target.value))} className="input text-sm py-1">
                   <option value="">Frascos...</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
@@ -446,18 +446,18 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                   <input 
                       type="text" 
                       placeholder="Complejo B (cc)" 
-                      value={selection.complejoB_cc || ''} 
+                      value={selection.complejoB_cc ?? ''} 
                       onChange={(e) => handleSelectionChange(item.id, 'complejoB_cc', e.target.value)} 
                       className="input text-sm py-1" 
                   />
                   <input 
                       type="text" 
                       placeholder="Bioquel (cc)" 
-                      value={selection.bioquel_cc || ''} 
+                      value={selection.bioquel_cc ?? ''} 
                       onChange={(e) => handleSelectionChange(item.id, 'bioquel_cc', e.target.value)} 
                       className="input text-sm py-1" 
                   />
-                  <select value={selection.frequency || ''} onChange={e => handleSelectionChange(item.id, 'frequency', e.target.value as any)} className="input text-sm py-1">
+                  <select value={selection.frequency ?? ''} onChange={e => handleSelectionChange(item.id, 'frequency', e.target.value as any)} className="input text-sm py-1">
                     <option value="">Frecuencia...</option>
                     <option value="1 vez por semana por 10 dosis">1 vez/sem por 10 dosis</option>
                     <option value="2 veces por semana por 10 dosis">2 veces/sem por 10 dosis</option>
@@ -489,9 +489,9 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           {selection.selected && (
             <div className="mt-3 pl-9 space-y-3">
               <p className="text-sm text-gray-600 flex items-center flex-wrap gap-2">
-                <input type="number" value={selection.gotas || ''} onChange={e => handleSelectionChange('am_bioterapico', 'gotas', parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="Gotas"/>
+                <input type="number" value={selection.gotas ?? ''} onChange={e => handleSelectionChange('am_bioterapico', 'gotas', e.target.value === '' ? undefined : parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="Gotas"/>
                 <span>gotas</span>
-                <input type="number" value={selection.vecesAlDia || ''} onChange={e => handleSelectionChange('am_bioterapico', 'vecesAlDia', parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="Veces"/>
+                <input type="number" value={selection.vecesAlDia ?? ''} onChange={e => handleSelectionChange('am_bioterapico', 'vecesAlDia', e.target.value === '' ? undefined : parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="Veces"/>
                 <span>veces al día debajo de la lengua:</span>
               </p>
               <div className="flex gap-4 text-sm">
@@ -551,12 +551,12 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
       </div>
       {selections[item.id]?.selected && !('dose' in item) && frequencyOptions.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
-          <input type="text" placeholder="Cant." value={(selections[item.id] as StandardFormItem)?.qty || ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
-          <select value={(selections[item.id] as StandardFormItem)?.freq || ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
+          <input type="text" placeholder="Cant." value={(selections[item.id] as StandardFormItem)?.qty ?? ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
+          <select value={(selections[item.id] as StandardFormItem)?.freq ?? ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
             <option value="">Frecuencia...</option>
             {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
           </select>
-          <input type="text" placeholder="Suplemento personalizado" value={(selections[item.id] as StandardFormItem)?.custom || ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
+          <input type="text" placeholder="Suplemento personalizado" value={(selections[item.id] as StandardFormItem)?.custom ?? ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
         </div>
       )}
     </div>
@@ -589,7 +589,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                     return renderStandardItem(item, category.id, freqOptions);
                   })}
                   <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
-                    <input type="text" placeholder="Añadir nuevo ítem..." value={newItemInputs[category.id] || ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
+                    <input type="text" placeholder="Añadir nuevo ítem..." value={newItemInputs[category.id] ?? ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
                     <button type="button" onClick={() => handleAddNewItem(category.id)} className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"><FaPlus /> Añadir</button>
                   </div>
                 </div>
