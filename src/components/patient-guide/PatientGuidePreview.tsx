@@ -7,17 +7,14 @@ import {
   StandardGuideItem,
   MetabolicActivator,
   RevitalizationGuideItem,
-  RemocionItem, // Ensure RemocionItem is imported
   StandardFormItem,
   RevitalizationFormItem,
-  MetabolicFormItem,
   RemocionFormItem,
-  RemocionAlimentacionType,
-  NoniAloeVeraTime
+  MetabolicFormItem,
+  RemocionItem
 } from '@/types/guide';
 import { FaPrint, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
-// IMPORTAR las constantes desde PatientGuide.tsx
 import { homeopathicStructure, bachFlowersList } from './PatientGuide'; 
 
 interface Props {
@@ -27,10 +24,19 @@ interface Props {
   onClose: () => void;
 }
 
-// Type guard to check if an item is a RemocionItem
-function isRemocionItem(item: StandardGuideItem | RevitalizationGuideItem | RemocionItem): item is RemocionItem {
-  return (item as RemocionItem).subType !== undefined;
-}
+// ===== SOLUCIÓN: Función auxiliar recursiva para aplanar la estructura jerárquica =====
+const flattenHomeopathyItems = (obj: typeof homeopathicStructure): string[] => {
+  return Object.values(obj).flatMap(value => {
+    if (Array.isArray(value)) {
+      return value; // Es un array de strings, devolverlo directamente
+    }
+    if (typeof value === 'object' && value !== null) {
+      return flattenHomeopathyItems(value as any); // Es un objeto anidado, llamar recursivamente
+    }
+    return [];
+  });
+};
+// ====================================================================================
 
 export default function PatientGuidePreview({ patient, guideData, formValues, onClose }: Props) {
   const handlePrint = () => {
@@ -98,16 +104,17 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
           <div className="space-y-8">
             {guideData.map(category => {
               if (category.type === 'METABOLIC') {
-                const activator = category.items[0] as MetabolicActivator;
                 const bioTerapicoSelection = selections['am_bioterapico'] as MetabolicFormItem;
-                const selectedHomeopathy = Object.keys(homeopathicStructure)
-                  .flatMap(cat => homeopathicStructure[cat as keyof typeof homeopathicStructure])
-                  .map(name => `am_hom_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`)
-                  .filter(id => selections[id]?.selected)
-                  .map(id => {
-                    const name = Object.values(homeopathicStructure).flat().find(n => `am_hom_${n.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}` === id);
-                    return { id, name };
-                  });
+                
+                // ===== SOLUCIÓN: Usar la nueva función para obtener una lista plana de todos los nombres =====
+                const allHomeopathyNames = flattenHomeopathyItems(homeopathicStructure);
+                const selectedHomeopathy = allHomeopathyNames
+                  .filter(name => {
+                    const itemId = `am_hom_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
+                    return selections[itemId]?.selected;
+                  })
+                  .map(name => ({ id: `am_hom_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`, name }));
+                // ========================================================================================
 
                 const selectedBach = bachFlowersList.filter(subItem => selections?.[subItem.id]?.selected);
                 
@@ -173,14 +180,13 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                             .join(' / ');
                         } else if (category.type === 'REMOCION') {
                             const rem = details as RemocionFormItem;
-                            // Explicitly cast 'item' to RemocionItem here
                             const remocionItem = item as RemocionItem; 
                             if (remocionItem.subType === 'aceite_ricino' || remocionItem.subType === 'leche_magnesia') {
-                                treatmentDetails = `${rem.cucharadas || ''} Cucharadas en ${rem.horario || ''}`;
+                                treatmentDetails = `${rem.cucharadas || ''} cucharada(s) ${rem.horario || ''}`;
                             } else if (remocionItem.subType === 'detox_alcalina') {
                                 treatmentDetails = `${rem.semanas ? `${rem.semanas} semana(s)` : ''} ${rem.alimentacionTipo?.join(', ') || ''}`;
                             } else if (remocionItem.subType === 'noni_aloe') {
-                                treatmentDetails = `${rem.tacita || ''} (${rem.frascos || ''} frasco(s))`;
+                                treatmentDetails = `${rem.tacita_qty || ''} tacita(s) ${rem.tacita || ''} (${rem.frascos || ''} frasco(s))`;
                             }
                         } else {
                           const std = details as StandardFormItem;
