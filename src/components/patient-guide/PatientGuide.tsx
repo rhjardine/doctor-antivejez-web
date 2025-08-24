@@ -21,8 +21,7 @@ import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 
 // --- Estructura de Datos para el Activador Metabólico Jerárquico ---
-// Exportar estas constantes para que puedan ser importadas en PatientGuidePreview.tsx
-export const homeopathicStructure = { // ADDED 'export'
+export const homeopathicStructure = {
   'Sistemas': ['Inflamación', 'Glicólisis (m)', 'Ciclo Krebs(t)', 'Cadena Resp (n)'],
   'Humorales': ['Excreción', 'Inflamación'],
   'Mesenquimáticos': ['Deposición', 'Impregnación'],
@@ -44,7 +43,7 @@ export const homeopathicStructure = { // ADDED 'export'
   'Vegetativo': ['Atlética colérica joven', 'Atlética colérica mayor', 'Robusta sang. joven', 'Robusta sang. mayor'],
 };
 
-export const bachFlowersList: MetabolicActivatorItem[] = [ // ADDED 'export'
+export const bachFlowersList: MetabolicActivatorItem[] = [
   { id: 'am_bach_1', name: 'Agrimony' }, { id: 'am_bach_2', name: 'Aspen' }, { id: 'am_bach_3', name: 'Beech' }, { id: 'am_bach_4', name: 'Centaury' }, { id: 'am_bach_5', name: 'Cerato' }, { id: 'am_bach_6', name: 'Cherry plum' }, { id: 'am_bach_7', name: 'Chestnut bud' }, { id: 'am_bach_8', name: 'Chicory' }, { id: 'am_bach_9', name: 'Clematis' }, { id: 'am_bach_10', name: 'Crab apple' }, { id: 'am_bach_11', name: 'Elm' }, { id: 'am_bach_12', name: 'Gentian' }, { id: 'am_bach_13', name: 'Gorse' }, { id: 'am_bach_14', name: 'Heather' }, { id: 'am_bach_15', name: 'Holly' }, { id: 'am_bach_16', name: 'Honeysuckle' }, { id: 'am_bach_17', name: 'Hornbeam' }, { id: 'am_bach_18', name: 'Impatiens' }, { id: 'am_bach_19', name: 'Larch' }, { id: 'am_bach_20', name: 'Mimulus' }, { id: 'am_bach_21', name: 'Mustard' }, { id: 'am_bach_22', name: 'Oak' }, { id: 'am_bach_23', name: 'Olive' }, { id: 'am_bach_24', name: 'Pine' }, { id: 'am_bach_25', name: 'Red chestnut' }, { id: 'am_bach_26', name: 'Rock rose' }, { id: 'am_bach_27', name: 'Rock water' }, { id: 'am_bach_28', name: 'Scleranthus' }, { id: 'am_bach_29', name: 'Star of Bethlehem' }, { id: 'am_bach_30', name: 'Sweet chestnut' }, { id: 'am_bach_31', name: 'Vervain' }, { id: 'am_bach_32', name: 'Vine' }, { id: 'am_bach_33', name: 'Walnut' }, { id: 'am_bach_34', name: 'Water violet' }, { id: 'am_bach_35', name: 'White chestnut' }, { id: 'am_bach_36', name: 'Wild oat' }, { id: 'am_bach_37', name: 'Wild rose' }, { id: 'am_bach_38', name: 'Willow' }, { id: 'am_bach_39', name: 'Rescue Remedy' },
 ];
 
@@ -64,7 +63,7 @@ const initialGuideData: GuideCategory[] = [
     id: 'cat_revitalizacion',
     title: 'Fase de Revitalización',
     type: 'REVITALIZATION',
-    items: [ { id: 'rev_1', name: 'Complejo B + Bioquel' } ],
+    items: [ { id: 'rev_1', name: 'Complejo B + Otro' } ],
   },
   {
     id: 'cat_nutra_primarios',
@@ -227,7 +226,6 @@ const initialGuideData: GuideCategory[] = [
   }
 ];
 
-// ===== SOLUCIÓN: Se define el subcomponente ANTES del componente principal que lo usa =====
 const HomeopathySelector = ({ selections, handleSelectionChange }: { selections: Selections, handleSelectionChange: Function }) => {
   return (
     <div className="space-y-4">
@@ -256,12 +254,11 @@ const HomeopathySelector = ({ selections, handleSelectionChange }: { selections:
     </div>
   );
 };
-// =======================================================================================
 
 // --- Componente Principal ---
 export default function PatientGuide({ patient }: { patient: PatientWithDetails }) {
   const [guideData, setGuideData] = useState<GuideCategory[]>(initialGuideData);
-  const [selections, setSelections] = useState<Selections>({}); 
+  const [selections, setSelections] = useState<Selections>({});
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({ 'cat_remocion': true });
   const [newItemInputs, setNewItemInputs] = useState<Record<string, string>>({});
   const [observaciones, setObservaciones] = useState('');
@@ -367,23 +364,24 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           <div className="mt-3 pl-9 space-y-3">
             { (item.subType === 'aceite_ricino' || item.subType === 'leche_magnesia') && (
               <div className="grid grid-cols-2 gap-4">
+                {/* ===== AJUSTE 1: Cambio en el selector de cucharadas ===== */}
                 <select 
-                  value={selection.cucharadas ?? ''} // Use nullish coalescing for controlled component
+                  value={selection.cucharadas ?? ''}
                   onChange={e => handleSelectionChange(item.id, 'cucharadas', e.target.value === '' ? undefined : parseInt(e.target.value))} 
                   className="input text-sm py-1"
                 >
-                  <option value="">Cucharadas...</option>
-                  {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
+                  <option value="">Seleccione dosis...</option>
+                  {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{`${n} cucharada(s)`}</option>)}
                 </select>
                 <select 
-                  value={selection.horario ?? ''} // Use nullish coalescing
+                  value={selection.horario ?? ''}
                   onChange={e => handleSelectionChange(item.id, 'horario', e.target.value === '' ? undefined : e.target.value as any)} 
                   className="input text-sm py-1"
                 >
                   <option value="">Horario...</option>
-                  <option value="el día">el día</option>
-                  <option value="la tarde">la tarde</option>
-                  <option value="la noche al acostarse">la noche al acostarse</option>
+                  <option value="en el día">en el día</option>
+                  <option value="en la tarde">en la tarde</option>
+                  <option value="en la noche al acostarse">en la noche al acostarse</option>
                 </select>
               </div>
             )}
@@ -443,16 +441,17 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           </div>
           {selection.selected && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 pl-9">
+                  {/* ===== AJUSTE 2: Cambio en los placeholders de Revitalización ===== */}
                   <input 
                       type="text" 
-                      placeholder="Complejo B (cc)" 
+                      placeholder="Complejo B 3 cc" 
                       value={selection.complejoB_cc ?? ''} 
                       onChange={(e) => handleSelectionChange(item.id, 'complejoB_cc', e.target.value)} 
                       className="input text-sm py-1" 
                   />
                   <input 
                       type="text" 
-                      placeholder="Bioquel (cc)" 
+                      placeholder="Otro medicamento 3 cc" 
                       value={selection.bioquel_cc ?? ''} 
                       onChange={(e) => handleSelectionChange(item.id, 'bioquel_cc', e.target.value)} 
                       className="input text-sm py-1" 
@@ -510,10 +509,10 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         
         <div className="border-b border-gray-200">
           <nav className="flex space-x-4">
-            <button onClick={() => setActiveSubTab('homeopatia')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'homeopatia' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+            <button type="button" onClick={() => setActiveSubTab('homeopatia')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'homeopatia' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
               Homeopatía
             </button>
-            <button onClick={() => setActiveSubTab('bach')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'bach' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+            <button type="button" onClick={() => setActiveSubTab('bach')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'bach' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
               Flores de Bach
             </button>
           </nav>
@@ -571,7 +570,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
 
       {guideData.map((category) => (
         <div key={category.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div onClick={() => toggleCategory(category.id)} className="w-full flex justify-between items-center p-4 bg-primary-dark text-white rounded-t-lg">
+          <div onClick={() => toggleCategory(category.id)} className="w-full flex justify-between items-center p-4 cursor-pointer bg-primary-dark text-white rounded-t-lg">
             <h3 className="font-semibold">{category.title}</h3>
             {openCategories[category.id] ? <FaChevronUp /> : <FaChevronDown />}
           </div>
