@@ -299,6 +299,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const [observaciones, setObservaciones] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [activeMetabolicTab, setActiveMetabolicTab] = useState<'homeopatia' | 'bach'>('homeopatia');
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
@@ -508,7 +509,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   };
 
   const renderMetabolicActivator = () => {
-    const [activeSubTab, setActiveSubTab] = useState<'homeopatia' | 'bach'>('homeopatia');
     const selection = selections['am_bioterapico'] as MetabolicFormItem || {};
     const currentHorarios = Array.isArray(selection.horario) ? selection.horario : (selection.horario ? [selection.horario] : []);
 
@@ -549,17 +549,17 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         
         <div className="border-b border-gray-200">
           <nav className="flex space-x-1">
-            <button type="button" onClick={() => setActiveSubTab('homeopatia')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeSubTab === 'homeopatia' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>
+            <button type="button" onClick={() => setActiveMetabolicTab('homeopatia')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeMetabolicTab === 'homeopatia' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>
               Homeopatía
             </button>
-            <button type="button" onClick={() => setActiveSubTab('bach')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeSubTab === 'bach' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>
+            <button type="button" onClick={() => setActiveMetabolicTab('bach')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeMetabolicTab === 'bach' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>
               Flores de Bach
             </button>
           </nav>
         </div>
         <div className="p-4 border-x border-b border-gray-200 rounded-b-lg -mt-px">
-          {activeSubTab === 'homeopatia' && <HomeopathySelector selections={selections} handleSelectionChange={handleSelectionChange} />}
-          {activeSubTab === 'bach' && <BachFlowerSelector selections={selections} handleSelectionChange={handleSelectionChange} />}
+          {activeMetabolicTab === 'homeopatia' && <HomeopathySelector selections={selections} handleSelectionChange={handleSelectionChange} />}
+          {activeMetabolicTab === 'bach' && <BachFlowerSelector selections={selections} handleSelectionChange={handleSelectionChange} />}
         </div>
       </div>
     );
