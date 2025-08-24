@@ -208,11 +208,10 @@ const initialGuideData: GuideCategory[] = [
       { id: 'terapia_14', name: 'Nebulización' },
       { id: 'terapia_15', name: 'Neural' },
       { id: 'terapia_16', name: 'Ozono' },
-      { id: 'terapia_17', name: 'Exosómas' }, // ===== AJUSTE 3: "Shot Umbilical" cambiado a "Exosómas" =====
+      { id: 'terapia_17', name: 'Exosómas' },
       { id: 'terapia_18', name: 'Terapia BioCelular' },
     ]
   },
-  // ===== AJUSTE 4: Sección "Terapia BioNeural" eliminada =====
   {
     id: 'cat_control_terapia',
     title: 'Control de Terapia',
@@ -359,7 +358,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           <div className="mt-3 pl-9 space-y-3">
             { (item.subType === 'aceite_ricino' || item.subType === 'leche_magnesia') && (
               <div className="grid grid-cols-2 gap-4">
-                {/* ===== AJUSTE 1: Cambio en el selector de cucharadas ===== */}
                 <select 
                   value={selection.cucharadas ?? ''}
                   onChange={e => handleSelectionChange(item.id, 'cucharadas', e.target.value === '' ? undefined : parseInt(e.target.value))} 
@@ -402,7 +400,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
               </div>
             )}
             { item.subType === 'noni_aloe' && (
-              // ===== AJUSTE 2: Nuevos campos para Noni/Aloe Vera =====
               <div className="grid grid-cols-3 gap-4">
                  <input
                     type="number"
@@ -444,7 +441,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           </div>
           {selection.selected && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 pl-9">
-                  {/* ===== AJUSTE 2: Cambio en los placeholders de Revitalización ===== */}
                   <input 
                       type="text" 
                       placeholder="Complejo B 3 cc" 
@@ -471,12 +467,98 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   };
 
   const renderMetabolicActivator = () => {
-    // ... (código sin cambios)
+    const [activeSubTab, setActiveSubTab] = useState<'homeopatia' | 'bach'>('homeopatia');
+    const selection = selections['am_bioterapico'] as MetabolicFormItem || {};
+    const currentHorarios = Array.isArray(selection.horario) ? selection.horario : (selection.horario ? [selection.horario] : []);
+
+    return (
+      <div className="space-y-4">
+        <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+          <div className="flex items-center gap-4">
+            <input 
+              type="checkbox" 
+              id="am_bioterapico" 
+              checked={selection.selected || false} 
+              onChange={(e) => handleSelectionChange('am_bioterapico', 'selected', e.target.checked)} 
+              className="w-5 h-5 accent-primary"
+            />
+            <label htmlFor="am_bioterapico" className="font-semibold text-blue-800">Bioterápico + Bach</label>
+          </div>
+          {selection.selected && (
+            <div className="mt-3 pl-9 space-y-3">
+              <p className="text-sm text-gray-600 flex items-center flex-wrap gap-2">
+                <input type="number" value={selection.gotas ?? ''} onChange={e => handleSelectionChange('am_bioterapico', 'gotas', e.target.value === '' ? undefined : parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="Gotas"/>
+                <span>gotas</span>
+                <input type="number" value={selection.vecesAlDia ?? ''} onChange={e => handleSelectionChange('am_bioterapico', 'vecesAlDia', e.target.value === '' ? undefined : parseInt(e.target.value))} className="input text-sm py-1 w-20" placeholder="Veces"/>
+                <span>veces al día debajo de la lengua:</span>
+              </p>
+              <div className="flex gap-4 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={currentHorarios.includes('Desayuno y Cena')} onChange={() => handleMetabolicHorarioChange('Desayuno y Cena')}/>
+                  30 min antes de Desayuno y Cena
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={currentHorarios.includes('Emergencia')} onChange={() => handleMetabolicHorarioChange('Emergencia')}/>
+                  o cada 15 min / 1h en crisis
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-4">
+            <button type="button" onClick={() => setActiveSubTab('homeopatia')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'homeopatia' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+              Homeopatía
+            </button>
+            <button type="button" onClick={() => setActiveSubTab('bach')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'bach' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+              Flores de Bach
+            </button>
+          </nav>
+        </div>
+
+        {activeSubTab === 'homeopatia' && <HomeopathySelector selections={selections} handleSelectionChange={handleSelectionChange} />}
+        
+        {activeSubTab === 'bach' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {bachFlowersList.map(item => (
+              <label key={item.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded-md">
+                <input
+                  type="checkbox"
+                  id={item.id}
+                  checked={selections[item.id]?.selected || false}
+                  onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span>{item.name}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
-  const renderStandardItem = (item: StandardGuideItem | MetabolicActivatorItem, categoryId: string, frequencyOptions: string[]) => {
-    // ... (código sin cambios)
-  };
+  const renderStandardItem = (item: StandardGuideItem | MetabolicActivatorItem, categoryId: string, frequencyOptions: string[]) => (
+    <div key={item.id} className="p-3 bg-gray-50 rounded-md transition-all hover:bg-gray-100">
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
+        <input type="checkbox" id={item.id} checked={selections[item.id]?.selected || false} onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} className="w-5 h-5 accent-primary"/>
+        <label htmlFor={item.id} className="flex-grow font-medium text-gray-800 text-sm">{item.name}</label>
+        {'dose' in item && item.dose && <span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">{item.dose}</span>}
+        <button type="button" onClick={() => handleDeleteItem(categoryId, item.id)} className="text-gray-400 hover:text-red-500 transition-colors ml-auto"><FaTrash /></button>
+      </div>
+      {selections[item.id]?.selected && !('dose' in item) && frequencyOptions.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
+          <input type="text" placeholder="Cant." value={(selections[item.id] as StandardFormItem)?.qty ?? ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
+          <select value={(selections[item.id] as StandardFormItem)?.freq ?? ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
+            <option value="">Frecuencia...</option>
+            {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+          <input type="text" placeholder="Suplemento personalizado" value={(selections[item.id] as StandardFormItem)?.custom ?? ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -493,39 +575,40 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           </div>
           {openCategories[category.id] && (
             <div className="p-4">
-              {category.type === 'REMOCION' && (
-                <div className="space-y-4">
-                  {(category.items as (RemocionItem | StandardGuideItem)[])
-                    .filter((item): item is RemocionItem => 'subType' in item)
-                    .map(item => renderRemocionItem(item))}
-                  
-                  {(category.items as (RemocionItem | StandardGuideItem)[])
-                    .filter((item): item is StandardGuideItem => !('subType' in item))
-                    .map(item => renderStandardItem(item, category.id, []))}
-                  
-                  {/* ===== AJUSTE 1: Botón de añadir para Fase de Remoción ===== */}
-                  <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
-                    <input type="text" placeholder="Añadir nuevo producto de remoción..." value={newItemInputs[category.id] ?? ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
-                    <button type="button" onClick={() => handleAddNewItem(category.id)} className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"><FaPlus /> Añadir</button>
-                  </div>
-                </div>
-              )}
-              {category.type === 'REVITALIZATION' && <div className="space-y-4">{(category.items as RevitalizationGuideItem[]).map(item => renderRevitalizationItem(item))}</div>}
-              {category.type === 'METABOLIC' && renderMetabolicActivator()}
-              {category.type === 'STANDARD' && (
-                <div className="space-y-4">
-                  {(category.items as StandardGuideItem[]).map(item => {
-                    const freqOptions = (['cat_sueros', 'cat_terapias'].includes(category.id)) 
-                      ? sueroTerapiaFrequencyOptions 
-                      : nutraFrequencyOptions;
-                    return renderStandardItem(item, category.id, freqOptions);
-                  })}
-                  <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
-                    <input type="text" placeholder="Añadir nuevo ítem..." value={newItemInputs[category.id] ?? ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
-                    <button type="button" onClick={() => handleAddNewItem(category.id)} className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"><FaPlus /> Añadir</button>
-                  </div>
-                </div>
-              )}
+              <div className="space-y-4">
+                {category.type === 'REMOCION' && (
+                  <>
+                    {(category.items as RemocionItem[])
+                      .filter(item => 'subType' in item)
+                      .map(item => renderRemocionItem(item))}
+                    
+                    {(category.items as (StandardGuideItem | RemocionItem)[])
+                      .filter((item): item is StandardGuideItem => !('subType' in item))
+                      .map(item => renderStandardItem(item, category.id, []))}
+                    
+                    <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
+                      <input type="text" placeholder="Añadir nuevo producto de remoción..." value={newItemInputs[category.id] ?? ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
+                      <button type="button" onClick={() => handleAddNewItem(category.id)} className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"><FaPlus /> Añadir</button>
+                    </div>
+                  </>
+                )}
+                {category.type === 'REVITALIZATION' && (category.items as RevitalizationGuideItem[]).map(item => renderRevitalizationItem(item))}
+                {category.type === 'METABOLIC' && renderMetabolicActivator()}
+                {category.type === 'STANDARD' && (
+                  <>
+                    {(category.items as StandardGuideItem[]).map(item => {
+                      const freqOptions = (['cat_sueros', 'cat_terapias'].includes(category.id)) 
+                        ? sueroTerapiaFrequencyOptions 
+                        : nutraFrequencyOptions;
+                      return renderStandardItem(item, category.id, freqOptions);
+                    })}
+                    <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
+                      <input type="text" placeholder="Añadir nuevo ítem..." value={newItemInputs[category.id] ?? ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
+                      <button type="button" onClick={() => handleAddNewItem(category.id)} className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"><FaPlus /> Añadir</button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
