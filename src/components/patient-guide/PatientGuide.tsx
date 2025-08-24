@@ -22,25 +22,32 @@ import { toast } from 'sonner';
 
 // --- Estructura de Datos para el Activador Metabólico Jerárquico ---
 export const homeopathicStructure = {
-  'Sistemas': ['Inflamación', 'Glicólisis (m)', 'Ciclo Krebs(t)', 'Cadena Resp (n)'],
-  'Humorales': ['Excreción', 'Inflamación'],
-  'Mesenquimáticos': ['Deposición', 'Impregnación'],
-  'Celulares': ['Degeneración', 'Dediferencial'],
-  'Nervioso': ['SN Central', 'SN Autónomo', 'Ansiedad', 'Depresión', 'Visión', 'Audición', 'Olfato', 'Gusto'],
-  'Endocrino': ['Pineal', 'Hipófisis', 'Tiroides', 'Timo', 'Páncreas', 'Suprarrenal', 'Ovarios', 'Testículos'],
-  'Inmunológico': ['Inflam. severa', 'Inflam. media', 'Inflama leve', 'Alérgico', 'Estimula basal', 'Estimula viral', 'Estimula bact', 'Estimula cell'],
-  'Cardiovascular': ['Sangre', 'Corazón', 'Circ. arterial', 'Circ. venosa', 'Micro circulatorio'],
-  'Digestivo': ['Superior', 'Inferior', 'Hígado', 'Vías biliares', 'Páncreas', 'Bazo'],
-  'Óseo Articular': ['Huesos', 'Cartílagos y lig.', 'Discos', 'Occipital', 'Cervical', 'Dorsal', 'Lumbar'],
-  'Respiratorio': ['Superior', 'Medio', 'Inferior'],
-  'Urinario': ['Riñón', 'Vejiga'],
-  'Muscular': ['Inflamatorio', 'Degenerativo'],
-  'Linfático Adiposo': ['Congestivo', 'Degenerativo', 'Sobrepeso', 'Obesidad'],
-  'Reproductor': ['Femenino', 'Masculino', 'Próstata'],
-  'Piel': ['Inflamatorio', 'Degenerativo', 'Cabellos / Uñas'],
+  'Evolución': ['Inflamación', 'Degeneración'],
+  'Energía': ['Glicólisis (m)', 'Ciclo Krebs (t)', 'Cadena Resp (n)'],
+  'Hemotóxico': {
+    'Humorales': ['Excreción', 'Inflamación'],
+    'Mesenquimáticos': ['Deposición', 'Impregnación'],
+    'Celulares': ['Regeneración', 'Dediferenciación'],
+  },
+  'Sistemas Orgánicos': {
+    'Nervioso': ['SN Central', 'SN Autónomo', 'Ansiedad', 'Depresión', 'Visión', 'Audición', 'Olfato', 'Gusto'],
+    'Endocrino': ['Pineal', 'Hipófisis', 'Tiroides', 'Timo', 'Páncreas', 'Suprarrenal', 'Ovarios', 'Testículos'],
+    'Inmunológico': ['Inflam. severa', 'Inflam. media', 'Inflama leve', 'Alérgico', 'Estímulo basal', 'Estímulo viral', 'Estímulo bact', 'Estímulo cell'],
+    'Cardiovascular': ['Sangre', 'Corazón', 'Circ. arterial', 'Circ. venosa', 'Microcirculación'],
+    'Respiratorio': ['Superior', 'Medio', 'Inferior'],
+    'Linfático Adiposo': ['Congestivo', 'Degenerativo', 'Sobrepeso', 'Obesidad'],
+    'Digestivo': ['Superior', 'Inferior', 'Hígado', 'Vías biliares', 'Páncreas', 'Bazo'],
+    'Urinario': ['Riñón', 'Vejiga'],
+    'Reproductor': ['Femenino', 'Masculino', 'Próstata'],
+    'Óseo Articular': ['Huesos', 'Cartílagos y ligamentos', 'Discos', 'Occipital', 'Cervical', 'Dorsal', 'Lumbar'],
+    'Muscular': ['Inflamatorio', 'Degenerativo'],
+    'Piel': ['Inflamatorio', 'Degenerativo', 'Cabellos/Uñas'],
+  },
+  'Perfiles Constitucionales': {
+    'Neuro': ['Leptosómica melanc. joven', 'Leptosómica melanc. mayor', 'Picnica flem joven', 'Picnica flem mayor'],
+    'Vegetativo': ['Atlética colérica joven', 'Atlética colérica mayor', 'Robusta sang joven', 'Robusta sang mayor'],
+  },
   'Especiales': ['Diarrea', 'Fiebre', 'Post Vacuna', 'Bacteriosis', 'Micosis', 'Protozoarios', 'Parasitosis', 'GPDF'],
-  'Neuro': ['Leptosomica melanc. joven', 'Leptosomica melanc. mayor', 'Picnica flem. joven', 'Picnica flem. mayor'],
-  'Vegetativo': ['Atlética colérica joven', 'Atlética colérica mayor', 'Robusta sang. joven', 'Robusta sang. mayor'],
 };
 
 export const bachFlowersList: MetabolicActivatorItem[] = [
@@ -221,29 +228,63 @@ const initialGuideData: GuideCategory[] = [
 ];
 
 const HomeopathySelector = ({ selections, handleSelectionChange }: { selections: Selections, handleSelectionChange: Function }) => {
+  const renderCheckbox = (name: string) => {
+    const itemId = `am_hom_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
+    return (
+      <label key={itemId} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
+        <input
+          type="checkbox"
+          id={itemId}
+          checked={selections[itemId]?.selected || false}
+          onChange={(e) => handleSelectionChange(itemId, 'selected', e.target.checked)}
+          className="w-4 h-4 accent-primary"
+        />
+        <span>{name}</span>
+      </label>
+    );
+  };
+
   return (
     <div className="space-y-4">
-      {Object.entries(homeopathicStructure).map(([category, items]) => (
-        <div key={category} className="p-3 bg-gray-100 rounded-md">
-          <h5 className="font-semibold text-gray-800 mb-2">{category}</h5>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
-            {items.map(item => {
-              const itemId = `am_hom_${item.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
-              return (
-                <label key={itemId} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    id={itemId}
-                    checked={selections[itemId]?.selected || false}
-                    onChange={(e) => handleSelectionChange(itemId, 'selected', e.target.checked)}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  <span>{item}</span>
-                </label>
-              );
-            })}
-          </div>
+      {Object.entries(homeopathicStructure).map(([category, subItems]) => (
+        <div key={category} className="p-4 bg-gray-50 rounded-lg border">
+          <h5 className="font-bold text-gray-800 mb-3">{category}</h5>
+          {Array.isArray(subItems) ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
+              {subItems.map(renderCheckbox)}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(subItems).map(([subCategory, items]) => (
+                <div key={subCategory}>
+                  <h6 className="font-semibold text-gray-600 mb-2">{subCategory}</h6>
+                  <div className="pl-4 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+                    {items.map(renderCheckbox)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      ))}
+    </div>
+  );
+};
+
+const BachFlowerSelector = ({ selections, handleSelectionChange }: { selections: Selections, handleSelectionChange: Function }) => {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {bachFlowersList.map(item => (
+        <label key={item.id} className="flex items-center gap-2 text-sm p-3 bg-gray-50 rounded-lg border cursor-pointer hover:border-primary">
+          <input
+            type="checkbox"
+            id={item.id}
+            checked={selections[item.id]?.selected || false}
+            onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)}
+            className="w-4 h-4 accent-primary"
+          />
+          <span>{item.name}</span>
+        </label>
       ))}
     </div>
   );
@@ -507,34 +548,19 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         </div>
         
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-4">
-            <button type="button" onClick={() => setActiveSubTab('homeopatia')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'homeopatia' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+          <nav className="flex space-x-1">
+            <button type="button" onClick={() => setActiveSubTab('homeopatia')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeSubTab === 'homeopatia' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>
               Homeopatía
             </button>
-            <button type="button" onClick={() => setActiveSubTab('bach')} className={`py-2 px-4 text-sm font-medium ${activeSubTab === 'bach' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
+            <button type="button" onClick={() => setActiveSubTab('bach')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeSubTab === 'bach' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>
               Flores de Bach
             </button>
           </nav>
         </div>
-
-        {activeSubTab === 'homeopatia' && <HomeopathySelector selections={selections} handleSelectionChange={handleSelectionChange} />}
-        
-        {activeSubTab === 'bach' && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {bachFlowersList.map(item => (
-              <label key={item.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded-md">
-                <input
-                  type="checkbox"
-                  id={item.id}
-                  checked={selections[item.id]?.selected || false}
-                  onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)}
-                  className="w-4 h-4 accent-primary"
-                />
-                <span>{item.name}</span>
-              </label>
-            ))}
-          </div>
-        )}
+        <div className="p-4 border-x border-b border-gray-200 rounded-b-lg -mt-px">
+          {activeSubTab === 'homeopatia' && <HomeopathySelector selections={selections} handleSelectionChange={handleSelectionChange} />}
+          {activeSubTab === 'bach' && <BachFlowerSelector selections={selections} handleSelectionChange={handleSelectionChange} />}
+        </div>
       </div>
     );
   };
@@ -578,11 +604,11 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
               <div className="space-y-4">
                 {category.type === 'REMOCION' && (
                   <>
-                    {(category.items as RemocionItem[])
-                      .filter(item => 'subType' in item)
+                    {(category.items as (RemocionItem | StandardGuideItem)[])
+                      .filter((item): item is RemocionItem => 'subType' in item)
                       .map(item => renderRemocionItem(item))}
                     
-                    {(category.items as (StandardGuideItem | RemocionItem)[])
+                    {(category.items as (RemocionItem | StandardGuideItem)[])
                       .filter((item): item is StandardGuideItem => !('subType' in item))
                       .map(item => renderStandardItem(item, category.id, []))}
                     

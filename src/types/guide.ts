@@ -1,7 +1,6 @@
 // src/types/guide.ts
 export { GuideItemType } from '@prisma/client';
 
-// --- Nuevos tipos para campos específicos ---
 export type RemocionAlimentacionType = 'Niño' | 'Antienvejecimiento' | 'Antidiabética' | 'Metabólica' | 'Citostática' | 'Renal';
 
 export type NoniAloeVeraTime = 
@@ -9,7 +8,6 @@ export type NoniAloeVeraTime =
   | '30 minutos antes de Desayuno y Cena' 
   | '30 minutos antes de la Cena';
 
-// --- Items de la Guía ---
 export interface StandardGuideItem {
   id: string;
   name: string;
@@ -36,18 +34,16 @@ export interface MetabolicActivator {
   bachFlowers: MetabolicActivatorItem[];
 }
 
-// --- Categorías de la Guía ---
 export interface GuideCategory {
   id: string;
   title: string;
   type: 'STANDARD' | 'METABOLIC' | 'REVITALIZATION' | 'REMOCION';
   items:
-    | (StandardGuideItem | RemocionItem)[] // MODIFICADO para permitir items mixtos
+    | (StandardGuideItem | RemocionItem)[]
     | RevitalizationGuideItem[]
     | [MetabolicActivator];
 }
 
-// --- Tipos para los valores del Formulario ---
 export interface StandardFormItem {
   selected?: boolean;
   qty?: string;
@@ -58,7 +54,7 @@ export interface StandardFormItem {
 export interface RevitalizationFormItem {
   selected?: boolean;
   complejoB_cc?: string;
-  bioquel_cc?: string; // Este campo ahora será para el "Otro" medicamento
+  bioquel_cc?: string;
   frequency?: '1 vez por semana por 10 dosis' | '2 veces por semana por 10 dosis' | '';
 }
 
@@ -75,7 +71,7 @@ export interface RemocionFormItem {
   horario?: 'en el día' | 'en la tarde' | 'en la noche al acostarse';
   semanas?: number;
   alimentacionTipo?: RemocionAlimentacionType[];
-  tacita_qty?: number; // ===== NUEVO: Campo para la cantidad numérica de Noni/Aloe Vera =====
+  tacita_qty?: number;
   tacita?: NoniAloeVeraTime;
   frascos?: number;
 }
