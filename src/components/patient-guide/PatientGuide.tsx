@@ -157,7 +157,7 @@ const initialGuideData: GuideCategory[] = [
       { id: 'fn_3', name: 'Agua mineral' },
       { id: 'fn_4', name: 'Arcilla Medicinal Bebible' },
       { id: 'fn_5', name: 'Arcilla Medicinal Tópica' },
-      { id: 'fn_6', name: 'Amigel' },
+      { id: 'fn_6', name: 'Arnigel' },
       { id: 'fn_7', name: 'Cambiar desodorante por borocanfor y aceites esenciales' },
       { id: 'fn_8', name: 'Cambiar o cubrir las amalgamas por resina fotocurable' },
       { id: 'fn_9', name: 'Cloruro de Magnesio' },
