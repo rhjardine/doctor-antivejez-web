@@ -41,18 +41,6 @@ const CategoryTitle = ({ title, icon }: { title: string, icon: React.ReactNode }
   </div>
 );
 
-const flattenHomeopathyItems = (obj: object): string[] => {
-    return Object.values(obj).flatMap(value => {
-      if (Array.isArray(value)) {
-        return value;
-      }
-      if (typeof value === 'object' && value !== null) {
-        return flattenHomeopathyItems(value);
-      }
-      return [];
-    });
-};
-
 export default function PatientGuidePreview({ patient, guideData, formValues, onClose }: Props) {
   const handlePrint = () => {
     window.print();
@@ -138,23 +126,26 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
               if (category.type === 'METABOLIC') {
                 const bioTerapicoSelection = selections['am_bioterapico'] as MetabolicFormItem;
                 
-                // ===== SOLUCIÓN: Lógica de filtrado refactorizada y segura =====
-                const selectedHomeopathy = Object.entries(homeopathicStructure)
-                  .flatMap(([cat, subItems]) => {
-                    if (Array.isArray(subItems)) {
-                      return subItems.map(name => ({ name, category: cat }));
-                    }
-                    return Object.entries(subItems).flatMap(([subCat, items]) => 
-                      items.map(name => ({ name, category: cat, subCategory: subCat }))
-                    );
-                  })
+                // ===== SOLUCIÓN: La lógica de flatMap ahora produce un tipo consistente =====
+                const allHomeopathyItems = Object.entries(homeopathicStructure).flatMap(([cat, subItems]) => {
+                  if (Array.isArray(subItems)) {
+                    // Para arrays directos, subCategory es undefined
+                    return subItems.map(name => ({ name, category: cat, subCategory: undefined }));
+                  }
+                  // Para objetos anidados, se incluye la subcategoría
+                  return Object.entries(subItems).flatMap(([subCat, items]) => 
+                    items.map(name => ({ name, category: cat, subCategory: subCat }))
+                  );
+                });
+
+                const selectedHomeopathy = allHomeopathyItems
                   .filter(item => {
                     const uniquePrefix = item.subCategory ? `${item.category}_${item.subCategory}` : item.category;
                     const itemId = `am_hom_${uniquePrefix}_${item.name}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
                     return selections[itemId]?.selected;
                   })
                   .map(item => item.name);
-                // =============================================================
+                // =======================================================================
 
                 const selectedBach = bachFlowersList.filter(subItem => selections?.[subItem.id]?.selected);
                 
