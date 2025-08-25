@@ -13,7 +13,7 @@ import {
   MetabolicFormItem,
   RemocionFormItem,
 } from '@/types/guide';
-import { FaPrint, FaTimes, FaSyringe, FaCapsules, FaSpa, FaLeaf, FaVial, FaDna, FaStethoscope } from 'react-icons/fa';
+import { FaPrint, FaTimes, FaSyringe, FaCapsules, FaSpa, FaLeaf, FaVial, FaDna, FaStethoscope, FaUserMd } from 'react-icons/fa';
 import Image from 'next/image';
 import { homeopathicStructure, bachFlowersList } from './PatientGuide'; 
 
@@ -24,7 +24,6 @@ interface Props {
   onClose: () => void;
 }
 
-// --- Subcomponente para renderizar un ítem de la guía ---
 const GuideListItem = ({ name, details }: { name: string, details?: string | null }) => (
   <li className="text-gray-800 break-inside-avoid flex items-start">
     <span className="text-primary mr-3 mt-1">&#8226;</span>
@@ -35,13 +34,24 @@ const GuideListItem = ({ name, details }: { name: string, details?: string | nul
   </li>
 );
 
-// --- Subcomponente para los títulos de categoría ---
 const CategoryTitle = ({ title, icon }: { title: string, icon: React.ReactNode }) => (
   <div className="flex items-center gap-3 border-b-2 border-gray-200 pb-2 mb-4">
     <div className="text-primary text-2xl">{icon}</div>
     <h3 className="text-xl font-bold text-gray-800">{title}</h3>
   </div>
 );
+
+const flattenHomeopathyItems = (obj: object): string[] => {
+    return Object.values(obj).flatMap(value => {
+      if (Array.isArray(value)) {
+        return value;
+      }
+      if (typeof value === 'object' && value !== null) {
+        return flattenHomeopathyItems(value);
+      }
+      return [];
+    });
+};
 
 export default function PatientGuidePreview({ patient, guideData, formValues, onClose }: Props) {
   const handlePrint = () => {
@@ -125,25 +135,27 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
 
           <main className="space-y-10">
             {guideData.map(category => {
-              const selectedItems = category.items.filter(item => selections?.[item.id]?.selected);
-
               if (category.type === 'METABOLIC') {
                 const bioTerapicoSelection = selections['am_bioterapico'] as MetabolicFormItem;
-                const allHomeopathyNames = flattenHomeopathyItems(homeopathicStructure);
-                const selectedHomeopathy = allHomeopathyNames
-                  .filter(name => {
-                    const categoryKey = Object.keys(homeopathicStructure).find(cat => 
-                      Array.isArray(homeopathicStructure[cat as keyof typeof homeopathicStructure]) 
-                        ? homeopathicStructure[cat as keyof typeof homeopathicStructure].includes(name)
-                        : Object.values(homeopathicStructure[cat as keyof typeof homeopathicStructure]).flat().includes(name)
-                    ) || '';
-                    const subCategoryKey = !Array.isArray(homeopathicStructure[categoryKey as keyof typeof homeopathicStructure]) 
-                      ? Object.keys(homeopathicStructure[categoryKey as keyof typeof homeopathicStructure]).find(subCat => homeopathicStructure[categoryKey as keyof typeof homeopathicStructure][subCat].includes(name))
-                      : undefined;
-                    const uniquePrefix = subCategoryKey ? `${categoryKey}_${subCategoryKey}` : categoryKey;
-                    const itemId = `am_hom_${uniquePrefix}_${name}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+                
+                // ===== SOLUCIÓN: Lógica de filtrado refactorizada y segura =====
+                const selectedHomeopathy = Object.entries(homeopathicStructure)
+                  .flatMap(([cat, subItems]) => {
+                    if (Array.isArray(subItems)) {
+                      return subItems.map(name => ({ name, category: cat }));
+                    }
+                    return Object.entries(subItems).flatMap(([subCat, items]) => 
+                      items.map(name => ({ name, category: cat, subCategory: subCat }))
+                    );
+                  })
+                  .filter(item => {
+                    const uniquePrefix = item.subCategory ? `${item.category}_${item.subCategory}` : item.category;
+                    const itemId = `am_hom_${uniquePrefix}_${item.name}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
                     return selections[itemId]?.selected;
-                  });
+                  })
+                  .map(item => item.name);
+                // =============================================================
+
                 const selectedBach = bachFlowersList.filter(subItem => selections?.[subItem.id]?.selected);
                 
                 if (!bioTerapicoSelection?.selected && selectedHomeopathy.length === 0 && selectedBach.length === 0) return null;
@@ -184,6 +196,7 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                 );
               }
               
+              const selectedItems = category.items.filter(item => selections?.[item.id]?.selected);
               if (selectedItems.length === 0) return null;
 
               return (
@@ -235,15 +248,3 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
     </div>
   );
 }
-
-const flattenHomeopathyItems = (obj: typeof homeopathicStructure): string[] => {
-    return Object.values(obj).flatMap(value => {
-      if (Array.isArray(value)) {
-        return value;
-      }
-      if (typeof value === 'object' && value !== null) {
-        return flattenHomeopathyItems(value as any);
-      }
-      return [];
-    });
-};
