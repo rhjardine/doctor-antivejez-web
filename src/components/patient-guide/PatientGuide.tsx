@@ -375,9 +375,9 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const nutraFrequencyOptions = ["Mañana", "Noche", "30 min antes de Desayuno", "30 min antes de Cena", "30 min antes de Desayuno y Cena", "30 min antes de Desayuno y Cena y Antes del Ejercicio", "Antes del Ejercicio" "Otros"];
   const sueroTerapiaFrequencyOptions = ["Diaria", "Semanal", "Quincenal", "Mensual"];
   const noniAloeTimeOptions: NoniAloeVeraTime[] = [
-    'Tacita 30 minutos antes de Desayuno', 
-    'Tacita 30 minutos antes de Desayuno y Cena',
-    'Tacita 30 minutos antes de la Cena'
+    '30 minutos antes de Desayuno', 
+    '30 minutos antes de Desayuno y Cena',
+    '30 minutos antes de la Cena'
   ];
 
   const renderRemocionItem = (item: RemocionItem) => {
