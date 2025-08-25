@@ -62,7 +62,7 @@ const initialGuideData: GuideCategory[] = [
     items: [
       { id: 'rem_1', name: 'Aceite de ricino', subType: 'aceite_ricino' },
       { id: 'rem_2', name: 'Leche de magnesia', subType: 'leche_magnesia' },
-      { id: 'rem_3', name: 'Detoxificación Alcalina Vegetariana', subType: 'detox_alcalina' },
+      { id: 'rem_3', name: 'Detoxificación Alcalina', subType: 'detox_alcalina' },
       { id: 'rem_4', name: 'Noni / Aloe Vera', subType: 'noni_aloe' },
     ],
   },
@@ -372,7 +372,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
       setIsSendModalOpen(false);
   };
 
-  const nutraFrequencyOptions = ["Mañana", "Noche", "30 min antes de Desayuno", "30 min antes de Cena", "30 min antes de Desayuno y Cena", "30 min antes de Desayuno y Cena y Antes del Ejercicio", "Antes del Ejercicio" "Otros"];
+  const nutraFrequencyOptions = ["Mañana", "Noche", "30 min antes de Desayuno", "30 min antes de Cena", "30 min antes de Desayuno y Cena", "Antes del Ejercicio", "Otros"];
   const sueroTerapiaFrequencyOptions = ["Diaria", "Semanal", "Quincenal", "Mensual"];
   const noniAloeTimeOptions: NoniAloeVeraTime[] = [
     '30 minutos antes de Desayuno', 
