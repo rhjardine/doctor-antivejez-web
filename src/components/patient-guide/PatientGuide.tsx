@@ -229,7 +229,6 @@ const initialGuideData: GuideCategory[] = [
 
 const HomeopathySelector = ({ selections, handleSelectionChange }: { selections: Selections, handleSelectionChange: Function }) => {
   const renderCheckbox = (name: string, category: string, subCategory?: string) => {
-    // ===== SOLUCIÓN DEL BUG: Se genera un ID único usando la jerarquía =====
     const uniquePrefix = subCategory ? `${category}_${subCategory}` : category;
     const itemId = `am_hom_${uniquePrefix}_${name}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
     
@@ -375,7 +374,19 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
       setIsSendModalOpen(false);
   };
 
-  const nutraFrequencyOptions = ["Mañana", "Noche", "30 min antes de Desayuno", "30 min antes de Cena", "30 min antes de Desayuno y Cena", "Antes del Ejercicio", "Otros"];
+  const nutraFrequencyOptions = [
+    "Mañana", 
+    "Noche", 
+    "30 min antes de Desayuno", 
+    "30 min antes de Cena", 
+    "30 min antes de Desayuno y Cena",
+    "Con el Desayuno",
+    "Con la Cena",
+    "Con el Desayuno y la Cena",
+    "Antes del Ejercicio", 
+    "Otros"
+  ];
+  
   const sueroTerapiaFrequencyOptions = ["Diaria", "Semanal", "Quincenal", "Mensual"];
   const noniAloeTimeOptions: NoniAloeVeraTime[] = [
     '30 minutos antes de Desayuno', 
@@ -568,26 +579,71 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     );
   };
 
-  const renderStandardItem = (item: StandardGuideItem | MetabolicActivatorItem, categoryId: string, frequencyOptions: string[]) => (
-    <div key={item.id} className="p-3 bg-gray-50 rounded-md transition-all hover:bg-gray-100">
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
-        <input type="checkbox" id={item.id} checked={selections[item.id]?.selected || false} onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} className="w-5 h-5 accent-primary"/>
-        <label htmlFor={item.id} className="flex-grow font-medium text-gray-800 text-sm">{item.name}</label>
-        {'dose' in item && item.dose && <span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">{item.dose}</span>}
-        <button type="button" onClick={() => handleDeleteItem(categoryId, item.id)} className="text-gray-400 hover:text-red-500 transition-colors ml-auto"><FaTrash /></button>
-      </div>
-      {selections[item.id]?.selected && !('dose' in item) && frequencyOptions.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
-          <input type="text" placeholder="Cant." value={(selections[item.id] as StandardFormItem)?.qty ?? ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
-          <select value={(selections[item.id] as StandardFormItem)?.freq ?? ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
-            <option value="">Frecuencia...</option>
-            {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
-          <input type="text" placeholder="Suplemento personalizado" value={(selections[item.id] as StandardFormItem)?.custom ?? ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
+  const renderStandardItem = (item: StandardGuideItem | MetabolicActivatorItem, categoryId: string, frequencyOptions: string[]) => {
+    const selection = selections[item.id] as StandardFormItem || {};
+    const isNutraceutico = ['cat_nutra_primarios', 'cat_nutra_secundarios', 'cat_nutra_complementarios', 'cat_cosmeceuticos'].includes(categoryId);
+
+    return (
+      <div key={item.id} className="p-3 bg-gray-50 rounded-md transition-all hover:bg-gray-100">
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
+          <input type="checkbox" id={item.id} checked={selection.selected || false} onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} className="w-5 h-5 accent-primary"/>
+          <label htmlFor={item.id} className="flex-grow font-medium text-gray-800 text-sm">{item.name}</label>
+          {'dose' in item && item.dose && <span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">{item.dose}</span>}
+          <button type="button" onClick={() => handleDeleteItem(categoryId, item.id)} className="text-gray-400 hover:text-red-500 transition-colors ml-auto"><FaTrash /></button>
         </div>
-      )}
-    </div>
-  );
+        
+        {selection.selected && !('dose' in item) && (
+          isNutraceutico ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2 pl-9">
+              <input 
+                type="number" 
+                placeholder="Dosis" 
+                value={selection.qty ?? ''} 
+                onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} 
+                className="input text-sm py-1"
+                min="1"
+                max="10"
+              />
+              <select 
+                value={selection.doseType ?? ''} 
+                onChange={(e) => handleSelectionChange(item.id, 'doseType', e.target.value as any)} 
+                className="input text-sm py-1"
+              >
+                <option value="">Tipo...</option>
+                <option value="Capsulas">Cápsulas</option>
+                <option value="Tabletas">Tabletas</option>
+                <option value="Cucharaditas">Cucharaditas</option>
+              </select>
+              <select 
+                value={selection.freq ?? ''} 
+                onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} 
+                className="input text-sm py-1"
+              >
+                <option value="">Frecuencia...</option>
+                {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+              <input 
+                type="text" 
+                placeholder="Suplemento personalizado" 
+                value={selection.custom ?? ''} 
+                onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} 
+                className="input text-sm py-1" 
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
+              <input type="text" placeholder="Cant." value={selection.qty ?? ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
+              <select value={selection.freq ?? ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
+                <option value="">Frecuencia...</option>
+                {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+              <input type="text" placeholder="Suplemento personalizado" value={selection.custom ?? ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
+            </div>
+          )
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">

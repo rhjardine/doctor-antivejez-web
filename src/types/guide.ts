@@ -44,12 +44,15 @@ export interface GuideCategory {
     | [MetabolicActivator];
 }
 
+// ===== AJUSTE: Se añade la propiedad 'doseType' al formulario estándar =====
 export interface StandardFormItem {
   selected?: boolean;
   qty?: string;
+  doseType?: 'Capsulas' | 'Tabletas' | 'Cucharaditas';
   freq?: string;
   custom?: string;
 }
+// =======================================================================
 
 export interface RevitalizationFormItem {
   selected?: boolean;
