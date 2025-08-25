@@ -13,9 +13,9 @@ import {
   MetabolicFormItem,
   RemocionFormItem,
 } from '@/types/guide';
-import { FaPrint, FaTimes } from 'react-icons/fa';
+import { FaPrint, FaTimes, FaSyringe, FaCapsules, FaSpa, FaLeaf, FaVial, FaDna, FaStethoscope } from 'react-icons/fa';
 import Image from 'next/image';
-import { homeopathicStructure, bachFlowersList } from './PatientGuide';
+import { homeopathicStructure, bachFlowersList } from './PatientGuide'; 
 
 interface Props {
   patient: PatientWithDetails;
@@ -26,10 +26,21 @@ interface Props {
 
 // --- Subcomponente para renderizar un ítem de la guía ---
 const GuideListItem = ({ name, details }: { name: string, details?: string | null }) => (
-  <li className="text-gray-800 break-inside-avoid">
-    <span className="font-semibold">{name}</span>
-    {details && <span className="text-gray-600">: {details}</span>}
+  <li className="text-gray-800 break-inside-avoid flex items-start">
+    <span className="text-primary mr-3 mt-1">&#8226;</span>
+    <div>
+      <span className="font-semibold">{name}</span>
+      {details && <span className="text-gray-600 block text-sm">{details}</span>}
+    </div>
   </li>
+);
+
+// --- Subcomponente para los títulos de categoría ---
+const CategoryTitle = ({ title, icon }: { title: string, icon: React.ReactNode }) => (
+  <div className="flex items-center gap-3 border-b-2 border-gray-200 pb-2 mb-4">
+    <div className="text-primary text-2xl">{icon}</div>
+    <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+  </div>
 );
 
 export default function PatientGuidePreview({ patient, guideData, formValues, onClose }: Props) {
@@ -38,6 +49,17 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
   };
 
   const { selections, observaciones } = formValues;
+
+  const getCategoryIcon = (categoryId: string) => {
+    if (categoryId.startsWith('cat_remocion')) return <FaSpa />;
+    if (categoryId.startsWith('cat_revitalizacion')) return <FaSyringe />;
+    if (categoryId.startsWith('cat_nutra')) return <FaCapsules />;
+    if (categoryId.startsWith('cat_activador')) return <FaDna />;
+    if (categoryId.startsWith('cat_formulas')) return <FaLeaf />;
+    if (categoryId.startsWith('cat_sueros')) return <FaVial />;
+    if (categoryId.startsWith('cat_terapias')) return <FaStethoscope />;
+    return <FaCapsules />;
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fadeIn no-print">
@@ -56,6 +78,10 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
 
         <style jsx global>{`
           @media print {
+            @page {
+              size: A4;
+              margin: 20mm;
+            }
             body * {
               visibility: hidden;
             }
@@ -75,7 +101,7 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
             }
           }
         `}</style>
-        <div id="printable-guide" className="p-8 lg:p-12 overflow-y-auto bg-gray-50">
+        <div id="printable-guide" className="p-8 lg:p-12 overflow-y-auto bg-white">
           <header className="flex justify-between items-start mb-10 border-b-2 border-primary pb-6">
             <div className="w-40">
               <Image src="/images/logo.png" alt="Logo Doctor Antivejez" width={160} height={40} priority />
@@ -106,7 +132,16 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                 const allHomeopathyNames = flattenHomeopathyItems(homeopathicStructure);
                 const selectedHomeopathy = allHomeopathyNames
                   .filter(name => {
-                    const itemId = `am_hom_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
+                    const categoryKey = Object.keys(homeopathicStructure).find(cat => 
+                      Array.isArray(homeopathicStructure[cat as keyof typeof homeopathicStructure]) 
+                        ? homeopathicStructure[cat as keyof typeof homeopathicStructure].includes(name)
+                        : Object.values(homeopathicStructure[cat as keyof typeof homeopathicStructure]).flat().includes(name)
+                    ) || '';
+                    const subCategoryKey = !Array.isArray(homeopathicStructure[categoryKey as keyof typeof homeopathicStructure]) 
+                      ? Object.keys(homeopathicStructure[categoryKey as keyof typeof homeopathicStructure]).find(subCat => homeopathicStructure[categoryKey as keyof typeof homeopathicStructure][subCat].includes(name))
+                      : undefined;
+                    const uniquePrefix = subCategoryKey ? `${categoryKey}_${subCategoryKey}` : categoryKey;
+                    const itemId = `am_hom_${uniquePrefix}_${name}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
                     return selections[itemId]?.selected;
                   });
                 const selectedBach = bachFlowersList.filter(subItem => selections?.[subItem.id]?.selected);
@@ -115,9 +150,9 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
 
                 return (
                   <div key={category.id} className="break-inside-avoid">
-                    <h3 className="category-title">{category.title}</h3>
+                    <CategoryTitle title={category.title} icon={getCategoryIcon(category.id)} />
                     {bioTerapicoSelection?.selected && (
-                      <div className="text-gray-800 mb-4">
+                      <div className="text-gray-800 mb-4 pl-10">
                         <span className="font-semibold">Bioterápico + Bach:</span>
                         <span className="text-gray-600 ml-2">
                           {bioTerapicoSelection.gotas} gotas, {bioTerapicoSelection.vecesAlDia} veces al día. 
@@ -131,17 +166,17 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                     )}
                     {selectedHomeopathy.length > 0 && (
                       <>
-                        <h4 className="font-semibold text-primary-dark mt-4 mb-2">Homeopatía</h4>
-                        <ul className="list-disc list-inside space-y-1 pl-2 columns-2 md:columns-3 text-sm">
-                          {selectedHomeopathy.map(name => <li key={name}>{name}</li>)}
+                        <h4 className="font-semibold text-primary-dark mt-4 mb-2 pl-10">Homeopatía</h4>
+                        <ul className="list-none space-y-1 pl-14 columns-2 md:columns-3 text-sm">
+                          {selectedHomeopathy.map(name => <li key={name} className="before:content-['\2713'] before:text-green-500 before:mr-2">{name}</li>)}
                         </ul>
                       </>
                     )}
                     {selectedBach.length > 0 && (
                       <>
-                        <h4 className="font-semibold text-primary-dark mt-4 mb-2">Flores de Bach</h4>
-                        <ul className="list-disc list-inside space-y-1 pl-2 columns-2 md:columns-3 text-sm">
-                          {selectedBach.map(item => <li key={item.id}>{item.name}</li>)}
+                        <h4 className="font-semibold text-primary-dark mt-4 mb-2 pl-10">Flores de Bach</h4>
+                        <ul className="list-none space-y-1 pl-14 columns-2 md:columns-3 text-sm">
+                          {selectedBach.map(item => <li key={item.id} className="before:content-['\2713'] before:text-green-500 before:mr-2">{item.name}</li>)}
                         </ul>
                       </>
                     )}
@@ -153,8 +188,8 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
 
               return (
                 <div key={category.id} className="break-inside-avoid">
-                  <h3 className="category-title">{category.title}</h3>
-                  <ul className="list-disc list-inside space-y-3 pl-4">
+                  <CategoryTitle title={category.title} icon={getCategoryIcon(category.id)} />
+                  <ul className="list-none space-y-4 pl-10">
                     {selectedItems
                       .filter((it): it is StandardGuideItem | RevitalizationGuideItem | RemocionItem => 'name' in it)
                       .map(item => {
@@ -165,12 +200,12 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                           treatmentDetails = item.dose;
                         } else if (category.type === 'REVITALIZATION') {
                           const rev = details as RevitalizationFormItem;
-                          treatmentDetails = [rev.complejoB_cc, rev.bioquel_cc, rev.frequency].filter(Boolean).join(' / ');
+                          treatmentDetails = `${rev.complejoB_cc || '3 cc'} / ${rev.bioquel_cc || '3 cc'} / ${rev.frequency || ''}`;
                         } else if (category.type === 'REMOCION') {
                             const rem = details as RemocionFormItem;
-                            const remItem = item as RemocionItem;
+                            const remItem = item as RemocionItem; 
                             if (remItem.subType === 'aceite_ricino' || remItem.subType === 'leche_magnesia') {
-                                treatmentDetails = `${rem.cucharadas || ''} cucharada(s) ${rem.horario || ''}`;
+                                treatmentDetails = `${rem.cucharadas || '_'} cucharada(s) ${rem.horario || ''}`;
                             } else if (remItem.subType === 'detox_alcalina') {
                                 treatmentDetails = `Por ${rem.semanas || '_'} semana(s). Tipo: ${rem.alimentacionTipo?.join(', ') || 'No especificado'}`;
                             } else if (remItem.subType === 'noni_aloe') {
@@ -190,8 +225,8 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
             
             {observaciones && (
                 <div className="break-inside-avoid pt-4">
-                    <h3 className="category-title">Observaciones</h3>
-                    <p className="text-gray-800 whitespace-pre-wrap bg-gray-100 p-4 rounded-md border">{observaciones}</p>
+                    <CategoryTitle title="Observaciones" icon={<FaUserMd />} />
+                    <p className="text-gray-800 whitespace-pre-wrap bg-gray-100 p-4 rounded-md border ml-10">{observaciones}</p>
                 </div>
             )}
           </main>

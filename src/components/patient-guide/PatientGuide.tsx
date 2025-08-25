@@ -70,7 +70,7 @@ const initialGuideData: GuideCategory[] = [
     id: 'cat_revitalizacion',
     title: 'Fase de Revitalización',
     type: 'REVITALIZATION',
-    items: [ { id: 'rev_1', name: 'Complejo B + Bioquel u otro' } ],
+    items: [ { id: 'rev_1', name: 'Complejo B + Otro' } ],
   },
   {
     id: 'cat_nutra_primarios',
@@ -228,8 +228,11 @@ const initialGuideData: GuideCategory[] = [
 ];
 
 const HomeopathySelector = ({ selections, handleSelectionChange }: { selections: Selections, handleSelectionChange: Function }) => {
-  const renderCheckbox = (name: string) => {
-    const itemId = `am_hom_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
+  const renderCheckbox = (name: string, category: string, subCategory?: string) => {
+    // ===== SOLUCIÓN DEL BUG: Se genera un ID único usando la jerarquía =====
+    const uniquePrefix = subCategory ? `${category}_${subCategory}` : category;
+    const itemId = `am_hom_${uniquePrefix}_${name}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+    
     return (
       <label key={itemId} className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary">
         <input
@@ -251,7 +254,7 @@ const HomeopathySelector = ({ selections, handleSelectionChange }: { selections:
           <h5 className="font-bold text-gray-800 mb-3">{category}</h5>
           {Array.isArray(subItems) ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
-              {subItems.map(renderCheckbox)}
+              {subItems.map(item => renderCheckbox(item, category))}
             </div>
           ) : (
             <div className="space-y-3">
@@ -259,7 +262,7 @@ const HomeopathySelector = ({ selections, handleSelectionChange }: { selections:
                 <div key={subCategory}>
                   <h6 className="font-semibold text-gray-600 mb-2">{subCategory}</h6>
                   <div className="pl-4 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
-                    {items.map(renderCheckbox)}
+                    {items.map(item => renderCheckbox(item, category, subCategory))}
                   </div>
                 </div>
               ))}
