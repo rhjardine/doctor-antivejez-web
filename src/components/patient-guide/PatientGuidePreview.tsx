@@ -24,6 +24,7 @@ interface Props {
   onClose: () => void;
 }
 
+// --- Subcomponente para renderizar un ítem de la guía ---
 const GuideListItem = ({ name, details }: { name: string, details?: string | null }) => (
   <li className="text-gray-800 break-inside-avoid flex items-start">
     <span className="text-primary mr-3 mt-1">&#8226;</span>
@@ -34,6 +35,7 @@ const GuideListItem = ({ name, details }: { name: string, details?: string | nul
   </li>
 );
 
+// --- Subcomponente para los títulos de categoría ---
 const CategoryTitle = ({ title, icon }: { title: string, icon: React.ReactNode }) => (
   <div className="flex items-center gap-3 border-b-2 border-gray-200 pb-2 mb-4">
     <div className="text-primary text-2xl">{icon}</div>
@@ -52,6 +54,7 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
     if (categoryId.startsWith('cat_remocion')) return <FaSpa />;
     if (categoryId.startsWith('cat_revitalizacion')) return <FaSyringe />;
     if (categoryId.startsWith('cat_nutra')) return <FaCapsules />;
+    if (categoryId.startsWith('cat_cosmeceuticos')) return <FaSpa />;
     if (categoryId.startsWith('cat_activador')) return <FaDna />;
     if (categoryId.startsWith('cat_formulas')) return <FaLeaf />;
     if (categoryId.startsWith('cat_sueros')) return <FaVial />;
@@ -123,20 +126,19 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
 
           <main className="space-y-10">
             {guideData.map(category => {
+              const selectedItems = category.items.filter(item => selections?.[item.id]?.selected);
+
               if (category.type === 'METABOLIC') {
                 const bioTerapicoSelection = selections['am_bioterapico'] as MetabolicFormItem;
                 
-                // ===== SOLUCIÓN: Lógica de aplanamiento refactorizada y segura para los tipos =====
-                const allHomeopathyItems = Object.entries(homeopathicStructure)
-                  .map(([cat, subItems]) => {
-                    if (Array.isArray(subItems)) {
-                      return subItems.map(name => ({ name, category: cat, subCategory: undefined as string | undefined }));
-                    }
-                    return Object.entries(subItems).flatMap(([subCat, items]) => 
-                      items.map(name => ({ name, category: cat, subCategory: subCat }))
-                    );
-                  })
-                  .flat(); // Aplanamos el array de arrays resultante
+                const allHomeopathyItems = Object.entries(homeopathicStructure).flatMap(([cat, subItems]) => {
+                  if (Array.isArray(subItems)) {
+                    return subItems.map(name => ({ name, category: cat, subCategory: undefined as string | undefined }));
+                  }
+                  return Object.entries(subItems).flatMap(([subCat, items]) => 
+                    items.map(name => ({ name, category: cat, subCategory: subCat }))
+                  );
+                }).flat();
 
                 const selectedHomeopathy = allHomeopathyItems
                   .filter(item => {
@@ -145,7 +147,6 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                     return selections[itemId]?.selected;
                   })
                   .map(item => item.name);
-                // =======================================================================
 
                 const selectedBach = bachFlowersList.filter(subItem => selections?.[subItem.id]?.selected);
                 
@@ -187,7 +188,6 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                 );
               }
               
-              const selectedItems = category.items.filter(item => selections?.[item.id]?.selected);
               if (selectedItems.length === 0) return null;
 
               return (
@@ -200,11 +200,14 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                         const details = selections[item.id];
                         let treatmentDetails: string | null = null;
 
+                        // ===== AJUSTE: Lógica de renderizado de detalles mejorada y completada =====
+                        const isNutraceutico = ['cat_nutra_primarios', 'cat_nutra_secundarios', 'cat_nutra_complementarios', 'cat_cosmeceuticos', 'cat_formulas_naturales'].includes(category.id);
+
                         if ('dose' in item && item.dose) {
                           treatmentDetails = item.dose;
                         } else if (category.type === 'REVITALIZATION') {
                           const rev = details as RevitalizationFormItem;
-                          treatmentDetails = `${rev.complejoB_cc || '3 cc'} / ${rev.bioquel_cc || '3 cc'} / ${rev.frequency || ''}`;
+                          treatmentDetails = `${rev.complejoB_cc || '3 cc'} / ${rev.bioquel_cc || '3 cc'} - ${rev.frequency || ''}`;
                         } else if (category.type === 'REMOCION') {
                             const rem = details as RemocionFormItem;
                             const remItem = item as RemocionItem; 
@@ -215,10 +218,19 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                             } else if (remItem.subType === 'noni_aloe') {
                                 treatmentDetails = `${rem.tacita_qty || '_'} tacita(s), ${rem.tacita || ''} (${rem.frascos || '_'} frasco(s))`;
                             }
-                        } else {
+                        } else if (isNutraceutico) {
+                            const std = details as StandardFormItem;
+                            const parts = [
+                                std.qty ? `${std.qty} ${std.doseType || ''}`.trim() : null,
+                                std.freq,
+                                std.custom
+                            ].filter(Boolean); // Filtra partes nulas o vacías
+                            treatmentDetails = parts.join(' - ');
+                        } else { // Para Sueros y Terapias
                           const std = details as StandardFormItem;
                           treatmentDetails = [std.qty, std.freq, std.custom].filter(Boolean).join(' - ');
                         }
+                        // =======================================================================
 
                         return <GuideListItem key={item.id} name={item.name} details={treatmentDetails} />;
                       })}
