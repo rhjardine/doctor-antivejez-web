@@ -126,17 +126,17 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
               if (category.type === 'METABOLIC') {
                 const bioTerapicoSelection = selections['am_bioterapico'] as MetabolicFormItem;
                 
-                // ===== SOLUCIÓN: La lógica de flatMap ahora produce un tipo consistente =====
-                const allHomeopathyItems = Object.entries(homeopathicStructure).flatMap(([cat, subItems]) => {
-                  if (Array.isArray(subItems)) {
-                    // Para arrays directos, subCategory es undefined
-                    return subItems.map(name => ({ name, category: cat, subCategory: undefined }));
-                  }
-                  // Para objetos anidados, se incluye la subcategoría
-                  return Object.entries(subItems).flatMap(([subCat, items]) => 
-                    items.map(name => ({ name, category: cat, subCategory: subCat }))
-                  );
-                });
+                // ===== SOLUCIÓN: Lógica de aplanamiento refactorizada y segura para los tipos =====
+                const allHomeopathyItems = Object.entries(homeopathicStructure)
+                  .map(([cat, subItems]) => {
+                    if (Array.isArray(subItems)) {
+                      return subItems.map(name => ({ name, category: cat, subCategory: undefined as string | undefined }));
+                    }
+                    return Object.entries(subItems).flatMap(([subCat, items]) => 
+                      items.map(name => ({ name, category: cat, subCategory: subCat }))
+                    );
+                  })
+                  .flat(); // Aplanamos el array de arrays resultante
 
                 const selectedHomeopathy = allHomeopathyItems
                   .filter(item => {
