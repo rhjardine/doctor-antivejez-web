@@ -11,20 +11,19 @@ export async function getFoodPlanTemplate(): Promise<{ success: boolean; data?: 
       orderBy: { name: 'asc' },
     });
 
-    const template = items.reduce((acc, item) => {
-      if (!acc[item.mealType]) {
-        acc[item.mealType] = [];
-      }
-      acc[item.mealType].push(item);
-      return acc;
-    }, {} as Partial<FoodPlanTemplate>) as FoodPlanTemplate;
+    // ===== SOLUCIÓN: Lógica de agrupación refactorizada para ser segura para los tipos =====
+    const template: FoodPlanTemplate = {
+      DESAYUNO: [],
+      ALMUERZO: [],
+      CENA: [],
+      MERIENDAS_POSTRES: [],
+    };
 
-    // Asegurarse de que todas las categorías de comida existan, incluso si están vacías
-    for (const mealType in MealType) {
-        if (!template[mealType as MealType]) {
-            template[mealType as MealType] = [];
-        }
+    for (const item of items) {
+      // Como 'template' ya tiene todas las claves definidas, TypeScript sabe que esto es seguro.
+      template[item.mealType].push(item);
     }
+    // =================================================================================
 
     return { success: true, data: template };
   } catch (error) {
@@ -35,14 +34,11 @@ export async function getFoodPlanTemplate(): Promise<{ success: boolean; data?: 
 
 export async function savePatientFoodPlan(patientId: string, selectedItemIds: string[]) {
     try {
-        // Usar una transacción para asegurar la consistencia de los datos
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Buscar si el paciente ya tiene un plan
             let foodPlan = await tx.foodPlan.findFirst({
                 where: { patientId },
             });
 
-            // 2. Si no tiene plan, crear uno nuevo
             if (!foodPlan) {
                 foodPlan = await tx.foodPlan.create({
                     data: {
@@ -51,8 +47,6 @@ export async function savePatientFoodPlan(patientId: string, selectedItemIds: st
                 });
             }
 
-            // 3. Actualizar el plan con los nuevos items seleccionados
-            // El método `set` de Prisma se encarga de desconectar los antiguos y conectar los nuevos.
             const updatedPlan = await tx.foodPlan.update({
                 where: { id: foodPlan.id },
                 data: {
