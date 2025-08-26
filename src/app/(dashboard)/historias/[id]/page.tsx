@@ -15,7 +15,7 @@ import {
   FaFileMedicalAlt,
   FaHistory,
   FaEdit,
-  FaAtom // ===== NUEVO: Icono para Ortomolecular =====
+  FaAtom
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
@@ -26,17 +26,16 @@ import ClinicalSummary from '@/components/patients/ClinicalSummary';
 import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
 import BiochemistryHistoryView from '@/components/biochemistry/BiochemistryHistoryView';
 import GeneticTestView from '@/components/genetics/GeneticTestView';
-// ===== NUEVO: Importar el componente del Test Ortomolecular =====
 import OrthomolecularTestView from '@/components/orthomolecular/OrthomolecularTestView';
-// ===============================================================
+// ===== NUEVO: Importar el componente de la Guía Nutrigenómica =====
+import NutrigenomicGuide from '@/components/nutrition/NutrigenomicGuide';
+// =================================================================
 import { telotestReportData } from '@/lib/mock-data';
 import type { PatientWithDetails } from '@/types';
 
 type Patient = PatientWithDetails;
 type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
-// ===== MODIFICADO: Se añade 'orthomolecular' a los tipos de vistas de test =====
 type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'orthomolecular' | 'biofisica_history' | 'bioquimica_history' | 'genetica';
-// ==============================================================================
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -136,9 +135,7 @@ export default function PatientDetailPage() {
             patient={patient} 
             onTestClick={() => setActiveTestView('biofisica')} 
             onBiochemistryTestClick={() => setActiveTestView('bioquimica')}
-            // ===== NUEVO: Se añade el handler para el clic en la tarjeta ortomolecular =====
             onOrthomolecularTestClick={() => setActiveTestView('orthomolecular')}
-            // ==============================================================================
             onHistoryClick={() => setActiveTestView('biofisica_history')}
             onBiochemistryHistoryClick={() => setActiveTestView('bioquimica_history')}
             onGeneticTestClick={() => setActiveTestView('genetica')}
@@ -148,10 +145,8 @@ export default function PatientDetailPage() {
         return <EdadBiofisicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'bioquimica':
         return <EdadBioquimicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
-      // ===== NUEVO: Se añade el caso para renderizar la vista del Test Ortomolecular =====
       case 'orthomolecular':
         return <OrthomolecularTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
-      // =================================================================================
       case 'biofisica_history':
         return <BiophysicsHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={refreshPatientData} />;
       case 'bioquimica_history':
@@ -278,7 +273,10 @@ export default function PatientDetailPage() {
           <PatientGuide patient={patient} />
         )}
 
-        {activeTab === 'alimentacion' && <div className="card text-center py-12"><FaAppleAlt className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Alimentación Nutrigenómica</h3><p className="text-gray-500">El plan de alimentación nutrigenómica estará disponible pronto.</p></div>}
+        {/* ===== MODIFICACIÓN: Se reemplaza el placeholder por el componente funcional ===== */}
+        {activeTab === 'alimentacion' && <NutrigenomicGuide patient={patient} />}
+        {/* ================================================================================= */}
+        
         {activeTab === 'omicas' && <div className="card text-center py-12"><FaDna className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3><p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p></div>}
         {activeTab === 'seguimiento' && <div className="card text-center py-12"><FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Seguimiento</h3><p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p></div>}
       </div>
