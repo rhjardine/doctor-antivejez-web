@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { PrismaClient, BoardType } from '@prisma/client';
+import { PrismaClient, BoardType, MealType, BloodTypeGroup } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -119,6 +119,71 @@ async function main() {
   } else {
     console.log('👤 Usuario administrador ya existe.');
   }
+
+  // ===== NUEVO: Lógica para poblar la Guía de Alimentación =====
+  console.log('🍓 Iniciando seeding de la guía de alimentación...');
+  
+  // Limpiar datos antiguos de alimentos para evitar duplicados
+  await prisma.foodItem.deleteMany({});
+  console.log('🗑️ Alimentos antiguos eliminados.');
+
+  const foodItems = [
+    // DESAYUNO
+    { name: 'Cereales de trigo sarraceno, avena sin gluten', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Tortilla de huevo con avena s/g', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Creps de avena s/g', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Leche de soya o almendras', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Huevo revuelto con vegetales y queso de cabra', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Yogur de cabra con frutas', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Huevo escalfado con verduras al vapor', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Cereales de', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Creps de yuca', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Suero de leche (Whey protein)', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Huevo duro cocido con tiras de queso de cabra', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Omelette de clara de huevo con champiñones', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Infusiones o café sin azúcar', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Pan sin gluten', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.ALL },
+    { name: 'Batido de proteínas con espinacas', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.ALL },
+    { name: 'Tostadas de pan integral con mantequilla de almendra', mealType: MealType.DESAYUNO, bloodTypeGroup: BloodTypeGroup.ALL },
+    
+    // ALMUERZO
+    { name: 'Carnes rojas o blancas', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Pasticho de berenjena con carne', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Tomate relleno con carne molida', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Rissoto o ñoquis', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Pizza de casabe con queso de cabra', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Kibbe con ensalada Fatush', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Lomito con jojoticos chinos', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Carnes blancas', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Pasticho de berenjena con pollo', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Tomate relleno con pollo', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Pizza de coliflor con queso de cabra', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Falafel con ensalada Tabule de quinoa', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Pollo a la naranja con ensalada budda', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Ensaladas', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.ALL },
+    { name: 'Granos', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.ALL },
+    { name: 'Pan sin gluten', mealType: MealType.ALMUERZO, bloodTypeGroup: BloodTypeGroup.ALL },
+
+    // CENA
+    { name: 'Ensaladas de sardinas, salmón o mariscos', mealType: MealType.CENA, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: 'Sushi', mealType: MealType.CENA, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Ceviche', mealType: MealType.CENA, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Antipasto', mealType: MealType.CENA, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Carpaccio', mealType: MealType.CENA, bloodTypeGroup: BloodTypeGroup.A_AB },
+
+    // MERIENDAS Y POSTRES
+    { name: 'Gelatina de lámina o 1 cda de polvo sin sabor en infusión con stevia o limón (GELATE)', mealType: MealType.MERIENDAS_POSTRES, bloodTypeGroup: BloodTypeGroup.O_B },
+    { name: '7 Semillas: almendras, nueces, pistacho, maní, guyama tostada', mealType: MealType.MERIENDAS_POSTRES, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Batido de proteina: 1 cda de suero o ricotta sin sal, whey protein o soy protein', mealType: MealType.MERIENDAS_POSTRES, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Helado Vegano (leche de almendras o coco)', mealType: MealType.MERIENDAS_POSTRES, bloodTypeGroup: BloodTypeGroup.A_AB },
+    { name: 'Tableta de Cacao Natives 100%', mealType: MealType.MERIENDAS_POSTRES, bloodTypeGroup: BloodTypeGroup.A_AB },
+  ];
+
+  await prisma.foodItem.createMany({
+    data: foodItems,
+  });
+  console.log(`🍓 ${foodItems.length} alimentos creados.`);
+  // ==========================================================
 
   console.log('✅ Seeding completado exitosamente.');
 }

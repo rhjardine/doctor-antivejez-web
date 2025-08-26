@@ -31,12 +31,26 @@ enum AppointmentStatus {
   CANCELLED
 }
 
-// Enum para los tipos de categorías de la guía
 enum GuideItemType {
   STANDARD
   METABOLIC
   REVITALIZATION
 }
+
+// ===== NUEVOS ENUMS PARA LA GUÍA DE ALIMENTACIÓN =====
+enum MealType {
+  DESAYUNO
+  ALMUERZO
+  CENA
+  MERIENDAS_POSTRES
+}
+
+enum BloodTypeGroup {
+  ALL
+  O_B
+  A_AB
+}
+// ===================================================
 
 // =================================================================
 // Modelos de Autenticación y Usuarios (NextAuth.js)
@@ -129,11 +143,12 @@ model Patient {
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   biophysicsTests     BiophysicsTest[]
   biochemistryTests   BiochemistryTest[]
-  // ===== RELACIÓN AÑADIDA: Se agrega la relación con el nuevo modelo de test =====
   orthomolecularTests OrthomolecularTest[]
-  // ============================================================================
   appointments        Appointment[]
   guides              PatientGuide[]
+  // ===== NUEVO: Relación con el Plan de Alimentación =====
+  foodPlans           FoodPlan[]
+  // =====================================================
 
   @@map("patients")
 }
@@ -221,7 +236,6 @@ model BiochemistryTest {
   @@map("biochemistry_tests")
 }
 
-// ===== NUEVO MODELO: Test Ortomolecular =====
 model OrthomolecularTest {
   id                String   @id @default(cuid())
   patientId         String
@@ -332,7 +346,6 @@ model OrthomolecularTest {
 
   @@map("orthomolecular_tests")
 }
-// ============================================
 
 // =================================================================
 // Modelos para Baremos y Rangos
@@ -423,3 +436,30 @@ model PatientGuideSelection {
 
   @@map("patient_guide_selections")
 }
+
+// ===== NUEVOS MODELOS PARA LA GUÍA DE ALIMENTACIÓN =====
+model FoodItem {
+  id             String         @id @default(cuid())
+  name           String
+  mealType       MealType
+  bloodTypeGroup BloodTypeGroup @default(ALL)
+  isDefault      Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+
+  foodPlans FoodPlan[]
+
+  @@map("food_items")
+}
+
+model FoodPlan {
+  id        String   @id @default(cuid())
+  patientId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  items   FoodItem[]
+
+  @@map("food_plans")
+}
+// ===================================================
