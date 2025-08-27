@@ -4,14 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "dotenv -e .env -- prisma generate && dotenv -e .env -- prisma migrate deploy && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "migrate:dev": "node scripts/migrate-dev.js"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts"
-  },
+  "seed": "prisma generate && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+},
   "dependencies": {
     "@google/generative-ai": "^0.14.1",
     "@hookform/resolvers": "^3.9.0",

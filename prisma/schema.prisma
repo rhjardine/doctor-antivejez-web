@@ -37,7 +37,6 @@ enum GuideItemType {
   REVITALIZATION
 }
 
-// ===== NUEVOS ENUMS PARA LA GUÍA DE ALIMENTACIÓN =====
 enum MealType {
   DESAYUNO
   ALMUERZO
@@ -50,7 +49,21 @@ enum BloodTypeGroup {
   O_B
   A_AB
 }
-// ===================================================
+
+// ===== NUEVOS ENUMS PARA LA GUÍA GENERAL =====
+enum GeneralGuideType {
+  AVOID
+  SUBSTITUTE
+}
+
+enum DietType {
+  NINO
+  METABOLICA
+  ANTIDIABETICA
+  CITOSTATICA
+  RENAL
+}
+// ===========================================
 
 // =================================================================
 // Modelos de Autenticación y Usuarios (NextAuth.js)
@@ -146,9 +159,10 @@ model Patient {
   orthomolecularTests OrthomolecularTest[]
   appointments        Appointment[]
   guides              PatientGuide[]
-  // ===== NUEVO: Relación con el Plan de Alimentación =====
   foodPlans           FoodPlan[]
-  // =====================================================
+  // ===== NUEVO: Campo para almacenar los tipos de dieta seleccionados =====
+  selectedDiets       DietType[]
+  // ====================================================================
 
   @@map("patients")
 }
@@ -437,7 +451,10 @@ model PatientGuideSelection {
   @@map("patient_guide_selections")
 }
 
-// ===== NUEVOS MODELOS PARA LA GUÍA DE ALIMENTACIÓN =====
+// =================================================================
+// Modelos para la Guía de Alimentación
+// =================================================================
+
 model FoodItem {
   id             String         @id @default(cuid())
   name           String
@@ -462,4 +479,23 @@ model FoodPlan {
 
   @@map("food_plans")
 }
-// ===================================================
+
+// ===== NUEVOS MODELOS PARA LA GUÍA GENERAL Y CLAVES DE BIENESTAR =====
+model GeneralGuideItem {
+  id        String           @id @default(cuid())
+  text      String
+  type      GeneralGuideType
+  isDefault Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  @@map("general_guide_items")
+}
+
+model WellnessKey {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  isDefault   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  @@map("wellness_keys")
+}
+// =================================================================
