@@ -5,11 +5,11 @@ import type {
     BloodTypeGroup, 
     GeneralGuideItem as PrismaGeneralGuideItem, 
     WellnessKey as PrismaWellnessKey, 
-    DietType, // El tipo existe en @prisma/client
+    DietType, 
     GeneralGuideType 
 } from '@prisma/client';
 
-// ===== SOLUCIÓN: Se añade la exportación de DietType =====
+// ===== SOLUCIÓN: Se exportan TODOS los enums necesarios =====
 export type { MealType, BloodTypeGroup, DietType, GeneralGuideType };
 // =========================================================
 
