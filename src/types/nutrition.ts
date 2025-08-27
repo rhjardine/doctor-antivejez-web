@@ -1,5 +1,5 @@
 // src/types/nutrition.ts
-import type { 
+import { 
     FoodItem as PrismaFoodItem, 
     MealType, 
     BloodTypeGroup, 
@@ -9,9 +9,13 @@ import type {
     GeneralGuideType 
 } from '@prisma/client';
 
-// ===== SOLUCIÓN: Se exportan TODOS los enums necesarios =====
-export type { MealType, BloodTypeGroup, DietType, GeneralGuideType };
-// =========================================================
+// ===== SOLUCIÓN: Se exporta el OBJETO 'DietType' además del TIPO =====
+// Esto hace que 'DietType' esté disponible en tiempo de ejecución para iterar sobre él.
+export { MealType, BloodTypeGroup, DietType, GeneralGuideType };
+// ====================================================================
+
+// También exportamos los tipos para usarlos en las definiciones
+export type { DietType as DietTypeEnum };
 
 export interface FoodItem extends PrismaFoodItem {}
 export interface GeneralGuideItem extends PrismaGeneralGuideItem {}

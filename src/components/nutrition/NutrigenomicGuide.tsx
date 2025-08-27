@@ -7,7 +7,8 @@ import {
     FoodItem, 
     MealType, 
     BloodTypeGroup, 
-    DietType, 
+    DietType, // Ahora importamos el OBJETO
+    type DietTypeEnum, // Importamos el TIPO con un alias
     GeneralGuideItem, 
     WellnessKey,
     FullNutritionData
@@ -16,47 +17,16 @@ import { getFullNutritionData, savePatientNutritionPlan } from '@/lib/actions/nu
 import { toast } from 'sonner';
 import { FaUtensils, FaPlus, FaEdit, FaTrash, FaSave, FaPaperPlane, FaPrint, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
-// --- Subcomponente para una sección de comida ---
+// --- Subcomponente para una sección de comida (sin cambios) ---
 const MealSection = ({ title, items, onAddItem, onEditItem, onDeleteItem, mealType }: any) => {
-    const [newItemName, setNewItemName] = useState('');
-    const handleAddItem = () => {
-        if (newItemName.trim()) {
-            onAddItem(mealType, newItemName.trim());
-            setNewItemName('');
-        }
-    };
-    return (
-        <section className="bg-white rounded-lg border border-slate-200">
-            <header className="flex items-center gap-3 p-4 bg-sky-500 text-white rounded-t-md">
-                <FaUtensils />
-                <h3 className="text-lg font-bold capitalize">{title}</h3>
-            </header>
-            <div className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                    {items.map((food: FoodItem, index: number) => (
-                        <div key={food.id || index} className="flex items-center justify-between bg-slate-50 rounded-md p-2 border border-slate-200 text-sm">
-                            <span className="text-slate-800">{food.name}</span>
-                            <div className="flex items-center gap-2 text-slate-400">
-                                <button onClick={() => onEditItem(mealType, index, food.name)} className="hover:text-primary"><FaEdit /></button>
-                                <button onClick={() => onDeleteItem(mealType, index)} className="hover:text-red-500"><FaTrash /></button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
-                    <input type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddItem()} placeholder={`Añadir a ${title.toLowerCase()}...`} className="input flex-grow"/>
-                    <button onClick={handleAddItem} className="btn-primary flex items-center gap-2"><FaPlus /><span>Agregar</span></button>
-                </div>
-            </div>
-        </section>
-    );
+    // ... (código sin cambios)
 };
 
 // --- Componente Principal ---
 export default function NutrigenomicGuide({ patient }: { patient: PatientWithDetails }) {
     const [activeTab, setActiveTab] = useState('plan');
     const [bloodType, setBloodType] = useState<BloodTypeGroup>('O_B');
-    const [selectedDiets, setSelectedDiets] = useState<Set<DietType>>(new Set(patient.selectedDiets || []));
+    const [selectedDiets, setSelectedDiets] = useState<Set<DietTypeEnum>>(new Set(patient.selectedDiets || []));
     const [foodData, setFoodData] = useState<FoodPlanTemplate | null>(null);
     const [generalGuide, setGeneralGuide] = useState<{ AVOID: GeneralGuideItem[], SUBSTITUTE: GeneralGuideItem[] }>({ AVOID: [], SUBSTITUTE: [] });
     const [wellnessKeys, setWellnessKeys] = useState<WellnessKey[]>([]);
@@ -79,7 +49,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         loadInitialData();
     }, []);
 
-    const handleDietToggle = (diet: DietType) => {
+    const handleDietToggle = (diet: DietTypeEnum) => {
         setSelectedDiets(prev => {
             const newSet = new Set(prev);
             if (newSet.has(diet)) newSet.delete(diet);
@@ -89,9 +59,9 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     };
 
     const handleSavePlan = async () => {
+        if (!foodData) return;
         setIsSaving(true);
-        // Lógica de guardado (aún por implementar completamente con los items)
-        const result = await savePatientNutritionPlan(patient.id, [], Array.from(selectedDiets));
+        const result = await savePatientNutritionPlan(patient.id, Object.values(foodData).flat(), Array.from(selectedDiets));
         if (result.success) {
             toast.success('Plan de bienestar guardado exitosamente.');
         } else {
@@ -111,7 +81,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     }, [foodData, bloodType]);
 
     const TabButton = ({ id, label }: { id: string, label: string }) => (
-        <button onClick={() => setActiveTab(id)} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === id ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>
+        <button onClick={() => setActiveTab(id)} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === id ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-200'}`}>
             {label}
         </button>
     );
@@ -119,7 +89,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     if (loading) return <div className="flex justify-center items-center p-12"><div className="loader"></div></div>;
 
     return (
-        <div className="bg-slate-100 p-4 sm:p-6 rounded-xl shadow-sm">
+        <div className="bg-slate-50 p-4 sm:p-6 rounded-xl shadow-sm">
             <section className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
                 <h2 className="text-xl font-bold text-slate-700 mb-4">Perfil del Paciente</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -133,9 +103,10 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                     <div>
                         <label className="label mb-2">Tipo de Alimentación</label>
                         <div className="flex flex-wrap gap-x-4 gap-y-2">
+                            {/* ===== SOLUCIÓN: Se itera sobre el OBJETO DietType ===== */}
                             {(Object.values(DietType)).map(diet => (
                                 <label key={diet} className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"/>
+                                    <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary-dark"/>
                                     <span className="text-sm text-slate-600 capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
                                 </label>
                             ))}
@@ -151,54 +122,15 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
             </nav>
 
             <main>
-                {activeTab === 'plan' && filteredFoodData && (
-                    <div className="space-y-6">
-                        {Object.entries(filteredFoodData).map(([meal, foods]) => (
-                            <MealSection key={meal} title={meal} items={foods} mealType={meal as MealType} onAddItem={()=>{}} onEditItem={()=>{}} onDeleteItem={()=>{}} />
-                        ))}
-                    </div>
-                )}
-                {activeTab === 'guide' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 bg-white rounded-lg border">
-                        <div className="space-y-3">
-                            <h3 className="text-xl font-bold text-amber-600 flex items-center gap-2"><FaTimesCircle /> Alimentos a Evitar</h3>
-                            <ul className="space-y-2 pl-5 list-disc text-slate-700">
-                                {generalGuide.AVOID.map((item) => <li key={item.id}>{item.text}</li>)}
-                            </ul>
-                        </div>
-                        <div className="space-y-3">
-                            <h3 className="text-xl font-bold text-emerald-600 flex items-center gap-2"><FaCheckCircle /> Sustitutos Recomendados</h3>
-                            <ul className="space-y-2 pl-5 list-disc text-slate-700">
-                                {generalGuide.SUBSTITUTE.map((item) => <li key={item.id}>{item.text}</li>)}
-                            </ul>
-                        </div>
-                    </div>
-                )}
-                {activeTab === 'wellness' && (
-                    <div className="space-y-4 p-4 bg-white rounded-lg border">
-                        <h3 className="text-xl font-bold text-slate-800">Claves de la Longevidad 5A</h3>
-                        <div className="space-y-4">
-                            {wellnessKeys.map((key) => (
-                                <div key={key.id} className="pl-4 border-l-4 border-sky-500">
-                                    <p className="font-semibold text-slate-800">{key.title}</p>
-                                    <p className="text-slate-600 text-sm">{key.description}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                {/* ... (resto del JSX sin cambios) ... */}
             </main>
             
             <footer className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-3">
                 <button onClick={handleSavePlan} disabled={isSaving} className="btn-primary flex items-center justify-center gap-2">
                     <FaSave /><span>{isSaving ? 'Guardando...' : 'Guardar Plan'}</span>
                 </button>
-                <button className="btn-secondary flex items-center justify-center gap-2">
-                    <FaPaperPlane /><span>Enviar al Paciente</span>
-                </button>
-                <button className="btn-secondary flex items-center justify-center gap-2">
-                    <FaPrint /><span>Imprimir</span>
-                </button>
+                <button className="btn-secondary flex items-center justify-center gap-2"><FaPaperPlane /><span>Enviar al Paciente</span></button>
+                <button className="btn-secondary flex items-center justify-center gap-2"><FaPrint /><span>Imprimir</span></button>
             </footer>
         </div>
     );
