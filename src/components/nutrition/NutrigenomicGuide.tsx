@@ -10,14 +10,13 @@ import {
     DietType,
     type DietTypeEnum,
     GeneralGuideItem, 
-    WellnessKey,
-    FullNutritionData
+    WellnessKey
 } from '@/types/nutrition';
 import { getFullNutritionData, savePatientNutritionPlan } from '@/lib/actions/nutrition.actions';
 import { toast } from 'sonner';
 import { FaUtensils, FaPlus, FaEdit, FaTrash, FaSave, FaPaperPlane, FaPrint, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
-// --- Subcomponente para una sección de comida (sin cambios) ---
+// --- Subcomponente para una sección de comida ---
 const MealSection = ({ title, items, onAddItem, onEditItem, onDeleteItem, mealType, selectedIds, onToggleItem }: any) => {
     const [newItemName, setNewItemName] = useState('');
     const handleAddItem = () => {
@@ -26,6 +25,7 @@ const MealSection = ({ title, items, onAddItem, onEditItem, onDeleteItem, mealTy
             setNewItemName('');
         }
     };
+
     return (
         <section className="bg-white rounded-lg border border-slate-200">
             <header className="flex items-center gap-3 p-4 bg-sky-500 text-white rounded-t-md">
@@ -78,13 +78,21 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
             setLoading(true);
             const result = await getFullNutritionData();
             if (result.success && result.data) {
-                setFoodData(result.data.foodTemplate);
+                const initialTemplate = result.data.foodTemplate;
+                const patientPlan = patient.foodPlans?.[0];
+                
+                if (patientPlan && patientPlan.items) {
+                    const patientItems = patientPlan.items;
+                    patientItems.forEach(item => {
+                        if (!initialTemplate[item.mealType].some(tItem => tItem.name === item.name)) {
+                            initialTemplate[item.mealType].push(item);
+                        }
+                    });
+                    setSelectedIds(new Set(patientPlan.items.map(item => item.id)));
+                }
+                setFoodData(initialTemplate);
                 setGeneralGuide(result.data.generalGuide);
                 setWellnessKeys(result.data.wellnessKeys);
-                const initialPlan = patient.foodPlans?.[0];
-                if (initialPlan && initialPlan.items) {
-                    setSelectedIds(new Set(initialPlan.items.map(item => item.id)));
-                }
             } else {
                 toast.error(result.error || 'Error al cargar los datos de la guía.');
             }
@@ -101,7 +109,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
             return newSet;
         });
     };
-
+    
     const handleToggleItem = (id: string) => {
         setSelectedIds(prev => {
             const newSet = new Set(prev);
@@ -123,7 +131,8 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
             bloodTypeGroup: bloodType,
             isDefault: false,
             createdAt: new Date(),
-        };
+            // Prisma-generated fields like `updatedAt` are not needed here
+        } as FoodItem;
         const updatedMeal = [...foodData[mealType], newItem];
         setFoodData({ ...foodData, [mealType]: updatedMeal });
         setSelectedIds(prev => new Set(prev).add(newItem.id)); // Seleccionar automáticamente el nuevo item
@@ -154,10 +163,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     const handleSavePlan = async () => {
         if (!foodData) return;
         setIsSaving(true);
-        
-        // ===== SOLUCIÓN: Se envían solo los IDs de los items seleccionados =====
         const result = await savePatientNutritionPlan(patient.id, Array.from(selectedIds), Array.from(selectedDiets));
-        
         if (result.success) {
             toast.success('Plan de bienestar guardado exitosamente.');
         } else {
@@ -171,7 +177,9 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         const filtered = {} as FoodPlanTemplate;
         for (const key in foodData) {
             const mealType = key as MealType;
-            filtered[mealType] = foodData[mealType].filter(item => item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType);
+            filtered[mealType] = foodData[mealType].filter(item => 
+                item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType
+            );
         }
         return filtered;
     }, [foodData, bloodType]);
@@ -186,23 +194,23 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
 
     return (
         <div className="bg-slate-50 p-4 sm:p-6 rounded-xl shadow-sm">
-            <section className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
-                <h2 className="text-xl font-bold text-slate-700 mb-4">Perfil del Paciente</h2>
+            <section className="bg-primary-dark border border-blue-800 rounded-lg p-6 mb-6 text-white">
+                <h2 className="text-xl font-bold mb-4">Perfil del Paciente</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label htmlFor="blood-type-select" className="label">Grupo Sanguíneo</label>
-                        <select id="blood-type-select" value={bloodType} onChange={(e) => setBloodType(e.target.value as BloodTypeGroup)} className="input w-full">
+                        <label htmlFor="blood-type-select" className="label text-gray-300">Grupo Sanguíneo</label>
+                        <select id="blood-type-select" value={bloodType} onChange={(e) => setBloodType(e.target.value as BloodTypeGroup)} className="input w-full bg-white/10 border-white/20 text-white">
                             <option value="O_B">Grupo O y B</option>
                             <option value="A_AB">Grupo A y AB</option>
                         </select>
                     </div>
                     <div>
-                        <label className="label mb-2">Tipo de Alimentación</label>
+                        <label className="label text-gray-300 mb-2">Tipo de Alimentación</label>
                         <div className="flex flex-wrap gap-x-4 gap-y-2">
                             {(Object.values(DietType)).map(diet => (
                                 <label key={diet} className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary-dark"/>
-                                    <span className="text-sm text-slate-600 capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
+                                    <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="h-4 w-4 rounded border-gray-500 bg-white/20 text-primary focus:ring-primary-dark"/>
+                                    <span className="text-sm text-gray-200 capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
                                 </label>
                             ))}
                         </div>
@@ -259,8 +267,12 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                 <button onClick={handleSavePlan} disabled={isSaving} className="btn-primary flex items-center justify-center gap-2">
                     <FaSave /><span>{isSaving ? 'Guardando...' : 'Guardar Plan'}</span>
                 </button>
-                <button className="btn-secondary flex items-center justify-center gap-2"><FaPaperPlane /><span>Enviar al Paciente</span></button>
-                <button className="btn-secondary flex items-center justify-center gap-2"><FaPrint /><span>Imprimir</span></button>
+                <button className="btn-secondary flex items-center justify-center gap-2">
+                    <FaPaperPlane /><span>Enviar al Paciente</span>
+                </button>
+                <button className="btn-secondary flex items-center justify-center gap-2">
+                    <FaPrint /><span>Imprimir</span>
+                </button>
             </footer>
         </div>
     );
