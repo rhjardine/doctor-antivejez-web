@@ -32,7 +32,7 @@ export async function getFullNutritionData(): Promise<{ success: boolean; data?:
   }
 }
 
-// ===== AJUSTE: La función ahora acepta un array de IDs de ítems =====
+// ===== AJUSTE: La función ahora acepta un array de IDs de ítems (string[]) =====
 export async function savePatientNutritionPlan(
   patientId: string, 
   selectedItemIds: string[],
@@ -59,6 +59,7 @@ export async function savePatientNutritionPlan(
                 });
             }
 
+            // Aquí se usan los IDs directamente para establecer la relación
             const updatedPlan = await tx.foodPlan.update({
                 where: { id: foodPlan.id },
                 data: {
