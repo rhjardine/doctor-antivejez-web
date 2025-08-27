@@ -4,9 +4,6 @@ import { prisma } from '@/lib/db';
 import { FoodPlanTemplate, MealType, GeneralGuideType, FullNutritionData, DietType } from '@/types/nutrition';
 import { revalidatePath } from 'next/cache';
 
-/**
- * Obtiene todos los datos necesarios para la plantilla de la guía de alimentación.
- */
 export async function getFullNutritionData(): Promise<{ success: boolean; data?: FullNutritionData; error?: string }> {
   try {
     const [foodItems, generalGuideItems, wellnessKeys] = await Promise.all([
@@ -15,20 +12,10 @@ export async function getFullNutritionData(): Promise<{ success: boolean; data?:
       prisma.wellnessKey.findMany({ where: { isDefault: true }, orderBy: { id: 'asc' } }),
     ]);
 
-    const foodTemplate = foodItems.reduce((acc, item) => {
-      if (!acc[item.mealType]) {
-        acc[item.mealType] = [];
-      }
-      acc[item.mealType].push(item);
-      return acc;
-    }, {} as Partial<FoodPlanTemplate>) as FoodPlanTemplate;
-
-    // Asegurarse de que todas las categorías de comida existan
-    for (const mealType in MealType) {
-        if (!template[mealType as MealType]) {
-            template[mealType as MealType] = [];
-        }
-    }
+    const foodTemplate = (Object.values(MealType) as MealType[]).reduce((acc, mealType) => {
+        acc[mealType] = foodItems.filter(item => item.mealType === mealType);
+        return acc;
+    }, {} as FoodPlanTemplate);
 
     const generalGuide = {
       AVOID: generalGuideItems.filter(item => item.type === GeneralGuideType.AVOID),
@@ -45,9 +32,7 @@ export async function getFullNutritionData(): Promise<{ success: boolean; data?:
   }
 }
 
-/**
- * Guarda el plan de alimentación completo de un paciente, incluyendo los ítems de comida y los tipos de dieta.
- */
+// ===== AJUSTE: La función ahora acepta un array de IDs de ítems =====
 export async function savePatientNutritionPlan(
   patientId: string, 
   selectedItemIds: string[],
@@ -55,7 +40,6 @@ export async function savePatientNutritionPlan(
 ) {
     try {
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Actualizar los tipos de dieta seleccionados para el paciente
             await tx.patient.update({
                 where: { id: patientId },
                 data: {
@@ -65,7 +49,6 @@ export async function savePatientNutritionPlan(
                 },
             });
 
-            // 2. Buscar o crear el plan de alimentación del paciente
             let foodPlan = await tx.foodPlan.findFirst({
                 where: { patientId },
             });
@@ -76,7 +59,6 @@ export async function savePatientNutritionPlan(
                 });
             }
 
-            // 3. Actualizar los ítems de comida seleccionados en el plan
             const updatedPlan = await tx.foodPlan.update({
                 where: { id: foodPlan.id },
                 data: {
