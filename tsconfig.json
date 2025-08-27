@@ -33,9 +33,13 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
-, "src/app/(auth)/register/page.tsx.disabled"  ],
+    ".next/types/**/*.ts",
+    "src/app/(auth)/register/page.tsx.disabled"
+  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    // ===== SOLUCIÓN: Excluir explícitamente el script de seed del build =====
+    "prisma/seed.ts"
+    // =====================================================================
   ]
 }
