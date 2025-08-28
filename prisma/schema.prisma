@@ -35,6 +35,7 @@ enum GuideItemType {
   STANDARD
   METABOLIC
   REVITALIZATION
+  REMOCION
 }
 
 enum MealType {
@@ -50,7 +51,6 @@ enum BloodTypeGroup {
   A_AB
 }
 
-// ===== NUEVOS ENUMS PARA LA GUÍA GENERAL =====
 enum GeneralGuideType {
   AVOID
   SUBSTITUTE
@@ -63,7 +63,23 @@ enum DietType {
   CITOSTATICA
   RENAL
 }
-// ===========================================
+
+// ===== INICIO DE LA CORRECCIÓN: Enums añadidos =====
+enum RemocionAlimentacionType {
+  Nino
+  Antienvejecimiento
+  Antidiabetica
+  Metabolica
+  Citostatica
+  Renal
+}
+
+enum NoniAloeVeraTime {
+  AntesDesayuno
+  AntesDesayunoCena
+  AntesCena
+}
+// ===== FIN DE LA CORRECCIÓN =====
 
 // =================================================================
 // Modelos de Autenticación y Usuarios (NextAuth.js)
@@ -128,7 +144,7 @@ model VerificationToken {
 
 model Patient {
   id                  String               @id @default(cuid())
-  controlNumber       Int                  @default(autoincrement())
+  controlNumber       Int                  @unique @default(autoincrement())
   userId              String
   photo               String?
   nationality         String
@@ -160,9 +176,7 @@ model Patient {
   appointments        Appointment[]
   guides              PatientGuide[]
   foodPlans           FoodPlan[]
-  // ===== NUEVO: Campo para almacenar los tipos de dieta seleccionados =====
   selectedDiets       DietType[]
-  // ====================================================================
 
   @@map("patients")
 }
@@ -259,8 +273,6 @@ model OrthomolecularTest {
   testDate          DateTime @default(now())
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-
-  // --- Parámetros del Test ---
   aluminio          Float?
   antimonio         Float?
   arsenico          Float?
@@ -307,8 +319,6 @@ model OrthomolecularTest {
   germanio          Float?
   rubidio           Float?
   zirconio          Float?
-
-  // --- Edades Parciales Calculadas ---
   aluminioAge       Float?
   antimonioAge      Float?
   arsenicoAge       Float?
@@ -424,27 +434,38 @@ model GuideItem {
 }
 
 model PatientGuide {
-  id         String                  @id @default(cuid())
-  patientId  String
-  guideDate  DateTime
-  createdAt  DateTime                @default(now())
-  patient    Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  selections PatientGuideSelection[]
+  id           String                  @id @default(cuid())
+  patientId    String
+  guideDate    DateTime
+  observations String?
+  createdAt    DateTime                @default(now())
+  patient      Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  selections   PatientGuideSelection[]
 
   @@map("patient_guides")
 }
 
 model PatientGuideSelection {
-  id             String       @id @default(cuid())
-  patientGuideId String
-  guideItemId    String
-  qty            String?
-  freq           String?
-  custom         String?
-  complejoB_cc   String?
-  bioquel_cc     String?
-  frequency      String?
-
+  id               String       @id @default(cuid())
+  patientGuideId   String
+  guideItemId      String
+  qty              String?
+  doseType         String?
+  freq             String?
+  custom           String?
+  complejoB_cc     String?
+  bioquel_cc       String?
+  frequency        String?
+  cucharadas       Int?
+  horario          String?
+  semanas          Int?
+  alimentacionTipo RemocionAlimentacionType[]
+  tacita_qty       Int?
+  tacita           NoniAloeVeraTime?
+  frascos          Int?
+  gotas            Int?
+  vecesAlDia       Int?
+  
   patientGuide PatientGuide @relation(fields: [patientGuideId], references: [id], onDelete: Cascade)
   guideItem    GuideItem    @relation(fields: [guideItemId], references: [id], onDelete: Cascade)
 
@@ -480,7 +501,6 @@ model FoodPlan {
   @@map("food_plans")
 }
 
-// ===== NUEVOS MODELOS PARA LA GUÍA GENERAL Y CLAVES DE BIENESTAR =====
 model GeneralGuideItem {
   id        String           @id @default(cuid())
   text      String
@@ -498,4 +518,3 @@ model WellnessKey {
   createdAt   DateTime @default(now())
   @@map("wellness_keys")
 }
-// =================================================================
