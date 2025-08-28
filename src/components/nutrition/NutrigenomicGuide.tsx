@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PatientWithDetails } from '@/types';
 import { 
     FoodPlanTemplate, 
@@ -10,15 +10,15 @@ import {
     DietType,
     type DietTypeEnum,
     GeneralGuideItem, 
-    WellnessKey
+    WellnessKey 
 } from '@/types/nutrition';
 import { getFullNutritionData, savePatientNutritionPlan } from '@/lib/actions/nutrition.actions';
 import { toast } from 'sonner';
 import { FaUtensils, FaPlus, FaEdit, FaTrash, FaSave, FaPaperPlane, FaPrint, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
-import NutritionPlanPreview from './NutritionPlanPreview'; // Importar el nuevo componente de vista previa
+import NutritionPlanPreview from './NutritionPlanPreview'; // <-- Se importa el nuevo componente
 
 // --- Subcomponente para una sección de comida ---
-const MealSection = ({ title, items, onAddItem, onEditItem, onDeleteItem, mealType }: any) => {
+const MealSection = ({ title, items, onAddItem, onEditItem, onDeleteItem, mealType, selectedIds, onToggleItem }: any) => {
     const [newItemName, setNewItemName] = useState('');
     const handleAddItem = () => {
         if (newItemName.trim()) {
@@ -26,6 +26,7 @@ const MealSection = ({ title, items, onAddItem, onEditItem, onDeleteItem, mealTy
             setNewItemName('');
         }
     };
+
     return (
         <section className="bg-white rounded-lg border border-slate-200">
             <header className="flex items-center gap-3 p-4 bg-sky-500 text-white rounded-t-md">
@@ -35,8 +36,16 @@ const MealSection = ({ title, items, onAddItem, onEditItem, onDeleteItem, mealTy
             <div className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                     {items.map((food: FoodItem, index: number) => (
-                        <div key={food.id || `${mealType}-${index}`} className="flex items-center justify-between bg-slate-50 rounded-md p-2 border border-slate-200 text-sm group">
-                            <span className="text-slate-800 flex-grow">{food.name}</span>
+                        <div key={food.id || `${mealType}-${index}`} className="flex items-center justify-between bg-slate-50 rounded-md p-2 pl-3 border border-slate-200 text-sm group">
+                            <label className="flex items-center gap-3 cursor-pointer flex-grow">
+                                <input
+                                    type="checkbox"
+                                    className="w-5 h-5 accent-primary-dark rounded"
+                                    checked={selectedIds.has(food.id)}
+                                    onChange={() => onToggleItem(food.id)}
+                                />
+                                <span>{food.name}</span>
+                            </label>
                             <div className="flex items-center gap-1 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => onEditItem(mealType, index, food.name)} className="p-1 hover:text-primary"><FaEdit /></button>
                                 <button onClick={() => onDeleteItem(mealType, index)} className="p-1 hover:text-red-500"><FaTrash /></button>
@@ -63,24 +72,36 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     const [wellnessKeys, setWellnessKeys] = useState<WellnessKey[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-
-    const loadInitialData = useCallback(async () => {
-        setLoading(true);
-        const result = await getFullNutritionData();
-        if (result.success && result.data) {
-            setFoodData(result.data.foodTemplate);
-            setGeneralGuide(result.data.generalGuide);
-            setWellnessKeys(result.data.wellnessKeys);
-        } else {
-            toast.error(result.error || 'Error al cargar los datos de la guía.');
-        }
-        setLoading(false);
-    }, []);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false); // <-- Estado para el modal de previsualización
 
     useEffect(() => {
+        const loadInitialData = async () => {
+            setLoading(true);
+            const result = await getFullNutritionData();
+            if (result.success && result.data) {
+                const initialTemplate = result.data.foodTemplate;
+                const patientPlan = patient.foodPlans?.[0];
+                
+                if (patientPlan && patientPlan.items) {
+                    const patientItems = patientPlan.items;
+                    patientItems.forEach(item => {
+                        if (!initialTemplate[item.mealType].some(tItem => tItem.name === item.name)) {
+                            initialTemplate[item.mealType].push(item);
+                        }
+                    });
+                    setSelectedIds(new Set(patientPlan.items.map(item => item.id)));
+                }
+                setFoodData(initialTemplate);
+                setGeneralGuide(result.data.generalGuide);
+                setWellnessKeys(result.data.wellnessKeys);
+            } else {
+                toast.error(result.error || 'Error al cargar los datos de la guía.');
+            }
+            setLoading(false);
+        };
         loadInitialData();
-    }, [loadInitialData]);
+    }, [patient]);
 
     const handleDietToggle = (diet: DietTypeEnum) => {
         setSelectedDiets(prev => {
@@ -90,14 +111,32 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
             return newSet;
         });
     };
+    
+    const handleToggleItem = (id: string) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
 
     const handleAddItem = (mealType: MealType, name: string) => {
         if (!foodData) return;
         const newItem: FoodItem = {
-            id: `temp_${Date.now()}`, name, mealType, bloodTypeGroup: bloodType, isDefault: false, createdAt: new Date()
+            id: `temp_${Date.now()}`,
+            name,
+            mealType,
+            bloodTypeGroup: bloodType,
+            isDefault: false,
+            createdAt: new Date(),
         } as FoodItem;
         const updatedMeal = [...foodData[mealType], newItem];
         setFoodData({ ...foodData, [mealType]: updatedMeal });
+        setSelectedIds(prev => new Set(prev).add(newItem.id));
     };
 
     const handleEditItem = (mealType: MealType, index: number, currentName: string) => {
@@ -112,17 +151,22 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
 
     const handleDeleteItem = (mealType: MealType, index: number) => {
         if (!foodData) return;
+        const itemToDelete = foodData[mealType][index];
         const updatedMeal = foodData[mealType].filter((_, i) => i !== index);
         setFoodData({ ...foodData, [mealType]: updatedMeal });
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(itemToDelete.id);
+            return newSet;
+        });
     };
 
     const handleSavePlan = async () => {
         if (!foodData) return;
         setIsSaving(true);
-        const result = await savePatientNutritionPlan(patient.id, Object.values(foodData).flat(), Array.from(selectedDiets));
+        const result = await savePatientNutritionPlan(patient.id, Array.from(selectedIds), Array.from(selectedDiets));
         if (result.success) {
             toast.success('Plan de bienestar guardado exitosamente.');
-            await loadInitialData(); // Recargar datos para obtener IDs de la BD
         } else {
             toast.error(result.error || 'No se pudo guardar el plan.');
         }
@@ -150,98 +194,95 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     if (loading) return <div className="flex justify-center items-center p-12"><div className="loader"></div></div>;
 
     return (
-        <>
-            {isPreviewOpen && filteredFoodData && (
+        <div className="bg-slate-50 p-4 sm:p-6 rounded-xl shadow-sm">
+            {isPreviewOpen && foodData && (
                 <NutritionPlanPreview
                     patient={patient}
-                    planData={{
-                        bloodType,
-                        selectedDiets: Array.from(selectedDiets),
-                        foodPlan: filteredFoodData,
-                        generalGuide,
-                        wellnessKeys
-                    }}
+                    foodData={foodData}
+                    generalGuide={generalGuide}
+                    wellnessKeys={wellnessKeys}
+                    selectedIds={selectedIds}
                     onClose={() => setIsPreviewOpen(false)}
                 />
             )}
-            <div className="bg-slate-50 p-4 sm:p-6 rounded-xl shadow-sm">
-                <section className="bg-primary-dark border border-blue-800 rounded-lg p-6 mb-6 text-white">
-                    <h2 className="text-xl font-bold mb-4">Perfil del Paciente</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label htmlFor="blood-type-select" className="label text-gray-300">Grupo Sanguíneo</label>
-                            <select id="blood-type-select" value={bloodType} onChange={(e) => setBloodType(e.target.value as BloodTypeGroup)} className="input w-full bg-white/10 border-white/20 text-white">
-                                <option value="O_B">Grupo O y B</option>
-                                <option value="A_AB">Grupo A y AB</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="label text-gray-300 mb-2">Tipo de Alimentación</label>
-                            <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                {(Object.values(DietType)).map(diet => (
-                                    <label key={diet} className="flex items-center space-x-2 cursor-pointer">
-                                        <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="h-4 w-4 rounded border-gray-500 bg-white/20 text-primary focus:ring-primary-dark"/>
-                                        <span className="text-sm text-gray-200 capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
+
+            <section className="bg-primary-dark border border-blue-800 rounded-lg p-6 mb-6 text-white">
+                <h2 className="text-xl font-bold mb-4">Perfil del Paciente</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label htmlFor="blood-type-select" className="label text-gray-300">Grupo Sanguíneo</label>
+                        <select id="blood-type-select" value={bloodType} onChange={(e) => setBloodType(e.target.value as BloodTypeGroup)} className="input w-full bg-white/10 border-white/20 text-white">
+                            <option value="O_B">Grupo O y B</option>
+                            <option value="A_AB">Grupo A y AB</option>
+                        </select>
                     </div>
-                </section>
-
-                <nav className="flex space-x-2 border-b border-slate-200 mb-6">
-                    <TabButton id="plan" label="Plan Alimentario" />
-                    <TabButton id="guide" label="Guía General" />
-                    <TabButton id="wellness" label="Claves de Bienestar" />
-                </nav>
-
-                <main>
-                    {activeTab === 'plan' && filteredFoodData && (
-                        <div className="space-y-6">
-                            {Object.entries(filteredFoodData).map(([meal, foods]) => (
-                                <MealSection key={meal} title={meal} items={foods} mealType={meal as MealType} onAddItem={handleAddItem} onEditItem={handleEditItem} onDeleteItem={handleDeleteItem} />
+                    <div>
+                        <label className="label text-gray-300 mb-2">Tipo de Alimentación</label>
+                        <div className="flex flex-wrap gap-x-4 gap-y-2">
+                            {(Object.values(DietType)).map(diet => (
+                                <label key={diet} className="flex items-center space-x-2 cursor-pointer">
+                                    <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="h-4 w-4 rounded border-gray-500 bg-white/20 text-primary focus:ring-primary-dark"/>
+                                    <span className="text-sm text-gray-200 capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
+                                </label>
                             ))}
                         </div>
-                    )}
-                    {activeTab === 'guide' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 bg-white rounded-lg border">
-                            <div className="space-y-3">
-                                <h3 className="text-xl font-bold text-amber-600 flex items-center gap-2"><FaTimesCircle /> Alimentos a Evitar</h3>
-                                <ul className="space-y-2 pl-5 list-disc text-slate-700">
-                                    {generalGuide.AVOID.map((item) => <li key={item.id}>{item.text}</li>)}
-                                </ul>
-                            </div>
-                            <div className="space-y-3">
-                                <h3 className="text-xl font-bold text-emerald-600 flex items-center gap-2"><FaCheckCircle /> Sustitutos Recomendados</h3>
-                                <ul className="space-y-2 pl-5 list-disc text-slate-700">
-                                    {generalGuide.SUBSTITUTE.map((item) => <li key={item.id}>{item.text}</li>)}
-                                </ul>
-                            </div>
+                    </div>
+                </div>
+            </section>
+
+            <nav className="flex space-x-2 border-b border-slate-200 mb-6">
+                <TabButton id="plan" label="Plan Alimentario" />
+                <TabButton id="guide" label="Guía General" />
+                <TabButton id="wellness" label="Claves de Bienestar" />
+            </nav>
+
+            <main>
+                {activeTab === 'plan' && filteredFoodData && (
+                    <div className="space-y-6">
+                        {Object.entries(filteredFoodData).map(([meal, foods]) => (
+                            <MealSection key={meal} title={meal} items={foods} mealType={meal as MealType} selectedIds={selectedIds} onToggleItem={handleToggleItem} onAddItem={handleAddItem} onEditItem={handleEditItem} onDeleteItem={handleDeleteItem} />
+                        ))}
+                    </div>
+                )}
+                {activeTab === 'guide' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 bg-white rounded-lg border">
+                        <div className="space-y-3">
+                            <h3 className="text-xl font-bold text-amber-600 flex items-center gap-2"><FaTimesCircle /> Alimentos a Evitar</h3>
+                            <ul className="space-y-2 pl-5 list-disc text-slate-700">
+                                {generalGuide.AVOID.map((item) => <li key={item.id}>{item.text}</li>)}
+                            </ul>
                         </div>
-                    )}
-                    {activeTab === 'wellness' && (
-                        <div className="space-y-4 p-6 bg-white rounded-lg border">
-                            <h3 className="text-xl font-bold text-slate-800">Claves de la Longevidad 5A</h3>
-                            <div className="space-y-4">
-                                {wellnessKeys.map((key) => (
-                                    <div key={key.id} className="pl-4 border-l-4 border-sky-500">
-                                        <p className="font-semibold text-slate-800">{key.title}</p>
-                                        <p className="text-slate-600 text-sm">{key.description}</p>
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="space-y-3">
+                            <h3 className="text-xl font-bold text-emerald-600 flex items-center gap-2"><FaCheckCircle /> Sustitutos Recomendados</h3>
+                            <ul className="space-y-2 pl-5 list-disc text-slate-700">
+                                {generalGuide.SUBSTITUTE.map((item) => <li key={item.id}>{item.text}</li>)}
+                            </ul>
                         </div>
-                    )}
-                </main>
-                
-                <footer className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-3">
-                    <button onClick={handleSavePlan} disabled={isSaving} className="btn-primary flex items-center justify-center gap-2">
-                        <FaSave /><span>{isSaving ? 'Guardando...' : 'Guardar Plan'}</span>
-                    </button>
-                    <button className="btn-secondary flex items-center justify-center gap-2"><FaPaperPlane /><span>Enviar al Paciente</span></button>
-                    <button onClick={() => setIsPreviewOpen(true)} className="btn-secondary flex items-center justify-center gap-2"><FaPrint /><span>Imprimir / Vista Previa</span></button>
-                </footer>
-            </div>
-        </>
+                    </div>
+                )}
+                {activeTab === 'wellness' && (
+                    <div className="space-y-4 p-6 bg-white rounded-lg border">
+                        <h3 className="text-xl font-bold text-slate-800">Claves de la Longevidad 5A</h3>
+                        <div className="space-y-4">
+                            {wellnessKeys.map((key) => (
+                                <div key={key.id} className="pl-4 border-l-4 border-sky-500">
+                                    <p className="font-semibold text-slate-800">{key.title}</p>
+                                    <p className="text-slate-600 text-sm">{key.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </main>
+            
+            <footer className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-3">
+                <button onClick={handleSavePlan} disabled={isSaving} className="btn-primary flex items-center justify-center gap-2">
+                    <FaSave /><span>{isSaving ? 'Guardando...' : 'Guardar Plan'}</span>
+                </button>
+                <button onClick={() => setIsPreviewOpen(true)} className="btn-secondary flex items-center justify-center gap-2">
+                    <FaPrint /><span>Imprimir</span>
+                </button>
+            </footer>
+        </div>
     );
 }
