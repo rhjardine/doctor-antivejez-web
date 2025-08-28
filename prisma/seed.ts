@@ -134,7 +134,7 @@ async function main() {
     { name: 'Suero de leche (Whey protein)', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
     { name: 'Huevo revuelto con vegetales y queso de cabra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
     { name: 'Huevo duro cocido con tiras de queso de cabra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Omelette de clara de huevo con champiñones', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
+    { name: 'Omelette de claras con champiñones', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
     { name: 'Infusiones o café sin azúcar', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
     // Grupo A o AB
     { name: 'Cereales de trigo sarraceno, avena sin gluten', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },

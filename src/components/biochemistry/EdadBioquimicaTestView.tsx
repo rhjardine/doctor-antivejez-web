@@ -1,7 +1,7 @@
 'use client';
 
 // src/components/biochemistry/EdadBioquimicaTestView.tsx
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,14 +11,12 @@ import {
   BiochemistryFormValues,
   BiochemistryCalculationResult,
   BiochemistryItem,
-  ResultStatus,
 } from '@/types/biochemistry';
 import { calculateAndSaveBiochemistryTest } from '@/lib/actions/biochemistry.actions';
-import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
 import { toast } from 'sonner';
-import { FaArrowLeft, FaSave, FaEdit, FaUndo, FaCheckCircle, FaChartLine } from 'react-icons/fa'; // Added FaChartLine for placeholder
+import { FaArrowLeft, FaSave, FaEdit, FaCheckCircle, FaChartLine } from 'react-icons/fa';
 
-// --- Esquema de Validación con Zod (sin cambios) ---
+// --- Esquema de Validación con Zod ---
 const validationSchema = z.object(
   Object.fromEntries(
     BIOCHEMISTRY_ITEMS.map(item => [
@@ -36,7 +34,7 @@ const validationSchema = z.object(
     path: [BIOCHEMISTRY_ITEMS[0].key], // Muestra el error en el primer campo
 });
 
-// --- Componente de Modal de Éxito (sin cambios) ---
+// --- Componente de Modal de Éxito ---
 function SuccessModal({ onClose, results }: { onClose: () => void, results: BiochemistryCalculationResult | null }) {
   if (!results) return null;
   return (
@@ -75,7 +73,7 @@ interface ResultItemCardProps {
   value?: number;
   calculatedAge?: number;
   chronologicalAge: number;
-  showResults: boolean; // Nueva prop para controlar la visibilidad
+  showResults: boolean; // Prop para controlar la visibilidad de los resultados
 }
 
 function ResultItemCard({ item, value, calculatedAge, chronologicalAge, showResults }: ResultItemCardProps) {
@@ -98,8 +96,8 @@ function ResultItemCard({ item, value, calculatedAge, chronologicalAge, showResu
     }
     const diff = calculatedAge - chronologicalAge;
     if (diff >= 7) return { color: 'red', label: 'Envejecido' };
-    if (diff > 0) return { color: 'yellow', label: 'Normal' }; // Adjusted for normal range
-    return { color: 'green', label: 'Rejuvenecido' }; // Adjusted for rejuvenated range
+    if (diff > 0) return { color: 'yellow', label: 'Normal' };
+    return { color: 'green', label: 'Rejuvenecido' };
   }, [calculatedAge, chronologicalAge]);
 
   return (
@@ -130,18 +128,15 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
   const [isSaving, setIsSaving] = useState(false);
   const [results, setResults] = useState<BiochemistryCalculationResult | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [calculatedAndSaved, setCalculatedAndSaved] = useState(false); // Nuevo estado para controlar la visibilidad de los resultados
+  const [calculatedAndSaved, setCalculatedAndSaved] = useState(false); // Estado para controlar la visibilidad de los resultados
 
-  const { control, handleSubmit, watch, formState: { errors, isValid }, reset } = useForm<BiochemistryFormValues>({
+  const { control, handleSubmit, watch, formState: { errors, isValid } } = useForm<BiochemistryFormValues>({
     resolver: zodResolver(validationSchema),
-    mode: 'onChange', // Permite la validación en vivo pero no la visualización de resultados
+    mode: 'onChange',
     defaultValues: {},
   });
 
-  const formValues = watch(); // Observa los cambios en el formulario
-
-  // La "live calculation" ya no se usa para mostrar resultados al usuario directamente.
-  // Solo se activa la visualización de resultados cuando 'calculatedAndSaved' es true.
+  const formValues = watch();
 
   const handleCalculateAndSave = async (data: BiochemistryFormValues) => {
     setIsSaving(true);
@@ -154,7 +149,7 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
 
       if (result.success && result.data) {
         setResults(result.data);
-        setIsEditing(false); // Deshabilita la edición después de guardar
+        setIsEditing(false);
         setCalculatedAndSaved(true); // Activa la visualización de resultados
         setShowSuccessModal(true);
         toast.success("Test Bioquímico guardado con éxito.");
@@ -177,7 +172,7 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
-    onTestComplete(); // Vuelve al perfil del paciente y refresca los datos
+    onTestComplete();
   };
 
   return (
@@ -197,45 +192,39 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
             </div>
             
             <div className="space-y-5">
-                {BIOCHEMISTRY_ITEMS.map((item) => {
-                    // No se usa 'calculatedAge' aquí para evitar mostrar resultados parciales en vivo.
-                    // Los resultados se mostrarán solo después de guardar.
-                    
-                    return (
-                        <div key={item.key}>
-                            <label htmlFor={item.key} className="block text-sm font-medium mb-1 text-gray-200">{item.label} ({item.unit})</label>
-                            <Controller
-                                name={item.key}
-                                control={control}
-                                render={({ field }) => (
-                                    <input
-                                        {...field}
-                                        id={item.key}
-                                        type="number"
-                                        step="any"
-                                        className={`input w-full placeholder-gray-400 ${
-                                            isEditing 
-                                            ? 'bg-white text-black' // Estilo en modo edición
-                                            : 'bg-gray-700/50 border-gray-500 text-white' // Estilo en modo no edición
-                                        } ${errors[item.key] ? 'border-red-500' : ''}`}
-                                        placeholder="0.00"
-                                        disabled={!isEditing}
-                                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                                        value={field.value ?? ''} // Asegura que el valor sea controlado y maneje undefined
-                                    />
-                                )}
-                            />
-                            {/* Se eliminó la visualización de edad calculada parcial aquí para cumplir con la premisa */}
-                            {errors[item.key] && <p className="text-red-400 text-xs mt-1">{errors[item.key]?.message}</p>}
-                        </div>
-                    );
-                })}
+                {BIOCHEMISTRY_ITEMS.map((item) => (
+                    <div key={item.key}>
+                        <label htmlFor={item.key} className="block text-sm font-medium mb-1 text-gray-200">{item.label} ({item.unit})</label>
+                        <Controller
+                            name={item.key}
+                            control={control}
+                            render={({ field }) => (
+                                <input
+                                    {...field}
+                                    id={item.key}
+                                    type="number"
+                                    step="any"
+                                    className={`input w-full placeholder-gray-400 ${
+                                        isEditing 
+                                        ? 'bg-white text-black'
+                                        : 'bg-gray-700/50 border-gray-500 text-white'
+                                    } ${errors[item.key] ? 'border-red-500' : ''}`}
+                                    placeholder="0.00"
+                                    disabled={!isEditing}
+                                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                                    value={field.value ?? ''}
+                                />
+                            )}
+                        />
+                        {errors[item.key] && <p className="text-red-400 text-xs mt-1">{errors[item.key]?.message}</p>}
+                    </div>
+                ))}
             </div>
             
             <div className="mt-8 pt-6 border-t border-white/20 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button type="submit" disabled={isSaving || !isEditing || !isValid} className="font-semibold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 bg-green-500 hover:bg-green-600 text-white disabled:bg-green-500/50 disabled:cursor-not-allowed">
                     <FaSave />
-                    <span>{isSaving ? 'Calculando/Guardando...' : 'Calcular/Guardar'}</span> {/* Botón renombrado */}
+                    <span>{isSaving ? 'Calculando/Guardando...' : 'Calcular/Guardar'}</span>
                 </button>
                 <button type="button" onClick={handleEdit} disabled={isEditing || isSaving} className="font-semibold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 bg-orange-500 hover:bg-orange-600 text-white disabled:bg-orange-500/50 disabled:cursor-not-allowed">
                     <FaEdit />
@@ -249,7 +238,7 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
         </div>
 
         <div className="lg:col-span-3 space-y-6">
-            {calculatedAndSaved && results ? ( // Solo se muestra si se ha calculado y guardado y hay resultados
+            {calculatedAndSaved && results ? (
                 <>
                     <div className="bg-[#23bcef] p-6 rounded-lg shadow-md">
                         <h3 className="text-lg font-bold text-white mb-4">Resultados Finales</h3>
@@ -285,7 +274,7 @@ export default function EdadBioquimicaTestView({ patient, onBack, onTestComplete
                                         value={formValues[item.key] as number | undefined}
                                         calculatedAge={results.partialAges[ageKey]}
                                         chronologicalAge={patient.chronologicalAge}
-                                        showResults={calculatedAndSaved} // Pasa la prop de visibilidad
+                                        showResults={calculatedAndSaved}
                                     />
                                 );
                             })}
