@@ -86,13 +86,15 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            body * {
-              visibility: hidden;
+            .no-print {
+              display: none !important;
             }
-            #printable-guide, #printable-guide * {
-              visibility: visible;
+            body > *:not(#printable-guide) {
+              display: none !important;
             }
             #printable-guide {
+              display: block !important;
+              visibility: visible !important;
               position: absolute;
               left: 0;
               top: 0;
@@ -100,9 +102,6 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
               height: auto;
               overflow: visible;
               font-size: 10pt;
-            }
-            .no-print {
-              display: none !important;
             }
           }
         `}</style>
