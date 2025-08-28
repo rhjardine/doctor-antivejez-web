@@ -305,6 +305,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const [activeMetabolicTab, setActiveMetabolicTab] = useState<'homeopatia' | 'bach'>('homeopatia');
   const [isSaving, setIsSaving] = useState(false);
   const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newlyAddedItems, setNewlyAddedItems] = useState<{ tempId: string; name: string; categoryId: string }[]>([]);
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
@@ -342,8 +343,9 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     const newItemName = newItemInputs[categoryId];
     if (!newItemName?.trim()) return;
 
+    const tempId = `new_${categoryId}_${Date.now()}`;
     const newItem: StandardGuideItem = {
-      id: `${categoryId}_${Date.now()}`,
+      id: tempId,
       name: newItemName.trim(),
     };
 
@@ -354,6 +356,8 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
       }
       return cat;
     }));
+    
+    setNewlyAddedItems(prev => [...prev, { tempId, name: newItem.name, categoryId }]);
     setNewItemInputs(prev => ({ ...prev, [categoryId]: '' }));
   };
 
@@ -370,6 +374,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
       delete newSelections[itemId];
       return newSelections;
     });
+    setNewlyAddedItems(prev => prev.filter(item => item.tempId !== itemId));
   };
 
   const handleSaveAndSend = async () => {
@@ -379,10 +384,11 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         guideDate,
         selections,
         observaciones,
-      });
+      }, newlyAddedItems);
 
       if (result.success) {
         toast.success(result.message);
+        setNewlyAddedItems([]); // Limpiar los items nuevos después de guardar
         setIsSendModalOpen(true);
       } else {
         toast.error(result.error || 'No se pudo guardar la guía.');
@@ -397,7 +403,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const handleSendAction = (action: 'email' | 'whatsapp') => {
       if (action === 'email') {
           const subject = encodeURIComponent('Guía de Tratamiento - Doctor AntiVejez');
-          const body = encodeURIComponent(`Estimado/a ${patient.firstName},\n\nAdjunto encontrará su guía de tratamiento personalizada.\n\nSaludos cordiales,\nDoctor AntiVejez`);
+          const body = encodeURIComponent(`Estimado/a ${patient.firstName},\n\nSu guía de tratamiento personalizada ha sido generada. Puede consultarla en el portal o en el archivo adjunto (si aplica).\n\nSaludos cordiales,\nDoctor AntiVejez`);
           window.location.href = `mailto:${patient.email}?subject=${subject}&body=${body}`;
       } else if (action === 'whatsapp') {
           const message = encodeURIComponent(`Hola ${patient.firstName}, su guía de tratamiento personalizada ha sido generada. Por favor, revise su correo electrónico o el portal de pacientes para verla.`);
