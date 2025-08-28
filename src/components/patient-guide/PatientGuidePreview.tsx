@@ -5,7 +5,6 @@ import {
   GuideCategory,
   GuideFormValues,
   StandardGuideItem,
-  MetabolicActivator,
   RevitalizationGuideItem,
   RemocionItem,
   StandardFormItem,
@@ -83,6 +82,10 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
               size: A4;
               margin: 20mm;
             }
+            body {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
             body * {
               visibility: hidden;
             }
@@ -96,9 +99,10 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
               width: 100%;
               height: auto;
               overflow: visible;
+              font-size: 10pt;
             }
             .no-print {
-              display: none;
+              display: none !important;
             }
           }
         `}</style>
@@ -199,8 +203,7 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                       .map(item => {
                         const details = selections[item.id];
                         let treatmentDetails: string | null = null;
-
-                        // ===== AJUSTE: Lógica de renderizado de detalles mejorada y completada =====
+                        
                         const isNutraceutico = ['cat_nutra_primarios', 'cat_nutra_secundarios', 'cat_nutra_complementarios', 'cat_cosmeceuticos', 'cat_formulas_naturales'].includes(category.id);
 
                         if ('dose' in item && item.dose) {
@@ -224,13 +227,12 @@ export default function PatientGuidePreview({ patient, guideData, formValues, on
                                 std.qty ? `${std.qty} ${std.doseType || ''}`.trim() : null,
                                 std.freq,
                                 std.custom
-                            ].filter(Boolean); // Filtra partes nulas o vacías
+                            ].filter(Boolean);
                             treatmentDetails = parts.join(' - ');
-                        } else { // Para Sueros y Terapias
+                        } else {
                           const std = details as StandardFormItem;
                           treatmentDetails = [std.qty, std.freq, std.custom].filter(Boolean).join(' - ');
                         }
-                        // =======================================================================
 
                         return <GuideListItem key={item.id} name={item.name} details={treatmentDetails} />;
                       })}

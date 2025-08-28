@@ -19,6 +19,7 @@ import {
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt, FaPrint, FaUserMd } from 'react-icons/fa';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
+import { savePatientGuide } from '@/lib/actions/guide.actions';
 
 // --- Estructura de Datos para el Activador Metabólico Jerárquico ---
 export const homeopathicStructure = {
@@ -302,6 +303,9 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [activeMetabolicTab, setActiveMetabolicTab] = useState<'homeopatia' | 'bach'>('homeopatia');
+  const [isSaving, setIsSaving] = useState(false);
+  const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
+
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
@@ -369,8 +373,40 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     });
   };
 
-  const handleSendAction = (action: 'email' | 'app') => {
-      toast.info(`Funcionalidad para enviar por ${action} en desarrollo.`);
+  const handleSaveAndSend = async () => {
+    setIsSaving(true);
+    try {
+      const result = await savePatientGuide(patient.id, {
+        guideDate,
+        selections,
+        observaciones,
+      });
+
+      if (result.success) {
+        toast.success(result.message);
+        setIsSendModalOpen(true); // Abrir modal de envío solo si el guardado fue exitoso
+      } else {
+        toast.error(result.error || 'No se pudo guardar la guía.');
+      }
+    } catch (error) {
+      toast.error('Error de conexión al guardar la guía.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSendAction = (action: 'email' | 'whatsapp') => {
+      if (action === 'email') {
+          const subject = encodeURIComponent('Guía de Tratamiento - Doctor AntiVejez');
+          const body = encodeURIComponent(`Estimado/a ${patient.firstName},\n\nAdjunto encontrará su guía de tratamiento personalizada.\n\nSaludos cordiales,\nDoctor AntiVejez`);
+          window.location.href = `mailto:${patient.email}?subject=${subject}&body=${body}`;
+      } else if (action === 'whatsapp') {
+          // Nota: La API de WhatsApp no permite pre-llenar un PDF.
+          // Se envía un mensaje para que el paciente sepa que su guía está lista.
+          // En un futuro, se podría generar un PDF, subirlo y enviar el enlace.
+          const message = encodeURIComponent(`Hola ${patient.firstName}, su guía de tratamiento personalizada ha sido generada. Por favor, revise su correo electrónico o el portal de pacientes para verla.`);
+          window.open(`https://wa.me/${patient.phone}?text=${message}`, '_blank');
+      }
       setIsSendModalOpen(false);
   };
 
@@ -649,7 +685,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     <div className="space-y-6">
       <div className="bg-primary text-white p-4 rounded-lg flex justify-between items-center flex-wrap gap-4">
         <div className="flex items-center gap-4"><FaUser className="text-xl" /><span className="font-semibold">{patient.firstName} {patient.lastName}</span></div>
-        <div className="flex items-center gap-4"><FaCalendar className="text-xl" /><input type="date" defaultValue={new Date().toISOString().split('T')[0]} className="bg-white/20 border-none rounded-md p-2 text-sm text-black"/></div>
+        <div className="flex items-center gap-4"><FaCalendar className="text-xl" /><input type="date" value={guideDate} onChange={(e) => setGuideDate(e.target.value)} className="bg-white/20 border-none rounded-md p-2 text-sm text-white"/></div>
       </div>
 
       {guideData.map((category) => (
@@ -712,21 +748,23 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
 
       <div className="flex justify-end gap-4 mt-8">
         <button type="button" onClick={() => setIsPreviewOpen(true)} className="btn-secondary flex items-center gap-2"><FaEye /> Vista Previa</button>
-        <button type="button" onClick={() => window.print()} className="btn-secondary flex items-center gap-2"><FaPrint /> Imprimir</button>
-        <button type="button" onClick={() => setIsSendModalOpen(true)} className="btn-primary flex items-center gap-2"><FaPaperPlane /> Guardar y Enviar</button>
+        <button type="button" onClick={() => { setIsPreviewOpen(true); setTimeout(() => window.print(), 500); }} className="btn-secondary flex items-center gap-2"><FaPrint /> Imprimir</button>
+        <button type="button" onClick={handleSaveAndSend} disabled={isSaving} className="btn-primary flex items-center gap-2">
+            <FaPaperPlane /> {isSaving ? 'Guardando...' : 'Guardar y Enviar'}
+        </button>
       </div>
 
-      {isPreviewOpen && <PatientGuidePreview patient={patient} formValues={{guideDate: new Date().toISOString(), selections, observaciones}} guideData={guideData} onClose={() => setIsPreviewOpen(false)} />}
+      {isPreviewOpen && <PatientGuidePreview patient={patient} formValues={{guideDate, selections, observaciones}} guideData={guideData} onClose={() => setIsPreviewOpen(false)} />}
 
       {isSendModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center relative animate-slideUp">
             <button onClick={() => setIsSendModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><FaTimes size={20}/></button>
-            <h3 className="text-xl font-bold text-primary-dark mb-6">Enviar Guía al Paciente</h3>
-            <p className="text-gray-600 mb-6">¿A quién deseas enviar esta guía?</p>
+            <h3 className="text-xl font-bold text-primary-dark mb-2">Guía Guardada</h3>
+            <p className="text-gray-600 mb-6">¿Cómo deseas enviar la guía al paciente?</p>
             <div className="space-y-4">
-              <button onClick={() => handleSendAction('email')} className="w-full btn-primary flex items-center justify-center gap-3"><FaEnvelope /> Enviar al Paciente</button>
-              <button onClick={() => handleSendAction('app')} className="w-full btn-secondary flex items-center justify-center gap-3"><FaUserMd /> Enviar al Coach/Admin</button>
+              <button onClick={() => handleSendAction('email')} className="w-full btn-primary flex items-center justify-center gap-3"><FaEnvelope /> Enviar por Correo</button>
+              <button onClick={() => handleSendAction('whatsapp')} className="w-full btn-success flex items-center justify-center gap-3"><FaMobileAlt /> Enviar por WhatsApp</button>
             </div>
           </div>
         </div>
