@@ -306,7 +306,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const [isSaving, setIsSaving] = useState(false);
   const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
 
-
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
   };
@@ -384,7 +383,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
 
       if (result.success) {
         toast.success(result.message);
-        setIsSendModalOpen(true); // Abrir modal de envío solo si el guardado fue exitoso
+        setIsSendModalOpen(true);
       } else {
         toast.error(result.error || 'No se pudo guardar la guía.');
       }
@@ -401,9 +400,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
           const body = encodeURIComponent(`Estimado/a ${patient.firstName},\n\nAdjunto encontrará su guía de tratamiento personalizada.\n\nSaludos cordiales,\nDoctor AntiVejez`);
           window.location.href = `mailto:${patient.email}?subject=${subject}&body=${body}`;
       } else if (action === 'whatsapp') {
-          // Nota: La API de WhatsApp no permite pre-llenar un PDF.
-          // Se envía un mensaje para que el paciente sepa que su guía está lista.
-          // En un futuro, se podría generar un PDF, subirlo y enviar el enlace.
           const message = encodeURIComponent(`Hola ${patient.firstName}, su guía de tratamiento personalizada ha sido generada. Por favor, revise su correo electrónico o el portal de pacientes para verla.`);
           window.open(`https://wa.me/${patient.phone}?text=${message}`, '_blank');
       }
@@ -411,23 +407,14 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   };
 
   const nutraFrequencyOptions = [
-    "Mañana", 
-    "Noche", 
-    "30 min antes de Desayuno", 
-    "30 min antes de Cena", 
-    "30 min antes de Desayuno y Cena",
-    "Con el Desayuno",
-    "Con la Cena",
-    "Con el Desayuno y la Cena",
-    "Antes del Ejercicio", 
-    "Otros"
+    "Mañana", "Noche", "30 min antes de Desayuno", "30 min antes de Cena", 
+    "30 min antes de Desayuno y Cena", "Con el Desayuno", "Con la Cena", 
+    "Con el Desayuno y la Cena", "Antes del Ejercicio", "Otros"
   ];
   
   const sueroTerapiaFrequencyOptions = ["Diaria", "Semanal", "Quincenal", "Mensual"];
   const noniAloeTimeOptions: NoniAloeVeraTime[] = [
-    '30 minutos antes de Desayuno', 
-    '30 minutos antes de Desayuno y Cena',
-    '30 minutos antes de la Cena'
+    '30 minutos antes de Desayuno', '30 minutos antes de Desayuno y Cena', '30 minutos antes de la Cena'
   ];
 
   const renderRemocionItem = (item: RemocionItem) => {
@@ -437,32 +424,18 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     return (
       <div key={item.id} className="p-3 bg-gray-50 rounded-md">
         <div className="flex items-center gap-4">
-          <input 
-            type="checkbox" 
-            id={item.id} 
-            checked={selection.selected || false} 
-            onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} 
-            className="w-5 h-5 accent-primary"
-          />
+          <input type="checkbox" id={item.id} checked={selection.selected || false} onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} className="w-5 h-5 accent-primary"/>
           <label htmlFor={item.id} className="font-medium text-gray-800">{item.name}</label>
         </div>
         {selection.selected && (
           <div className="mt-3 pl-9 space-y-3">
             { (item.subType === 'aceite_ricino' || item.subType === 'leche_magnesia') && (
               <div className="grid grid-cols-2 gap-4">
-                <select 
-                  value={selection.cucharadas ?? ''}
-                  onChange={e => handleSelectionChange(item.id, 'cucharadas', e.target.value === '' ? undefined : parseInt(e.target.value))} 
-                  className="input text-sm py-1"
-                >
+                <select value={selection.cucharadas ?? ''} onChange={e => handleSelectionChange(item.id, 'cucharadas', e.target.value === '' ? undefined : parseInt(e.target.value))} className="input text-sm py-1">
                   <option value="">Seleccione dosis...</option>
                   {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{`${n} cucharada(s)`}</option>)}
                 </select>
-                <select 
-                  value={selection.horario ?? ''}
-                  onChange={e => handleSelectionChange(item.id, 'horario', e.target.value === '' ? undefined : e.target.value as any)} 
-                  className="input text-sm py-1"
-                >
+                <select value={selection.horario ?? ''} onChange={e => handleSelectionChange(item.id, 'horario', e.target.value === '' ? undefined : e.target.value as any)} className="input text-sm py-1">
                   <option value="">Horario...</option>
                   <option value="en el día">en el día</option>
                   <option value="en la tarde">en la tarde</option>
@@ -493,13 +466,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
             )}
             { item.subType === 'noni_aloe' && (
               <div className="grid grid-cols-3 gap-4">
-                 <input
-                    type="number"
-                    placeholder="Cant."
-                    value={selection.tacita_qty ?? ''}
-                    onChange={e => handleSelectionChange(item.id, 'tacita_qty', e.target.value === '' ? undefined : parseInt(e.target.value))}
-                    className="input text-sm py-1"
-                 />
+                 <input type="number" placeholder="Cant." value={selection.tacita_qty ?? ''} onChange={e => handleSelectionChange(item.id, 'tacita_qty', e.target.value === '' ? undefined : parseInt(e.target.value))} className="input text-sm py-1"/>
                  <select value={selection.tacita ?? ''} onChange={e => handleSelectionChange(item.id, 'tacita', e.target.value as any)} className="input text-sm py-1">
                   <option value="">Tomar...</option>
                   {noniAloeTimeOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -522,31 +489,13 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     return (
       <div key={item.id} className="p-3 bg-blue-50 rounded-md border border-blue-200">
           <div className="flex items-center gap-4">
-              <input 
-                  type="checkbox" 
-                  id={item.id} 
-                  checked={selection.selected || false} 
-                  onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} 
-                  className="w-5 h-5 accent-primary"
-              />
+              <input type="checkbox" id={item.id} checked={selection.selected || false} onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} className="w-5 h-5 accent-primary"/>
               <label htmlFor={item.id} className="flex-grow font-semibold text-blue-800">{item.name}</label>
           </div>
           {selection.selected && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 pl-9">
-                  <input 
-                      type="text" 
-                      placeholder="Complejo B 3 cc" 
-                      value={selection.complejoB_cc ?? ''} 
-                      onChange={(e) => handleSelectionChange(item.id, 'complejoB_cc', e.target.value)} 
-                      className="input text-sm py-1" 
-                  />
-                  <input 
-                      type="text" 
-                      placeholder="Otro medicamento 3 cc" 
-                      value={selection.bioquel_cc ?? ''} 
-                      onChange={(e) => handleSelectionChange(item.id, 'bioquel_cc', e.target.value)} 
-                      className="input text-sm py-1" 
-                  />
+                  <input type="text" placeholder="Complejo B 3 cc" value={selection.complejoB_cc ?? ''} onChange={(e) => handleSelectionChange(item.id, 'complejoB_cc', e.target.value)} className="input text-sm py-1"/>
+                  <input type="text" placeholder="Otro medicamento 3 cc" value={selection.bioquel_cc ?? ''} onChange={(e) => handleSelectionChange(item.id, 'bioquel_cc', e.target.value)} className="input text-sm py-1"/>
                   <select value={selection.frequency ?? ''} onChange={e => handleSelectionChange(item.id, 'frequency', e.target.value as any)} className="input text-sm py-1">
                     <option value="">Frecuencia...</option>
                     <option value="1 vez por semana por 10 dosis">1 vez/sem por 10 dosis</option>
@@ -566,13 +515,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
       <div className="space-y-4">
         <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
           <div className="flex items-center gap-4">
-            <input 
-              type="checkbox" 
-              id="am_bioterapico" 
-              checked={selection.selected || false} 
-              onChange={(e) => handleSelectionChange('am_bioterapico', 'selected', e.target.checked)} 
-              className="w-5 h-5 accent-primary"
-            />
+            <input type="checkbox" id="am_bioterapico" checked={selection.selected || false} onChange={(e) => handleSelectionChange('am_bioterapico', 'selected', e.target.checked)} className="w-5 h-5 accent-primary"/>
             <label htmlFor="am_bioterapico" className="font-semibold text-blue-800">Bioterápico + Bach</label>
           </div>
           {selection.selected && (
@@ -599,12 +542,8 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         
         <div className="border-b border-gray-200">
           <nav className="flex space-x-1">
-            <button type="button" onClick={() => setActiveMetabolicTab('homeopatia')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeMetabolicTab === 'homeopatia' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>
-              Homeopatía
-            </button>
-            <button type="button" onClick={() => setActiveMetabolicTab('bach')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeMetabolicTab === 'bach' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>
-              Flores de Bach
-            </button>
+            <button type="button" onClick={() => setActiveMetabolicTab('homeopatia')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeMetabolicTab === 'homeopatia' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>Homeopatía</button>
+            <button type="button" onClick={() => setActiveMetabolicTab('bach')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeMetabolicTab === 'bach' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>Flores de Bach</button>
           </nav>
         </div>
         <div className="p-4 border-x border-b border-gray-200 rounded-b-lg -mt-px">
@@ -631,40 +570,18 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
         {selection.selected && !('dose' in item) && (
           isNutraceutico ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2 pl-9">
-              <input 
-                type="number" 
-                placeholder="Dosis" 
-                value={selection.qty ?? ''} 
-                onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} 
-                className="input text-sm py-1"
-                min="1"
-                max="10"
-              />
-              <select 
-                value={selection.doseType ?? ''} 
-                onChange={(e) => handleSelectionChange(item.id, 'doseType', e.target.value as any)} 
-                className="input text-sm py-1"
-              >
+              <input type="number" placeholder="Dosis" value={selection.qty ?? ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" min="1" max="10"/>
+              <select value={selection.doseType ?? ''} onChange={(e) => handleSelectionChange(item.id, 'doseType', e.target.value as any)} className="input text-sm py-1">
                 <option value="">Tipo...</option>
                 <option value="Capsulas">Cápsulas</option>
                 <option value="Tabletas">Tabletas</option>
                 <option value="Cucharaditas">Cucharaditas</option>
               </select>
-              <select 
-                value={selection.freq ?? ''} 
-                onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} 
-                className="input text-sm py-1"
-              >
+              <select value={selection.freq ?? ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
                 <option value="">Frecuencia...</option>
                 {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
-              <input 
-                type="text" 
-                placeholder="Suplemento personalizado" 
-                value={selection.custom ?? ''} 
-                onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} 
-                className="input text-sm py-1" 
-              />
+              <input type="text" placeholder="Suplemento personalizado" value={selection.custom ?? ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1"/>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
@@ -699,14 +616,8 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
               <div className="space-y-4">
                 {category.type === 'REMOCION' && (
                   <>
-                    {(category.items as (RemocionItem | StandardGuideItem)[])
-                      .filter((item): item is RemocionItem => 'subType' in item)
-                      .map(item => renderRemocionItem(item))}
-                    
-                    {(category.items as (RemocionItem | StandardGuideItem)[])
-                      .filter((item): item is StandardGuideItem => !('subType' in item))
-                      .map(item => renderStandardItem(item, category.id, []))}
-                    
+                    {(category.items as (RemocionItem | StandardGuideItem)[]).filter((item): item is RemocionItem => 'subType' in item).map(item => renderRemocionItem(item))}
+                    {(category.items as (RemocionItem | StandardGuideItem)[]).filter((item): item is StandardGuideItem => !('subType' in item)).map(item => renderStandardItem(item, category.id, []))}
                     <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
                       <input type="text" placeholder="Añadir nuevo producto de remoción..." value={newItemInputs[category.id] ?? ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
                       <button type="button" onClick={() => handleAddNewItem(category.id)} className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"><FaPlus /> Añadir</button>
@@ -718,9 +629,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
                 {category.type === 'STANDARD' && (
                   <>
                     {(category.items as StandardGuideItem[]).map(item => {
-                      const freqOptions = (['cat_sueros', 'cat_terapias'].includes(category.id)) 
-                        ? sueroTerapiaFrequencyOptions 
-                        : nutraFrequencyOptions;
+                      const freqOptions = (['cat_sueros', 'cat_terapias'].includes(category.id)) ? sueroTerapiaFrequencyOptions : nutraFrequencyOptions;
                       return renderStandardItem(item, category.id, freqOptions);
                     })}
                     <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
@@ -737,13 +646,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
       
       <div className="card">
         <h3 className="font-semibold text-gray-800 mb-2">Observaciones</h3>
-        <textarea 
-          value={observaciones} 
-          onChange={(e) => setObservaciones(e.target.value)}
-          className="input w-full"
-          rows={4}
-          placeholder="Añadir observaciones, notas o instrucciones adicionales para el paciente..."
-        />
+        <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="input w-full" rows={4} placeholder="Añadir observaciones, notas o instrucciones adicionales para el paciente..."/>
       </div>
 
       <div className="flex justify-end gap-4 mt-8">
