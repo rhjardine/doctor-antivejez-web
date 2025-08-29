@@ -1,16 +1,17 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { GuideFormValues, StandardFormItem, RevitalizationFormItem, MetabolicFormItem, RemocionFormItem, RemocionAlimentacionType, NoniAloeVeraTime } from '@/types/guide';
+import { GuideFormValues, StandardFormItem, RevitalizationFormItem, MetabolicFormItem, RemocionFormItem, GuideCategory } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
-import nodemailer from 'nodemailer'; // Para envío de emails
+import nodemailer from 'nodemailer';
+import { renderToString } from 'react-dom/server';
+import { generateGuideEmailHTML } from '@/utils/emailTemplates';
 
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
  * desde la base de datos para construir el formulario dinámicamente.
- * Extendida para incluir datos de alimentación filtrados por grupo sanguíneo.
  */
-export async function getGuideTemplate(patientId: string) {
+export async function getGuideTemplate() {
   try {
     const categories = await prisma.guideCategory.findMany({
       include: {
@@ -21,18 +22,7 @@ export async function getGuideTemplate(patientId: string) {
       },
       orderBy: { order: 'asc' },
     });
-
-    const patient = await prisma.patient.findUnique({ where: { id: patientId }, select: { bloodType: true } });
-    const bloodGroup = patient?.bloodType === 'O' || patient?.bloodType === 'B' ? 'O_B' : 'A_AB';
-
-    const foodItems = await prisma.foodItem.findMany({
-      where: { bloodTypeGroup: { in: ['ALL', bloodGroup] } },
-      orderBy: { mealType: 'asc' },
-    });
-    const generalGuides = await prisma.generalGuideItem.findMany({});
-    const wellnessKeys = await prisma.wellnessKey.findMany({});
-
-    return { success: true, data: { categories, foodItems, generalGuides, wellnessKeys } };
+    return { success: true, data: categories };
   } catch (error) {
     console.error('Error fetching guide template:', error);
     return { success: false, error: 'No se pudo cargar la plantilla de la guía.' };
@@ -41,88 +31,168 @@ export async function getGuideTemplate(patientId: string) {
 
 /**
  * Guarda la guía personalizada de un paciente en la base de datos.
- * Esta versión maneja la creación de nuevos ítems dinámicos y foodPlan.
+ * Esta versión maneja la creación de nuevos ítems dinámicos de manera más robusta.
  */
 export async function savePatientGuide(
-  patientId: string, 
+  patientId: string,
   formData: GuideFormValues,
   newItems: { tempId: string; name: string; categoryId: string }[]
 ) {
   try {
-    const { guideDate, selections, observaciones, foodSelections } = formData; // Extendido con foodSelections
+    const { guideDate, selections, observaciones } = formData;
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Crear la guía principal
+      // 1. Verificar que el paciente existe
+      const patient = await tx.patient.findUnique({
+        where: { id: patientId },
+      });
+
+      if (!patient) {
+        throw new Error('Paciente no encontrado');
+      }
+
+      // 2. Crear la guía principal
       const patientGuide = await tx.patientGuide.create({
         data: {
           patientId,
           guideDate: new Date(guideDate),
-          observations: observaciones,
+          observations: observaciones || null,
         },
       });
 
-      // 2. Crear los nuevos ítems y mapear sus IDs temporales a las nuevas IDs de la BD
+      // 3. Crear los nuevos ítems y mapear sus IDs temporales a las nuevas IDs de la BD
       const tempIdToDbIdMap = new Map<string, string>();
+      
       for (const newItem of newItems) {
-        const createdItem = await tx.guideItem.create({
-          data: {
-            name: newItem.name,
-            categoryId: newItem.categoryId,
-            isDefault: false, // Los ítems creados dinámicamente no son por defecto
-          },
-        });
-        tempIdToDbIdMap.set(newItem.tempId, createdItem.id);
+        try {
+          // Verificar que la categoría existe
+          const category = await tx.guideCategory.findUnique({
+            where: { id: newItem.categoryId },
+          });
+
+          if (!category) {
+            console.warn(`Categoría ${newItem.categoryId} no encontrada, omitiendo ítem: ${newItem.name}`);
+            continue;
+          }
+
+          const createdItem = await tx.guideItem.create({
+            data: {
+              name: newItem.name.trim(),
+              categoryId: newItem.categoryId,
+              isDefault: false, // Los ítems creados dinámicamente no son por defecto
+            },
+          });
+          
+          tempIdToDbIdMap.set(newItem.tempId, createdItem.id);
+        } catch (itemError) {
+          console.error(`Error creando ítem ${newItem.name}:`, itemError);
+          // Continuar con los demás ítems en caso de error
+        }
       }
 
-      // 3. Preparar todas las selecciones para guardarlas en lote
+      // 4. Preparar y validar todas las selecciones para guardarlas en lote
       const selectionsToCreate = [];
+      
       for (const itemId in selections) {
         if (Object.prototype.hasOwnProperty.call(selections, itemId)) {
           const selectionData = selections[itemId];
+          
           if (selectionData.selected) {
             // Usar la nueva ID de la BD si es un ítem dinámico, o la ID original si es uno por defecto
             const finalItemId = tempIdToDbIdMap.get(itemId) || itemId;
 
+            // Verificar que el ítem existe (para IDs no temporales)
+            if (!tempIdToDbIdMap.has(itemId)) {
+              const existingItem = await tx.guideItem.findUnique({
+                where: { id: itemId },
+              });
+
+              if (!existingItem) {
+                console.warn(`Ítem ${itemId} no encontrado en la base de datos, omitiendo`);
+                continue;
+              }
+            }
+
             const dbSelectionData: any = {
               patientGuideId: patientGuide.id,
               guideItemId: finalItemId,
-              qty: (selectionData as StandardFormItem).qty,
-              doseType: (selectionData as StandardFormItem).doseType,
-              freq: (selectionData as StandardFormItem).freq,
-              custom: (selectionData as StandardFormItem).custom,
-              complejoB_cc: (selectionData as RevitalizationFormItem).complejoB_cc,
-              bioquel_cc: (selectionData as RevitalizationFormItem).bioquel_cc,
-              frequency: (selectionData as RevitalizationFormItem).frequency,
-              cucharadas: (selectionData as RemocionFormItem).cucharadas,
-              horario: (selectionData as RemocionFormItem).horario,
-              semanas: (selectionData as RemocionFormItem).semanas,
-              alimentacionTipo: (selectionData as RemocionFormItem).alimentacionTipo,
-              tacita_qty: (selectionData as RemocionFormItem).tacita_qty,
-              tacita: (selectionData as RemocionFormItem).tacita,
-              frascos: (selectionData as RemocionFormItem).frascos,
-              gotas: (selectionData as MetabolicFormItem).gotas,
-              vecesAlDia: (selectionData as MetabolicFormItem).vecesAlDia,
             };
+
+            // Agregar campos específicos según el tipo de formulario
+            // Campos de StandardFormItem
+            if ((selectionData as StandardFormItem).qty !== undefined) {
+              dbSelectionData.qty = (selectionData as StandardFormItem).qty || null;
+            }
+            if ((selectionData as StandardFormItem).doseType !== undefined) {
+              dbSelectionData.doseType = (selectionData as StandardFormItem).doseType || null;
+            }
+            if ((selectionData as StandardFormItem).freq !== undefined) {
+              dbSelectionData.freq = (selectionData as StandardFormItem).freq || null;
+            }
+            if ((selectionData as StandardFormItem).custom !== undefined) {
+              dbSelectionData.custom = (selectionData as StandardFormItem).custom || null;
+            }
+
+            // Campos de RevitalizationFormItem
+            if ((selectionData as RevitalizationFormItem).complejoB_cc !== undefined) {
+              dbSelectionData.complejoB_cc = (selectionData as RevitalizationFormItem).complejoB_cc || null;
+            }
+            if ((selectionData as RevitalizationFormItem).bioquel_cc !== undefined) {
+              dbSelectionData.bioquel_cc = (selectionData as RevitalizationFormItem).bioquel_cc || null;
+            }
+            if ((selectionData as RevitalizationFormItem).frequency !== undefined) {
+              dbSelectionData.frequency = (selectionData as RevitalizationFormItem).frequency || null;
+            }
+
+            // Campos de RemocionFormItem
+            if ((selectionData as RemocionFormItem).cucharadas !== undefined) {
+              dbSelectionData.cucharadas = (selectionData as RemocionFormItem).cucharadas || null;
+            }
+            if ((selectionData as RemocionFormItem).horario !== undefined) {
+              dbSelectionData.horario = (selectionData as RemocionFormItem).horario || null;
+            }
+            if ((selectionData as RemocionFormItem).semanas !== undefined) {
+              dbSelectionData.semanas = (selectionData as RemocionFormItem).semanas || null;
+            }
+            if ((selectionData as RemocionFormItem).alimentacionTipo !== undefined) {
+              const alimentacionTipo = (selectionData as RemocionFormItem).alimentacionTipo;
+              dbSelectionData.alimentacionTipo = alimentacionTipo && alimentacionTipo.length > 0 
+                ? alimentacionTipo.join(',') 
+                : null;
+            }
+            if ((selectionData as RemocionFormItem).tacita_qty !== undefined) {
+              dbSelectionData.tacita_qty = (selectionData as RemocionFormItem).tacita_qty || null;
+            }
+            if ((selectionData as RemocionFormItem).tacita !== undefined) {
+              dbSelectionData.tacita = (selectionData as RemocionFormItem).tacita || null;
+            }
+            if ((selectionData as RemocionFormItem).frascos !== undefined) {
+              dbSelectionData.frascos = (selectionData as RemocionFormItem).frascos || null;
+            }
+
+            // Campos de MetabolicFormItem
+            if ((selectionData as MetabolicFormItem).gotas !== undefined) {
+              dbSelectionData.gotas = (selectionData as MetabolicFormItem).gotas || null;
+            }
+            if ((selectionData as MetabolicFormItem).vecesAlDia !== undefined) {
+              dbSelectionData.vecesAlDia = (selectionData as MetabolicFormItem).vecesAlDia || null;
+            }
+            if ((selectionData as MetabolicFormItem).horario !== undefined) {
+              const horario = (selectionData as MetabolicFormItem).horario;
+              dbSelectionData.horario = horario && Array.isArray(horario) && horario.length > 0 
+                ? horario.join(',') 
+                : null;
+            }
+
             selectionsToCreate.push(dbSelectionData);
           }
         }
       }
 
-      // 4. Insertar todas las selecciones en la base de datos
+      // 5. Insertar todas las selecciones en la base de datos
       if (selectionsToCreate.length > 0) {
         await tx.patientGuideSelection.createMany({
           data: selectionsToCreate,
-        });
-      }
-
-      // 5. Crear FoodPlan si hay selecciones de alimentos
-      if (foodSelections && foodSelections.length > 0) {
-        await tx.foodPlan.create({
-          data: {
-            patientId,
-            patientGuideId: patientGuide.id, // Vinculo
-            items: { connect: foodSelections.map(id => ({ id })) },
-          },
         });
       }
 
@@ -130,64 +200,125 @@ export async function savePatientGuide(
     });
 
     revalidatePath(`/historias/${patientId}`);
-    return { success: true, message: 'Guía guardada exitosamente.', data: result };
+    return { 
+      success: true, 
+      message: 'Guía guardada exitosamente.', 
+      data: result 
+    };
   } catch (error) {
     console.error('Error saving patient guide:', error);
-    return { success: false, error: 'Ocurrió un error al guardar la guía.' };
+    return { 
+      success: false, 
+      error: error instanceof Error 
+        ? error.message 
+        : 'Ocurrió un error al guardar la guía.' 
+    };
   }
 }
 
 /**
- * Envía la guía por email al paciente.
+ * Configura el transportador de email usando las variables de entorno
  */
-export async function sendGuideEmail(patientGuideId: string) {
+function createEmailTransporter() {
+  const transporter = nodemailer.createTransporter({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true', // true para puerto 465, false para otros puertos
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  return transporter;
+}
+
+/**
+ * Envía la guía del paciente por correo electrónico con formato HTML
+ */
+export async function sendPatientGuideByEmail(
+  patientId: string,
+  formData: GuideFormValues,
+  guideData: GuideCategory[]
+) {
   try {
-    const patientGuide = await prisma.patientGuide.findUnique({
-      where: { id: patientGuideId },
-      include: {
-        patient: true,
-        selections: { include: { guideItem: true } },
-      },
-    });
-
-    if (!patientGuide) {
-      throw new Error('Guía no encontrada');
+    // Verificar configuración de email
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+      return { 
+        success: false, 
+        error: 'Configuración de correo no encontrada. Contacte al administrador.' 
+      };
     }
 
-    // Generar HTML simple para el email (puedes usar un template engine como Handlebars para producción)
-    let htmlContent = `
-      <h1>Guía de Tratamiento para ${patientGuide.patient.firstName} ${patientGuide.patient.lastName}</h1>
-      <p>Fecha: ${patientGuide.guideDate.toLocaleDateString('es-ES')}</p>
-      <ul>
-    `;
-    patientGuide.selections.forEach(selection => {
-      htmlContent += `<li>${selection.guideItem.name} - Detalles: ${selection.qty || ''} ${selection.freq || ''}</li>`;
+    // Obtener información del paciente
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
     });
-    htmlContent += '</ul>';
 
-    if (patientGuide.observations) {
-      htmlContent += `<p>Observaciones: ${patientGuide.observations}</p>`;
+    if (!patient) {
+      return { success: false, error: 'Paciente no encontrado' };
     }
 
-    // Configuración de Nodemailer (usa env vars)
-    const transporter = nodemailer.createTransport({
-      service: 'gmail', // O tu proveedor
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+    if (!patient.email) {
+      return { success: false, error: 'El paciente no tiene correo electrónico registrado' };
+    }
+
+    // Crear transportador de email
+    const transporter = createEmailTransporter();
+
+    // Generar contenido HTML del correo
+    const htmlContent = generateGuideEmailHTML({
+      patient,
+      formValues: formData,
+      guideData,
     });
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'no-reply@doctorantivejez.com',
-      to: patientGuide.patient.email,
-      subject: 'Tu Guía de Tratamiento Personalizada',
+    // Configurar el mensaje
+    const mailOptions = {
+      from: {
+        name: 'Dr. Antivejez - Medicina Antienvejecimiento',
+        address: process.env.SMTP_USER,
+      },
+      to: patient.email,
+      subject: `Guía de Tratamiento Personalizada - ${patient.firstName} ${patient.lastName}`,
       html: htmlContent,
-    });
+      attachments: [
+        {
+          filename: 'logo-doctor-antivejez.png',
+          path: './public/images/logo.png',
+          cid: 'logo-doctor-antivejez', // ID para referenciar en el HTML
+        },
+      ],
+    };
 
-    return { success: true, message: 'Email enviado exitosamente.' };
+    // Enviar el correo
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log('Email enviado exitosamente:', info.messageId);
+
+    return { 
+      success: true, 
+      message: 'Guía enviada por correo exitosamente',
+      messageId: info.messageId 
+    };
   } catch (error) {
-    console.error('Error enviando email:', error);
-    return { success: false, error: 'Error al enviar el email.' };
+    console.error('Error sending email:', error);
+    
+    let errorMessage = 'Error al enviar el correo electrónico';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid login')) {
+        errorMessage = 'Error de autenticación del correo. Verifique las credenciales.';
+      } else if (error.message.includes('Network')) {
+        errorMessage = 'Error de conexión. Verifique su conexión a internet.';
+      } else {
+        errorMessage = `Error: ${error.message}`;
+      }
+    }
+
+    return { success: false, error: errorMessage };
   }
 }
