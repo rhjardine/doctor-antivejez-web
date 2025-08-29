@@ -4,8 +4,7 @@ import { prisma } from '@/lib/db';
 import { GuideFormValues, StandardFormItem, RevitalizationFormItem, MetabolicFormItem, RemocionFormItem, GuideCategory } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
 import nodemailer from 'nodemailer';
-import { renderToString } from 'react-dom/server';
-import { generateGuideEmailHTML } from '@/utils/emailTemplates';
+import { generateGuideEmailTemplate, generateGuideEmailSubject, generateGuidePlainText } from '@/utils/emailTemplates';
 
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
