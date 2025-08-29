@@ -1,10 +1,21 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { GuideFormValues, StandardFormItem, RevitalizationFormItem, MetabolicFormItem, RemocionFormItem, GuideCategory } from '@/types/guide';
+import {
+  GuideFormValues,
+  StandardFormItem,
+  RevitalizationFormItem,
+  MetabolicFormItem,
+  RemocionFormItem,
+  GuideCategory,
+} from '@/types/guide';
 import { revalidatePath } from 'next/cache';
 import nodemailer from 'nodemailer';
-import { generateGuideEmailHTML, generatePatientGuideEmailSubject, generatePatientGuideEmailText } from '@/utils/emailTemplates';
+import {
+  generateGuideEmailHTML,
+  generatePatientGuideEmailSubject,
+  generatePatientGuideEmailText,
+} from '@/utils/emailTemplates';
 
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
@@ -35,7 +46,7 @@ export async function getGuideTemplate() {
 export async function savePatientGuide(
   patientId: string,
   formData: GuideFormValues,
-  newItems: { tempId: string; name: string; categoryId: string }[]
+  newItems: { tempId: string; name: string; categoryId: string }[],
 ) {
   try {
     const { guideDate, selections, observaciones } = formData;
@@ -61,7 +72,7 @@ export async function savePatientGuide(
 
       // 3. Crear los nuevos ítems y mapear sus IDs temporales a las nuevas IDs de la BD
       const tempIdToDbIdMap = new Map<string, string>();
-      
+
       for (const newItem of newItems) {
         try {
           // Verificar que la categoría existe
@@ -70,7 +81,9 @@ export async function savePatientGuide(
           });
 
           if (!category) {
-            console.warn(`Categoría ${newItem.categoryId} no encontrada, omitiendo ítem: ${newItem.name}`);
+            console.warn(
+              `Categoría ${newItem.categoryId} no encontrada, omitiendo ítem: ${newItem.name}`,
+            );
             continue;
           }
 
@@ -81,7 +94,7 @@ export async function savePatientGuide(
               isDefault: false, // Los ítems creados dinámicamente no son por defecto
             },
           });
-          
+
           tempIdToDbIdMap.set(newItem.tempId, createdItem.id);
         } catch (itemError) {
           console.error(`Error creando ítem ${newItem.name}:`, itemError);
@@ -90,12 +103,12 @@ export async function savePatientGuide(
       }
 
       // 4. Preparar y validar todas las selecciones para guardarlas en lote
-      const selectionsToCreate = [];
-      
+      const selectionsToCreate: any[] = [];
+
       for (const itemId in selections) {
         if (Object.prototype.hasOwnProperty.call(selections, itemId)) {
           const selectionData = selections[itemId];
-          
+
           if (selectionData.selected) {
             // Usar la nueva ID de la BD si es un ítem dinámico, o la ID original si es uno por defecto
             const finalItemId = tempIdToDbIdMap.get(itemId) || itemId;
@@ -134,18 +147,22 @@ export async function savePatientGuide(
 
             // Campos de RevitalizationFormItem
             if ((selectionData as RevitalizationFormItem).complejoB_cc !== undefined) {
-              dbSelectionData.complejoB_cc = (selectionData as RevitalizationFormItem).complejoB_cc || null;
+              dbSelectionData.complejoB_cc =
+                (selectionData as RevitalizationFormItem).complejoB_cc || null;
             }
             if ((selectionData as RevitalizationFormItem).bioquel_cc !== undefined) {
-              dbSelectionData.bioquel_cc = (selectionData as RevitalizationFormItem).bioquel_cc || null;
+              dbSelectionData.bioquel_cc =
+                (selectionData as RevitalizationFormItem).bioquel_cc || null;
             }
             if ((selectionData as RevitalizationFormItem).frequency !== undefined) {
-              dbSelectionData.frequency = (selectionData as RevitalizationFormItem).frequency || null;
+              dbSelectionData.frequency =
+                (selectionData as RevitalizationFormItem).frequency || null;
             }
 
             // Campos de RemocionFormItem
             if ((selectionData as RemocionFormItem).cucharadas !== undefined) {
-              dbSelectionData.cucharadas = (selectionData as RemocionFormItem).cucharadas || null;
+              dbSelectionData.cucharadas =
+                (selectionData as RemocionFormItem).cucharadas || null;
             }
             if ((selectionData as RemocionFormItem).horario !== undefined) {
               dbSelectionData.horario = (selectionData as RemocionFormItem).horario || null;
@@ -155,12 +172,14 @@ export async function savePatientGuide(
             }
             if ((selectionData as RemocionFormItem).alimentacionTipo !== undefined) {
               const alimentacionTipo = (selectionData as RemocionFormItem).alimentacionTipo;
-              dbSelectionData.alimentacionTipo = alimentacionTipo && alimentacionTipo.length > 0 
-                ? alimentacionTipo.join(',') 
-                : null;
+              dbSelectionData.alimentacionTipo =
+                alimentacionTipo && alimentacionTipo.length > 0
+                  ? alimentacionTipo.join(',')
+                  : null;
             }
             if ((selectionData as RemocionFormItem).tacita_qty !== undefined) {
-              dbSelectionData.tacita_qty = (selectionData as RemocionFormItem).tacita_qty || null;
+              dbSelectionData.tacita_qty =
+                (selectionData as RemocionFormItem).tacita_qty || null;
             }
             if ((selectionData as RemocionFormItem).tacita !== undefined) {
               dbSelectionData.tacita = (selectionData as RemocionFormItem).tacita || null;
@@ -174,13 +193,15 @@ export async function savePatientGuide(
               dbSelectionData.gotas = (selectionData as MetabolicFormItem).gotas || null;
             }
             if ((selectionData as MetabolicFormItem).vecesAlDia !== undefined) {
-              dbSelectionData.vecesAlDia = (selectionData as MetabolicFormItem).vecesAlDia || null;
+              dbSelectionData.vecesAlDia =
+                (selectionData as MetabolicFormItem).vecesAlDia || null;
             }
             if ((selectionData as MetabolicFormItem).horario !== undefined) {
               const horario = (selectionData as MetabolicFormItem).horario;
-              dbSelectionData.horario = horario && Array.isArray(horario) && horario.length > 0 
-                ? horario.join(',') 
-                : null;
+              dbSelectionData.horario =
+                horario && Array.isArray(horario) && horario.length > 0
+                  ? horario.join(',')
+                  : null;
             }
 
             selectionsToCreate.push(dbSelectionData);
@@ -199,18 +220,16 @@ export async function savePatientGuide(
     });
 
     revalidatePath(`/historias/${patientId}`);
-    return { 
-      success: true, 
-      message: 'Guía guardada exitosamente.', 
-      data: result 
+    return {
+      success: true,
+      message: 'Guía guardada exitosamente.',
+      data: result,
     };
   } catch (error) {
     console.error('Error saving patient guide:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error 
-        ? error.message 
-        : 'Ocurrió un error al guardar la guía.' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Ocurrió un error al guardar la guía.',
     };
   }
 }
@@ -219,10 +238,10 @@ export async function savePatientGuide(
  * Configura el transportador de email usando las variables de entorno
  */
 function createEmailTransporter() {
-  const transporter = nodemailer.createTransport(
+  const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // true para puerto 465, false para otros puertos
+    port: Number(process.env.SMTP_PORT ?? '587'),
+    secure: (process.env.SMTP_SECURE ?? 'false') === 'true', // true para puerto 465, false para otros puertos
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
@@ -249,11 +268,11 @@ function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCat
     const selectionData = selections[itemId];
     if (selectionData.selected) {
       // Buscar el ítem en las categorías
-      let foundItem = null;
+      let foundItem: { id: string; name: string } | null = null;
       let categoryName = '';
 
       for (const category of guideData) {
-        const item = category.items.find(i => i.id === itemId);
+        const item = category.items.find((i) => i.id === itemId);
         if (item) {
           foundItem = item;
           categoryName = category.name;
@@ -268,7 +287,7 @@ function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCat
 
         selectionsByCategory.get(categoryName)!.push({
           name: foundItem.name,
-          details: selectionData
+          details: selectionData,
         });
       }
     }
@@ -280,9 +299,9 @@ function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCat
     htmlContent += `<h3 style="color: #007bff; border-bottom: 1px solid #007bff; padding-bottom: 8px;">${categoryName}</h3>`;
     htmlContent += `<ul style="margin: 10px 0; padding-left: 20px;">`;
 
-    items.forEach(item => {
+    items.forEach((item) => {
       htmlContent += `<li style="margin-bottom: 8px;"><strong>${item.name}</strong>`;
-      
+
       // Formatear detalles según el tipo
       const details = item.details;
       let detailsText = '';
@@ -342,14 +361,14 @@ function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCat
 export async function sendPatientGuideByEmail(
   patientId: string,
   formData: GuideFormValues,
-  guideData: GuideCategory[]
+  guideData: GuideCategory[],
 ) {
   try {
     // Verificar configuración de email
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      return { 
-        success: false, 
-        error: 'Configuración de correo no encontrada. Contacte al administrador.' 
+      return {
+        success: false,
+        error: 'Configuración de correo no encontrada. Contacte al administrador.',
       };
     }
 
@@ -383,8 +402,8 @@ export async function sendPatientGuideByEmail(
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
-      }).format(new Date(formData.guideDate))
+        minute: '2-digit',
+      }).format(new Date(formData.guideDate)),
     };
 
     // Generar contenido HTML y texto plano
@@ -396,7 +415,7 @@ export async function sendPatientGuideByEmail(
     const mailOptions = {
       from: {
         name: 'Dr. Medicina Anti-Aging',
-        address: process.env.SMTP_USER,
+        address: process.env.SMTP_USER as string,
       },
       to: patient.email,
       subject: emailSubject,
@@ -409,16 +428,16 @@ export async function sendPatientGuideByEmail(
 
     console.log('Email enviado exitosamente:', info.messageId);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: 'Guía enviada por correo exitosamente',
-      messageId: info.messageId 
+      messageId: info.messageId,
     };
   } catch (error) {
     console.error('Error sending email:', error);
-    
+
     let errorMessage = 'Error al enviar el correo electrónico';
-    
+
     if (error instanceof Error) {
       if (error.message.includes('Invalid login')) {
         errorMessage = 'Error de autenticación del correo. Verifique las credenciales.';
