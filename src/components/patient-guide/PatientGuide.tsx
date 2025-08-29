@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PatientWithDetails } from '@/types';
 import { 
   GuideCategory, 
@@ -19,7 +19,7 @@ import {
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt, FaPrint, FaUserMd } from 'react-icons/fa';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
-import { savePatientGuide } from '@/lib/actions/guide.actions';
+import { getGuideTemplate, savePatientGuide, sendGuideEmail } from '@/lib/actions/guide.actions';
 
 // --- Estructura de Datos para el Activador Metabólico Jerárquico ---
 export const homeopathicStructure = {
@@ -107,7 +107,7 @@ const initialGuideData: GuideCategory[] = [
         { id: 'ns_4', name: 'Inmune Booster (Estimula las defensas)' },
         { id: 'ns_5', name: 'Inmune Modulador (Regulador Inflamatorio)' },
         { id: 'ns_6', name: 'Masculino (Precursor hormonal masc)' },
-        { id: 'ns_7', name: 'Neuro Central (Regenerador Cerebral)' },
+        { id: 'ns_7', name: 'Neuro Central (Regenerador cerebral)' },
         { id: 'ns_8', name: 'Neuro Emocional (Restaurador Emocional)' },
         { id: 'ns_9', name: 'Próstata (Regenerador prostático)' },
         { id: 'ns_10', name: 'Anti stress'},
@@ -306,6 +306,21 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const [isSaving, setIsSaving] = useState(false);
   const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
   const [newlyAddedItems, setNewlyAddedItems] = useState<{ tempId: string; name: string; categoryId: string }[]>([]);
+  const [savedGuideId, setSavedGuideId] = useState<string | null>(null); // Nuevo: Para tracking de guía guardada
+
+  // Carga dinámica de template desde BD al montar
+  useEffect(() => {
+    async function loadTemplate() {
+      const response = await getGuideTemplate(patient.id);
+      if (response.success) {
+        // Fusiona con initialGuideData si es necesario
+        setGuideData(prev => [...prev, ...response.data.categories]); // Ejemplo de fusión
+      } else {
+        toast.error(response.error);
+      }
+    }
+    loadTemplate();
+  }, [patient.id]);
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
@@ -380,13 +395,15 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const handleSaveAndSend = async () => {
     setIsSaving(true);
     try {
-      const result = await savePatientGuide(patient.id, {
+      const formData: GuideFormValues = {
         guideDate,
         selections,
         observaciones,
-      }, newlyAddedItems);
+      };
+      const result = await savePatientGuide(patient.id, formData, newlyAddedItems);
 
       if (result.success) {
+        setSavedGuideId(result.data.id); // Guardar ID para envío
         toast.success(result.message);
         setNewlyAddedItems([]); // Limpiar los items nuevos después de guardar
         setIsSendModalOpen(true);
@@ -400,16 +417,27 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     }
   };
 
-  const handleSendAction = (action: 'email' | 'whatsapp') => {
-      if (action === 'email') {
-          const subject = encodeURIComponent('Guía de Tratamiento - Doctor AntiVejez');
-          const body = encodeURIComponent(`Estimado/a ${patient.firstName},\n\nSu guía de tratamiento personalizada ha sido generada. Puede consultarla en el portal o en el archivo adjunto (si aplica).\n\nSaludos cordiales,\nDoctor AntiVejez`);
-          window.location.href = `mailto:${patient.email}?subject=${subject}&body=${body}`;
-      } else if (action === 'whatsapp') {
-          const message = encodeURIComponent(`Hola ${patient.firstName}, su guía de tratamiento personalizada ha sido generada. Por favor, revise su correo electrónico o el portal de pacientes para verla.`);
-          window.open(`https://wa.me/${patient.phone}?text=${message}`, '_blank');
+  const handleSendAction = async (action: 'email' | 'whatsapp') => {
+    if (!savedGuideId) {
+      toast.error('No hay guía guardada para enviar.');
+      return;
+    }
+
+    setIsSendModalOpen(false);
+
+    if (action === 'email') {
+      const result = await sendGuideEmail(savedGuideId);
+      if (result.success) {
+        toast.success('Guía enviada por email.');
+      } else {
+        toast.error(result.error || 'Error al enviar por email.');
       }
-      setIsSendModalOpen(false);
+    } else if (action === 'whatsapp') {
+      // Placeholder para WhatsApp (e.g., integra Twilio en futuro server action)
+      const message = encodeURIComponent(`Hola ${patient.firstName}, su guía de tratamiento personalizada ha sido generada. Por favor, revise su correo electrónico o el portal de pacientes para verla.`);
+      window.open(`https://wa.me/${patient.phone}?text=${message}`, '_blank');
+      toast.success('Enlace de WhatsApp abierto.');
+    }
   };
 
   const nutraFrequencyOptions = [
@@ -552,132 +580,4 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
             <button type="button" onClick={() => setActiveMetabolicTab('bach')} className={`py-2 px-4 text-sm font-medium rounded-t-lg ${activeMetabolicTab === 'bach' ? 'bg-white border-t border-x border-gray-200 text-primary' : 'text-gray-500 hover:text-gray-700 bg-gray-50'}`}>Flores de Bach</button>
           </nav>
         </div>
-        <div className="p-4 border-x border-b border-gray-200 rounded-b-lg -mt-px">
-          {activeMetabolicTab === 'homeopatia' && <HomeopathySelector selections={selections} handleSelectionChange={handleSelectionChange} />}
-          {activeMetabolicTab === 'bach' && <BachFlowerSelector selections={selections} handleSelectionChange={handleSelectionChange} />}
-        </div>
-      </div>
-    );
-  };
-
-  const renderStandardItem = (item: StandardGuideItem | MetabolicActivatorItem, categoryId: string, frequencyOptions: string[]) => {
-    const selection = selections[item.id] as StandardFormItem || {};
-    const isNutraceutico = ['cat_nutra_primarios', 'cat_nutra_secundarios', 'cat_nutra_complementarios', 'cat_cosmeceuticos'].includes(categoryId);
-
-    return (
-      <div key={item.id} className="p-3 bg-gray-50 rounded-md transition-all hover:bg-gray-100">
-        <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
-          <input type="checkbox" id={item.id} checked={selection.selected || false} onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} className="w-5 h-5 accent-primary"/>
-          <label htmlFor={item.id} className="flex-grow font-medium text-gray-800 text-sm">{item.name}</label>
-          {'dose' in item && item.dose && <span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded">{item.dose}</span>}
-          <button type="button" onClick={() => handleDeleteItem(categoryId, item.id)} className="text-gray-400 hover:text-red-500 transition-colors ml-auto"><FaTrash /></button>
-        </div>
-        
-        {selection.selected && !('dose' in item) && (
-          isNutraceutico ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2 pl-9">
-              <input type="number" placeholder="Dosis" value={selection.qty ?? ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" min="1" max="10"/>
-              <select value={selection.doseType ?? ''} onChange={(e) => handleSelectionChange(item.id, 'doseType', e.target.value as any)} className="input text-sm py-1">
-                <option value="">Tipo...</option>
-                <option value="Capsulas">Cápsulas</option>
-                <option value="Tabletas">Tabletas</option>
-                <option value="Cucharaditas">Cucharaditas</option>
-              </select>
-              <select value={selection.freq ?? ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
-                <option value="">Frecuencia...</option>
-                {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-              <input type="text" placeholder="Suplemento personalizado" value={selection.custom ?? ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1"/>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pl-9">
-              <input type="text" placeholder="Cant." value={selection.qty ?? ''} onChange={(e) => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" />
-              <select value={selection.freq ?? ''} onChange={(e) => handleSelectionChange(item.id, 'freq', e.target.value)} className="input text-sm py-1">
-                <option value="">Frecuencia...</option>
-                {frequencyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-              <input type="text" placeholder="Suplemento personalizado" value={selection.custom ?? ''} onChange={(e) => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
-            </div>
-          )
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-primary text-white p-4 rounded-lg flex justify-between items-center flex-wrap gap-4">
-        <div className="flex items-center gap-4"><FaUser className="text-xl" /><span className="font-semibold">{patient.firstName} {patient.lastName}</span></div>
-        <div className="flex items-center gap-4"><FaCalendar className="text-xl" /><input type="date" value={guideDate} onChange={(e) => setGuideDate(e.target.value)} className="bg-white/20 border-none rounded-md p-2 text-sm text-white"/></div>
-      </div>
-
-      {guideData.map((category) => (
-        <div key={category.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div onClick={() => toggleCategory(category.id)} className="w-full flex justify-between items-center p-4 cursor-pointer bg-primary-dark text-white rounded-t-lg">
-            <h3 className="font-semibold">{category.title}</h3>
-            {openCategories[category.id] ? <FaChevronUp /> : <FaChevronDown />}
-          </div>
-          {openCategories[category.id] && (
-            <div className="p-4">
-              <div className="space-y-4">
-                {category.type === 'REMOCION' && (
-                  <>
-                    {(category.items as (RemocionItem | StandardGuideItem)[]).filter((item): item is RemocionItem => 'subType' in item).map(item => renderRemocionItem(item))}
-                    {(category.items as (RemocionItem | StandardGuideItem)[]).filter((item): item is StandardGuideItem => !('subType' in item)).map(item => renderStandardItem(item, category.id, []))}
-                    <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
-                      <input type="text" placeholder="Añadir nuevo producto de remoción..." value={newItemInputs[category.id] ?? ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
-                      <button type="button" onClick={() => handleAddNewItem(category.id)} className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"><FaPlus /> Añadir</button>
-                    </div>
-                  </>
-                )}
-                {category.type === 'REVITALIZATION' && (category.items as RevitalizationGuideItem[]).map(item => renderRevitalizationItem(item))}
-                {category.type === 'METABOLIC' && renderMetabolicActivator()}
-                {category.type === 'STANDARD' && (
-                  <>
-                    {(category.items as StandardGuideItem[]).map(item => {
-                      const freqOptions = (['cat_sueros', 'cat_terapias'].includes(category.id)) ? sueroTerapiaFrequencyOptions : nutraFrequencyOptions;
-                      return renderStandardItem(item, category.id, freqOptions);
-                    })}
-                    <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
-                      <input type="text" placeholder="Añadir nuevo ítem..." value={newItemInputs[category.id] ?? ''} onChange={(e) => setNewItemInputs(prev => ({ ...prev, [category.id]: e.target.value }))} className="input flex-grow" />
-                      <button type="button" onClick={() => handleAddNewItem(category.id)} className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"><FaPlus /> Añadir</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-      
-      <div className="card">
-        <h3 className="font-semibold text-gray-800 mb-2">Observaciones</h3>
-        <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="input w-full" rows={4} placeholder="Añadir observaciones, notas o instrucciones adicionales para el paciente..."/>
-      </div>
-
-      <div className="flex justify-end gap-4 mt-8">
-        <button type="button" onClick={() => setIsPreviewOpen(true)} className="btn-secondary flex items-center gap-2"><FaEye /> Vista Previa</button>
-        <button type="button" onClick={() => { setIsPreviewOpen(true); setTimeout(() => window.print(), 500); }} className="btn-secondary flex items-center gap-2"><FaPrint /> Imprimir</button>
-        <button type="button" onClick={handleSaveAndSend} disabled={isSaving} className="btn-primary flex items-center gap-2">
-            <FaPaperPlane /> {isSaving ? 'Guardando...' : 'Guardar y Enviar'}
-        </button>
-      </div>
-
-      {isPreviewOpen && <PatientGuidePreview patient={patient} formValues={{guideDate, selections, observaciones}} guideData={guideData} onClose={() => setIsPreviewOpen(false)} />}
-
-      {isSendModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center relative animate-slideUp">
-            <button onClick={() => setIsSendModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><FaTimes size={20}/></button>
-            <h3 className="text-xl font-bold text-primary-dark mb-2">Guía Guardada</h3>
-            <p className="text-gray-600 mb-6">¿Cómo deseas enviar la guía al paciente?</p>
-            <div className="space-y-4">
-              <button onClick={() => handleSendAction('email')} className="w-full btn-primary flex items-center justify-center gap-3"><FaEnvelope /> Enviar por Correo</button>
-              <button onClick={() => handleSendAction('whatsapp')} className="w-full btn-success flex items-center justify-center gap-3"><FaMobileAlt /> Enviar por WhatsApp</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        <div className="p-4 border-x
