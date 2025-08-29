@@ -1,259 +1,303 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { PatientWithDetails } from '@/types';
-import { 
-    FoodPlanTemplate, 
-    FoodItem, 
-    MealType, 
-    BloodTypeGroup, 
-    DietType,
-    type DietTypeEnum,
-    GeneralGuideItem, 
-    WellnessKey
-} from '@/types/nutrition';
-import { getFullNutritionData, savePatientNutritionPlan } from '@/lib/actions/nutrition.actions';
+import React, { useState, useEffect, useTransition } from 'react';
+import { Food, MealType, NutritionGuide } from '@prisma/client';
+import { getFoodsByBloodType, GroupedFoods, createOrUpdateNutritionGuide } from '@/lib/actions/nutrition.actions';
+import { Patient } from '@/types';
 import { toast } from 'sonner';
-import { FaUtensils, FaPlus, FaEdit, FaTrash, FaSave, FaPaperPlane, FaPrint, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
-import NutritionPlanPreview from './NutritionPlanPreview';
 
-// --- Subcomponente para una sección de comida ---
-const MealSection = ({ title, items, onAddItem, onEditItem, onDeleteItem, mealType }: any) => {
-    const [newItemName, setNewItemName] = useState('');
-    const handleAddItem = () => {
-        if (newItemName.trim()) {
-            onAddItem(mealType, newItemName.trim());
-            setNewItemName('');
-        }
-    };
-    return (
-        <section className="bg-white rounded-lg border border-slate-200">
-            <header className="flex items-center gap-3 p-4 bg-sky-500 text-white rounded-t-md">
-                <FaUtensils />
-                <h3 className="text-lg font-bold capitalize">{title.replace('_', ' ')}</h3>
-            </header>
-            <div className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                    {items.map((food: FoodItem, index: number) => (
-                        <div key={food.id || `${mealType}-${index}`} className="flex items-center justify-between bg-slate-50 rounded-md p-2 border border-slate-200 text-sm group">
-                            <span className="text-slate-800 flex-grow">{food.name}</span>
-                            <div className="flex items-center gap-1 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => onEditItem(mealType, index, food.name)} className="p-1 hover:text-primary"><FaEdit /></button>
-                                <button onClick={() => onDeleteItem(mealType, index)} className="p-1 hover:text-red-500"><FaTrash /></button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
-                    <input type="text" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddItem()} placeholder={`Añadir a ${title.toLowerCase().replace('_', ' ')}...`} className="input flex-grow"/>
-                    <button onClick={handleAddItem} className="btn-primary flex items-center gap-2"><FaPlus /><span>Agregar</span></button>
-                </div>
-            </div>
-        </section>
-    );
+// --- SUBCOMPONENTES PARA UNA MEJOR ESTRUCTURA ---
+
+// Props para el selector de comidas
+interface MealSelectorProps {
+  selectedMeal: MealType;
+  setSelectedMeal: (meal: MealType) => void;
+}
+
+// Componente para los botones de selección de comida (Desayuno, Almuerzo, etc.)
+const MealSelector: React.FC<MealSelectorProps> = ({ selectedMeal, setSelectedMeal }) => {
+  const meals: MealType[] = ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER'];
+  const mealTranslations: Record<MealType, string> = {
+    BREAKFAST: 'Desayuno',
+    LUNCH: 'Almuerzo',
+    SNACK: 'Merienda',
+    DINNER: 'Cena',
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-4">
+      {meals.map((meal) => (
+        <button
+          key={meal}
+          onClick={() => setSelectedMeal(meal)}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            selectedMeal === meal
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          {mealTranslations[meal]}
+        </button>
+      ))}
+    </div>
+  );
 };
 
-// --- Componente Principal ---
-export default function NutrigenomicGuide({ patient }: { patient: PatientWithDetails }) {
-    const [activeTab, setActiveTab] = useState('plan');
-    const [bloodType, setBloodType] = useState<BloodTypeGroup>('O_B');
-    const [selectedDiets, setSelectedDiets] = useState<Set<DietTypeEnum>>(new Set(patient.selectedDiets || []));
-    const [foodData, setFoodData] = useState<FoodPlanTemplate | null>(null);
-    const [generalGuide, setGeneralGuide] = useState<{ AVOID: GeneralGuideItem[], SUBSTITUTE: GeneralGuideItem[] }>({ AVOID: [], SUBSTITUTE: [] });
-    const [wellnessKeys, setWellnessKeys] = useState<WellnessKey[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+// Props para el visualizador de alimentos
+interface FoodDisplayProps {
+  foods: GroupedFoods;
+  onFoodSelect: (food: Food) => void;
+  selectedFoodIds: Set<string>;
+}
 
-    const loadInitialData = useCallback(async () => {
-        setLoading(true);
-        const result = await getFullNutritionData();
-        if (result.success && result.data) {
-            const initialTemplate = result.data.foodTemplate;
-            const patientPlan = patient.foodPlans?.[0];
-            
-            // Lógica para fusionar la plantilla con los datos guardados del paciente
-            if (patientPlan && patientPlan.items) {
-                const patientItems = patientPlan.items;
-                patientItems.forEach(item => {
-                    if (!initialTemplate[item.mealType].some(tItem => tItem.name === item.name)) {
-                        initialTemplate[item.mealType].push(item);
-                    }
-                });
-            }
-            setFoodData(initialTemplate);
-            setGeneralGuide(result.data.generalGuide);
-            setWellnessKeys(result.data.wellnessKeys);
-        } else {
-            toast.error(result.error || 'Error al cargar los datos de la guía.');
-        }
-        setLoading(false);
-    }, [patient.foodPlans]);
+// Componente para mostrar las listas de alimentos por categoría y beneficio
+const FoodDisplay: React.FC<FoodDisplayProps> = ({ foods, onFoodSelect, selectedFoodIds }) => {
+  const [activeCategory, setActiveCategory] = useState(Object.keys(foods)[0] || '');
 
-    useEffect(() => {
-        loadInitialData();
-    }, [loadInitialData]);
+  const benefitColors = {
+    BENEFICIAL: 'border-green-500 bg-green-50',
+    NEUTRAL: 'border-yellow-500 bg-yellow-50',
+    AVOID: 'border-red-500 bg-red-50 text-gray-500',
+  };
 
-    const handleDietToggle = (diet: DietTypeEnum) => {
-        setSelectedDiets(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(diet)) newSet.delete(diet);
-            else newSet.add(diet);
-            return newSet;
-        });
-    };
+  const categoryTranslations: Record<string, string> = {
+    PROTEINS: 'Proteínas',
+    DAIRY_EGGS: 'Lácteos y Huevos',
+    OILS_FATS: 'Aceites y Grasas',
+    NUTS_SEEDS: 'Nueces y Semillas',
+    LEGUMES: 'Legumbres',
+    GRAINS: 'Cereales',
+    VEGETABLES: 'Vegetales',
+    FRUITS: 'Frutas',
+    JUICES: 'Jugos',
+    SPICES: 'Especias',
+    TEAS: 'Tés',
+  };
 
-    const handleAddItem = (mealType: MealType, name: string) => {
-        if (!foodData) return;
-        const newItem: FoodItem = {
-            id: `temp_${Date.now()}`, name, mealType, bloodTypeGroup: bloodType, isDefault: false, createdAt: new Date()
-        } as FoodItem;
-        const updatedMeal = [...foodData[mealType], newItem];
-        setFoodData({ ...foodData, [mealType]: updatedMeal });
-    };
+  return (
+    <div className="border rounded-lg p-4">
+      <div className="flex flex-wrap gap-2 border-b mb-4 pb-2">
+        {Object.keys(foods).map((category) => (
+          <button
+            key={category}
+            onClick={() => setActiveCategory(category)}
+            className={`px-3 py-1 text-sm rounded-full ${
+              activeCategory === category ? 'bg-gray-800 text-white' : 'bg-gray-100 hover:bg-gray-200'
+            }`}
+          >
+            {categoryTranslations[category] || category}
+          </button>
+        ))}
+      </div>
 
-    const handleEditItem = (mealType: MealType, index: number, currentName: string) => {
-        if (!foodData) return;
-        const newName = prompt('Editar alimento:', currentName);
-        if (newName && newName.trim() && newName.trim() !== currentName) {
-            const updatedMeal = [...foodData[mealType]];
-            updatedMeal[index] = { ...updatedMeal[index], name: newName.trim() };
-            setFoodData({ ...foodData, [mealType]: updatedMeal });
-        }
-    };
-
-    const handleDeleteItem = (mealType: MealType, index: number) => {
-        if (!foodData) return;
-        const updatedMeal = foodData[mealType].filter((_, i) => i !== index);
-        setFoodData({ ...foodData, [mealType]: updatedMeal });
-    };
-
-    const handleSavePlan = async () => {
-        if (!foodData) return;
-        setIsSaving(true);
-        const result = await savePatientNutritionPlan(patient.id, foodData, Array.from(selectedDiets));
-        if (result.success) {
-            toast.success('Plan de bienestar guardado exitosamente.');
-            await loadInitialData();
-        } else {
-            toast.error(result.error || 'No se pudo guardar el plan.');
-        }
-        setIsSaving(false);
-    };
-
-    const filteredFoodData = useMemo(() => {
-        if (!foodData) return null;
-        const filtered = {} as FoodPlanTemplate;
-        for (const key in foodData) {
-            const mealType = key as MealType;
-            filtered[mealType] = foodData[mealType].filter(item => 
-                item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType
-            );
-        }
-        return filtered;
-    }, [foodData, bloodType]);
-
-    const TabButton = ({ id, label }: { id: string, label: string }) => (
-        <button onClick={() => setActiveTab(id)} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === id ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-200'}`}>
-            {label}
-        </button>
-    );
-
-    if (loading) return <div className="flex justify-center items-center p-12"><div className="loader"></div></div>;
-
-    return (
-        <>
-            {isPreviewOpen && filteredFoodData && (
-                <NutritionPlanPreview
-                    patient={patient}
-                    planData={{
-                        bloodType,
-                        selectedDiets: Array.from(selectedDiets),
-                        foodPlan: filteredFoodData,
-                        generalGuide,
-                        wellnessKeys
-                    }}
-                    onClose={() => setIsPreviewOpen(false)}
-                />
-            )}
-            <div className="bg-slate-50 p-4 sm:p-6 rounded-xl shadow-sm">
-                <section className="bg-primary-dark border border-blue-800 rounded-lg p-6 mb-6 text-white">
-                    <h2 className="text-xl font-bold mb-4">Perfil del Paciente</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label htmlFor="blood-type-select" className="label text-gray-300">Grupo Sanguíneo</label>
-                            <select id="blood-type-select" value={bloodType} onChange={(e) => setBloodType(e.target.value as BloodTypeGroup)} className="input w-full bg-white/10 border-white/20 text-white">
-                                <option value="O_B">Grupo O y B</option>
-                                <option value="A_AB">Grupo A y AB</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="label text-gray-300 mb-2">Tipo de Alimentación</label>
-                            <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                {(Object.values(DietType)).map(diet => (
-                                    <label key={diet} className="flex items-center space-x-2 cursor-pointer">
-                                        <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="h-4 w-4 rounded border-gray-500 bg-white/20 text-primary focus:ring-primary-dark"/>
-                                        <span className="text-sm text-gray-200 capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <nav className="flex space-x-2 border-b border-slate-200 mb-6">
-                    <TabButton id="plan" label="Plan Alimentario" />
-                    <TabButton id="guide" label="Guía General" />
-                    <TabButton id="wellness" label="Claves de Bienestar" />
-                </nav>
-
-                <main>
-                    {activeTab === 'plan' && filteredFoodData && (
-                        <div className="space-y-6">
-                            {Object.entries(filteredFoodData).map(([meal, foods]) => (
-                                <MealSection key={meal} title={meal} items={foods} mealType={meal as MealType} onAddItem={handleAddItem} onEditItem={handleEditItem} onDeleteItem={handleDeleteItem} />
-                            ))}
-                        </div>
-                    )}
-                    {activeTab === 'guide' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 bg-white rounded-lg border">
-                            <div className="space-y-3">
-                                <h3 className="text-xl font-bold text-amber-600 flex items-center gap-2"><FaTimesCircle /> Alimentos a Evitar</h3>
-                                <ul className="space-y-2 pl-5 list-disc text-slate-700">
-                                    {generalGuide.AVOID.map((item) => <li key={item.id}>{item.text}</li>)}
-                                </ul>
-                            </div>
-                            <div className="space-y-3">
-                                <h3 className="text-xl font-bold text-emerald-600 flex items-center gap-2"><FaCheckCircle /> Sustitutos Recomendados</h3>
-                                <ul className="space-y-2 pl-5 list-disc text-slate-700">
-                                    {generalGuide.SUBSTITUTE.map((item) => <li key={item.id}>{item.text}</li>)}
-                                </ul>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === 'wellness' && (
-                        <div className="space-y-4 p-6 bg-white rounded-lg border">
-                            <h3 className="text-xl font-bold text-slate-800">Claves de la Longevidad 5A</h3>
-                            <div className="space-y-4">
-                                {wellnessKeys.map((key) => (
-                                    <div key={key.id} className="pl-4 border-l-4 border-sky-500">
-                                        <p className="font-semibold text-slate-800">{key.title}</p>
-                                        <p className="text-slate-600 text-sm">{key.description}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </main>
-                
-                <footer className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-3">
-                    <button onClick={handleSavePlan} disabled={isSaving} className="btn-primary flex items-center justify-center gap-2">
-                        <FaSave /><span>{isSaving ? 'Guardando...' : 'Guardar Plan'}</span>
-                    </button>
-                    <button className="btn-secondary flex items-center justify-center gap-2"><FaPaperPlane /><span>Enviar al Paciente</span></button>
-                    <button onClick={() => setIsPreviewOpen(true)} className="btn-secondary flex items-center justify-center gap-2"><FaPrint /><span>Imprimir / Vista Previa</span></button>
-                </footer>
+      {activeCategory && foods[activeCategory] && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Columna Beneficiosos */}
+          <div className={`p-2 rounded-lg border-2 ${benefitColors.BENEFICIAL}`}>
+            <h3 className="font-bold text-green-700 mb-2 text-center">Beneficiosos</h3>
+            <div className="flex flex-wrap gap-2">
+              {foods[activeCategory].BENEFICIAL.map((food) => (
+                <button key={food.id} onClick={() => onFoodSelect(food)} className={`px-2 py-1 text-xs rounded-md transition-all ${selectedFoodIds.has(food.id) ? 'bg-green-600 text-white scale-105' : 'bg-white hover:bg-green-100 border'}`}>
+                  {food.name}
+                </button>
+              ))}
             </div>
-        </>
-    );
+          </div>
+          {/* Columna Neutros */}
+          <div className={`p-2 rounded-lg border-2 ${benefitColors.NEUTRAL}`}>
+            <h3 className="font-bold text-yellow-700 mb-2 text-center">Neutros</h3>
+             <div className="flex flex-wrap gap-2">
+              {foods[activeCategory].NEUTRAL.map((food) => (
+                <button key={food.id} onClick={() => onFoodSelect(food)} className={`px-2 py-1 text-xs rounded-md transition-all ${selectedFoodIds.has(food.id) ? 'bg-yellow-600 text-white scale-105' : 'bg-white hover:bg-yellow-100 border'}`}>
+                  {food.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Columna A Evitar */}
+          <div className={`p-2 rounded-lg border-2 ${benefitColors.AVOID}`}>
+            <h3 className="font-bold text-red-700 mb-2 text-center">A Evitar</h3>
+             <div className="flex flex-wrap gap-2">
+              {foods[activeCategory].AVOID.map((food) => (
+                <div key={food.id} className="px-2 py-1 text-xs rounded-md bg-gray-200 cursor-not-allowed">
+                  {food.name}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- COMPONENTE PRINCIPAL ---
+
+interface NutrigenomicGuideProps {
+  patient: Patient;
+  guide: NutritionGuide | null;
+}
+
+export default function NutrigenomicGuide({ patient, guide }: NutrigenomicGuideProps) {
+  const [isPending, startTransition] = useTransition();
+  const [foods, setFoods] = useState<GroupedFoods>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedMeal, setSelectedMeal] = useState<MealType>('BREAKFAST');
+  
+  // Estado para almacenar los alimentos seleccionados para cada comida
+  const [mealPlan, setMealPlan] = useState<Record<MealType, Food[]>>({
+    BREAKFAST: [],
+    LUNCH: [],
+    SNACK: [],
+    DINNER: [],
+  });
+  
+  const [observations, setObservations] = useState('');
+
+  // Efecto para cargar los alimentos según el tipo de sangre al montar el componente
+  useEffect(() => {
+    const fetchFoods = async () => {
+      if (!patient.bloodType) {
+        toast.warning('El paciente no tiene un tipo de sangre asignado.');
+        setIsLoading(false);
+        return;
+      }
+      try {
+        setIsLoading(true);
+        const groupedFoods = await getFoodsByBloodType(patient.id);
+        setFoods(groupedFoods);
+      } catch (error) {
+        toast.error('Error al cargar la lista de alimentos.');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchFoods();
+  }, [patient.id, patient.bloodType]);
+
+  // Efecto para inicializar el plan de comidas si ya existe una guía
+  useEffect(() => {
+    if (guide?.foodPlan?.meals) {
+      const initialPlan: Record<MealType, Food[]> = { BREAKFAST: [], LUNCH: [], SNACK: [], DINNER: [] };
+      guide.foodPlan.meals.forEach(meal => {
+        if (meal.items) {
+          initialPlan[meal.type] = meal.items.map(item => item.food);
+        }
+      });
+      setMealPlan(initialPlan);
+      setObservations(guide.observations || '');
+    }
+  }, [guide]);
+
+
+  // Maneja la selección/deselección de un alimento para la comida activa
+  const handleFoodSelect = (food: Food) => {
+    setMealPlan(prevPlan => {
+      const currentMealFoods = prevPlan[selectedMeal];
+      const isSelected = currentMealFoods.some(f => f.id === food.id);
+      
+      const newMealFoods = isSelected
+        ? currentMealFoods.filter(f => f.id !== food.id) // Deseleccionar
+        : [...currentMealFoods, food]; // Seleccionar
+        
+      return { ...prevPlan, [selectedMeal]: newMealFoods };
+    });
+  };
+
+  // Maneja el guardado del formulario
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    startTransition(async () => {
+      const planData = {
+        breakfast: { foodIds: mealPlan.BREAKFAST.map(f => f.id) },
+        lunch: { foodIds: mealPlan.LUNCH.map(f => f.id) },
+        snack: { foodIds: mealPlan.SNACK.map(f => f.id) },
+        dinner: { foodIds: mealPlan.DINNER.map(f => f.id) },
+      };
+
+      const result = await createOrUpdateNutritionGuide(patient.id, {
+        plan: planData,
+        observations,
+      });
+
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    });
+  };
+  
+  const selectedFoodIdsForCurrentMeal = new Set(mealPlan[selectedMeal].map(f => f.id));
+  const mealTranslations: Record<MealType, string> = {
+    BREAKFAST: 'Desayuno', LUNCH: 'Almuerzo', SNACK: 'Merienda', DINNER: 'Cena',
+  };
+
+  if (isLoading) {
+    return <div className="text-center p-8">Cargando guía de alimentos...</div>;
+  }
+
+  if (!patient.bloodType) {
+    return <div className="text-center p-8 bg-yellow-100 border border-yellow-300 rounded-md">Por favor, asigne un tipo de sangre al paciente para ver las recomendaciones.</div>;
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6 p-4 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold text-gray-800">Guía Nutrigenómica - Tipo de Sangre: {patient.bloodType}</h2>
+      
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Seleccione una comida para añadir alimentos:</h3>
+        <MealSelector selectedMeal={selectedMeal} setSelectedMeal={setSelectedMeal} />
+      </div>
+
+      <FoodDisplay foods={foods} onFoodSelect={handleFoodSelect} selectedFoodIds={selectedFoodIdsForCurrentMeal} />
+
+      {/* Vista previa del plan de comidas */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold text-gray-800 border-b pb-2">Plan de Comidas Sugerido</h3>
+        {Object.entries(mealPlan).map(([mealType, foods]) => (
+          <div key={mealType}>
+            <h4 className="font-semibold text-blue-700">{mealTranslations[mealType as MealType]}</h4>
+            <div className="flex flex-wrap gap-2 mt-2 p-2 bg-gray-50 rounded-md min-h-[40px]">
+              {foods.length > 0 ? (
+                foods.map(food => (
+                  <span key={food.id} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                    {food.name}
+                  </span>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No hay alimentos seleccionados.</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Campo de observaciones */}
+      <div>
+        <label htmlFor="observations" className="block text-lg font-semibold text-gray-700 mb-2">
+          Observaciones
+        </label>
+        <textarea
+          id="observations"
+          value={observations}
+          onChange={(e) => setObservations(e.target.value)}
+          rows={4}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+          placeholder="Añadir observaciones o indicaciones adicionales..."
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="px-6 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+        >
+          {isPending ? 'Guardando...' : 'Guardar Guía'}
+        </button>
+      </div>
+    </form>
+  );
 }

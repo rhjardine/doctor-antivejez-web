@@ -1,246 +1,253 @@
 // prisma/seed.ts
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient, FoodCategory, BenefitLevel } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// --- TIPOS DE ALIMENTOS POR TIPO DE SANGRE ---
+// Esta estructura nos permite definir qué alimentos son beneficiosos, neutros o a evitar para cada tipo de sangre.
+const foodData = {
+  // --- TIPO O ---
+  O: {
+    BENEFICIAL: {
+      PROTEINS: ['Carne de Res', 'Carne de Carnero', 'Corazón', 'Hígado', 'Ternera', 'Bacalao', 'Lenguado', 'Merluza', 'Salmón', 'Sardina', 'Trucha'],
+      DAIRY_EGGS: [],
+      OILS_FATS: ['Aceite de Oliva', 'Aceite de Linaza'],
+      NUTS_SEEDS: ['Nueces', 'Semillas de Calabaza'],
+      LEGUMES: ['Frijoles (caraotas)'],
+      GRAINS: [],
+      VEGETABLES: ['Ajo', 'Batata', 'Brócoli', 'Cebolla', 'Calabaza', 'Espinaca', 'Lechuga Romana', 'Pimiento Rojo', 'Perejil'],
+      FRUITS: ['Ciruelas', 'Higos', 'Ciruelas Pasas'],
+      JUICES: ['Jugo de Ciruela', 'Jugo de Piña', 'Jugo de Cereza Negra'],
+      SPICES: ['Cúrcuma', 'Pimienta de Cayena', 'Algas Marinas'],
+      TEAS: ['Té de Perejil', 'Té de Menta'],
+    },
+    NEUTRAL: {
+      PROTEINS: ['Pollo', 'Pavo', 'Pato', 'Atún', 'Camarón', 'Cangrejo', 'Langosta', 'Mejillones', 'Ostras'],
+      DAIRY_EGGS: ['Mantequilla', 'Queso de Cabra', 'Queso Feta', 'Mozzarella', 'Leche de Soja', 'Huevos'],
+      OILS_FATS: ['Aceite de Canola', 'Aceite de Sésamo'],
+      NUTS_SEEDS: ['Almendras', 'Avellanas', 'Semillas de Girasol', 'Semillas de Sésamo', 'Tahini'],
+      LEGUMES: ['Garbanzos', 'Lentejas Verdes', 'Guisantes'],
+      GRAINS: ['Arroz', 'Mijo', 'Avena'],
+      VEGETABLES: ['Apio', 'Berenjena', 'Espárragos', 'Hinojo', 'Jengibre', 'Pepino', 'Pimiento Verde', 'Pimiento Amarillo', 'Rábano', 'Tomate', 'Zanahoria', 'Zuquini'],
+      FRUITS: ['Albaricoque', 'Arándano', 'Cereza', 'Dátil', 'Frambuesa', 'Granada', 'Guayaba', 'Kiwi', 'Limón', 'Mango', 'Manzana', 'Melocotón', 'Melón', 'Papaya', 'Pera', 'Piña', 'Sandía', 'Uvas'],
+      JUICES: ['Jugo de Uva', 'Jugo de Papaya', 'Jugo de Apio', 'Jugo de Pepino'],
+      SPICES: ['Albahaca', 'Azafrán', 'Canela', 'Cardamomo', 'Clavo', 'Comino', 'Eneldo', 'Laurel', 'Menta', 'Mostaza', 'Orégano', 'Pimentón', 'Romero', 'Salvia', 'Tomillo'],
+      TEAS: ['Té Verde', 'Té de Manzanilla', 'Té de Jengibre'],
+    },
+    AVOID: {
+      PROTEINS: ['Carne de Cerdo', 'Ganso', 'Pulpo', 'Salmón Ahumado', 'Arenque'],
+      DAIRY_EGGS: ['Leche de Vaca', 'Queso Americano', 'Queso Azul', 'Queso Crema', 'Yogur', 'Helado'],
+      OILS_FATS: ['Aceite de Maíz', 'Aceite de Maní', 'Aceite de Cártamo'],
+      NUTS_SEEDS: ['Maní (cacahuetes)', 'Pistachos', 'Semillas de Amapola'],
+      LEGUMES: ['Lentejas Rojas'],
+      GRAINS: ['Trigo', 'Maíz', 'Cuscús', 'Gluten'],
+      VEGETABLES: ['Aguacate', 'Coliflor', 'Champiñones', 'Maíz', 'Papa', 'Repollo'],
+      FRUITS: ['Fresa', 'Mandarina', 'Naranja', 'Melón Cantalupo'],
+      JUICES: ['Jugo de Naranja', 'Jugo de Manzana'],
+      SPICES: ['Pimienta Blanca', 'Pimienta Negra', 'Vinagre', 'Canela'],
+      TEAS: ['Té Negro'],
+    },
+  },
+  // --- TIPO A ---
+  A: {
+    BENEFICIAL: {
+      PROTEINS: ['Bacalao', 'Carpa', 'Salmón', 'Sardina', 'Trucha'],
+      DAIRY_EGGS: [],
+      OILS_FATS: ['Aceite de Oliva', 'Aceite de Linaza'],
+      NUTS_SEEDS: ['Maní (cacahuetes)', 'Semillas de Calabaza'],
+      LEGUMES: ['Lentejas', 'Frijoles Negros', 'Soja'],
+      GRAINS: ['Avena', 'Arroz Integral', 'Pan de Soja'],
+      VEGETABLES: ['Ajo', 'Brócoli', 'Cebolla', 'Espinaca', 'Zanahoria', 'Calabaza'],
+      FRUITS: ['Albaricoque', 'Ciruela', 'Higos', 'Limón', 'Piña'],
+      JUICES: ['Jugo de Albaricoque', 'Jugo de Ciruela', 'Jugo de Piña', 'Jugo de Apio'],
+      SPICES: ['Jengibre', 'Ajo', 'Salsa de Soja'],
+      TEAS: ['Té Verde', 'Té de Manzanilla', 'Té de Jengibre'],
+    },
+    NEUTRAL: {
+      PROTEINS: ['Pollo', 'Pavo', 'Atún'],
+      DAIRY_EGGS: ['Yogur', 'Queso de Cabra', 'Kefir', 'Mozzarella'],
+      OILS_FATS: ['Aceite de Canola'],
+      NUTS_SEEDS: ['Almendras', 'Nueces', 'Semillas de Girasol'],
+      LEGUMES: ['Guisantes'],
+      GRAINS: ['Maíz', 'Mijo', 'Quinoa'],
+      VEGETABLES: ['Espárragos', 'Pepino', 'Lechuga', 'Zuquini'],
+      FRUITS: ['Manzana', 'Pera', 'Uvas', 'Kiwi', 'Melocotón'],
+      JUICES: ['Jugo de Manzana', 'Jugo de Uva'],
+      SPICES: ['Albahaca', 'Orégano', 'Mostaza'],
+      TEAS: ['Té de Diente de León'],
+    },
+    AVOID: {
+      PROTEINS: ['Carne de Res', 'Carne de Cerdo', 'Pato', 'Camarón', 'Cangrejo', 'Langosta'],
+      DAIRY_EGGS: ['Leche de Vaca', 'Queso Americano', 'Queso Azul', 'Mantequilla'],
+      OILS_FATS: ['Aceite de Maíz', 'Aceite de Sésamo'],
+      NUTS_SEEDS: ['Pistachos'],
+      LEGUMES: ['Garbanzos', 'Frijoles Rojos'],
+      GRAINS: ['Trigo'],
+      VEGETABLES: ['Berenjena', 'Champiñones', 'Papa', 'Pimiento', 'Tomate', 'Repollo'],
+      FRUITS: ['Banana', 'Mango', 'Naranja', 'Papaya'],
+      JUICES: ['Jugo de Naranja', 'Jugo de Tomate'],
+      SPICES: ['Pimienta Negra', 'Pimienta de Cayena', 'Vinagre'],
+      TEAS: ['Té Negro'],
+    },
+  },
+  // --- TIPO B ---
+  B: {
+    BENEFICIAL: {
+      PROTEINS: ['Carnero', 'Cordero', 'Sardina', 'Salmón', 'Lenguado'],
+      DAIRY_EGGS: ['Leche de Cabra', 'Queso de Cabra', 'Yogur', 'Kefir', 'Huevos'],
+      OILS_FATS: ['Aceite de Oliva'],
+      NUTS_SEEDS: [],
+      LEGUMES: ['Frijoles'],
+      GRAINS: ['Avena', 'Arroz'],
+      VEGETABLES: ['Brócoli', 'Repollo', 'Pimiento', 'Batata', 'Zanahoria'],
+      FRUITS: ['Banana', 'Uvas', 'Papaya', 'Piña'],
+      JUICES: ['Jugo de Uva', 'Jugo de Papaya', 'Jugo de Piña'],
+      SPICES: ['Jengibre', 'Curry', 'Pimienta de Cayena'],
+      TEAS: ['Té de Jengibre', 'Té de Menta'],
+    },
+    NEUTRAL: {
+      PROTEINS: ['Carne de Res', 'Pavo', 'Atún', 'Bacalao'],
+      DAIRY_EGGS: ['Queso Feta', 'Mozzarella', 'Leche de Vaca (con moderación)'],
+      OILS_FATS: ['Aceite de Linaza'],
+      NUTS_SEEDS: ['Almendras', 'Nueces'],
+      LEGUMES: ['Lentejas Verdes', 'Guisantes'],
+      GRAINS: ['Mijo'],
+      VEGETABLES: ['Ajo', 'Cebolla', 'Espinaca', 'Pepino', 'Lechuga'],
+      FRUITS: ['Manzana', 'Pera', 'Cereza', 'Kiwi', 'Limón', 'Mango'],
+      JUICES: ['Jugo de Manzana', 'Jugo de Cereza'],
+      SPICES: ['Albahaca', 'Orégano', 'Cúrcuma'],
+      TEAS: ['Té Verde', 'Té de Manzanilla'],
+    },
+    AVOID: {
+      PROTEINS: ['Pollo', 'Carne de Cerdo', 'Pato', 'Camarón', 'Cangrejo', 'Langosta'],
+      DAIRY_EGGS: ['Queso Americano', 'Queso Azul'],
+      OILS_FATS: ['Aceite de Maíz', 'Aceite de Canola', 'Aceite de Girasol', 'Aceite de Sésamo'],
+      NUTS_SEEDS: ['Maní (cacahuetes)', 'Semillas de Girasol', 'Semillas de Sésamo', 'Tahini'],
+      LEGUMES: ['Lentejas Rojas', 'Garbanzos', 'Frijoles Negros'],
+      GRAINS: ['Trigo', 'Maíz', 'Centeno'],
+      VEGETABLES: ['Tomate', 'Aguacate', 'Maíz', 'Calabaza'],
+      FRUITS: ['Granada', 'Coco'],
+      JUICES: ['Jugo de Tomate'],
+      SPICES: ['Pimienta Negra', 'Canela'],
+      TEAS: ['Té de Tilo'],
+    },
+  },
+  // --- TIPO AB ---
+  AB: {
+    BENEFICIAL: {
+      PROTEINS: ['Carnero', 'Pavo', 'Atún', 'Bacalao', 'Salmón', 'Sardina'],
+      DAIRY_EGGS: ['Yogur', 'Kefir', 'Queso de Cabra', 'Mozzarella'],
+      OILS_FATS: ['Aceite de Oliva'],
+      NUTS_SEEDS: ['Maní (cacahuetes)', 'Nueces'],
+      LEGUMES: ['Lentejas', 'Soja'],
+      GRAINS: ['Avena', 'Arroz', 'Mijo'],
+      VEGETABLES: ['Brócoli', 'Apio', 'Pepino', 'Ajo', 'Batata'],
+      FRUITS: ['Cereza', 'Uvas', 'Kiwi', 'Limón', 'Piña'],
+      JUICES: ['Jugo de Uva', 'Jugo de Cereza'],
+      SPICES: ['Curry', 'Ajo', 'Perejil'],
+      TEAS: ['Té Verde', 'Té de Manzanilla'],
+    },
+    NEUTRAL: {
+      PROTEINS: ['Hígado', 'Carpa'],
+      DAIRY_EGGS: ['Queso Crema', 'Leche de Soja', 'Huevos'],
+      OILS_FATS: ['Aceite de Canola', 'Aceite de Linaza'],
+      NUTS_SEEDS: ['Almendras', 'Pistachos'],
+      LEGUMES: ['Guisantes', 'Frijoles Blancos'],
+      GRAINS: [],
+      VEGETABLES: ['Espinaca', 'Cebolla', 'Lechuga', 'Champiñones', 'Papa'],
+      FRUITS: ['Manzana', 'Pera', 'Albaricoque', 'Frambuesa', 'Higos'],
+      JUICES: ['Jugo de Manzana', 'Jugo de Albaricoque'],
+      SPICES: ['Albahaca', 'Orégano', 'Mostaza'],
+      TEAS: ['Té de Menta'],
+    },
+    AVOID: {
+      PROTEINS: ['Carne de Res', 'Pollo', 'Carne de Cerdo', 'Camarón', 'Cangrejo', 'Langosta'],
+      DAIRY_EGGS: ['Leche de Vaca Entera', 'Mantequilla', 'Queso Americano', 'Queso Azul'],
+      OILS_FATS: ['Aceite de Maíz', 'Aceite de Girasol', 'Aceite de Sésamo'],
+      NUTS_SEEDS: ['Semillas de Girasol', 'Semillas de Sésamo', 'Semillas de Calabaza'],
+      LEGUMES: ['Garbanzos', 'Frijoles Negros', 'Frijoles Rojos'],
+      GRAINS: ['Maíz'],
+      VEGETABLES: ['Pimiento', 'Aguacate', 'Maíz', 'Rábano'],
+      FRUITS: ['Banana', 'Mango', 'Naranja', 'Guayaba'],
+      JUICES: ['Jugo de Naranja'],
+      SPICES: ['Pimienta Negra', 'Pimienta de Cayena', 'Vinagre'],
+      TEAS: ['Té Negro', 'Té de Tilo'],
+    },
+  },
+};
+
 
 async function main() {
   console.log('🌱 Iniciando seeding de la base de datos...');
 
-  // --- 1. Limpiar datos antiguos de Baremos y Rangos ---
-  await prisma.board.deleteMany({});
-  await prisma.range.deleteMany({});
-  console.log('🗑️ Baremos y Rangos antiguos eliminados.');
+  // --- Limpiar datos antiguos para evitar duplicados ---
+  await prisma.foodBloodTypeBenefit.deleteMany({});
+  await prisma.food.deleteMany({});
+  await prisma.bloodType.deleteMany({});
+  console.log('🗑️ Datos de nutrición antiguos eliminados.');
 
-  // --- 2. Crear Rangos de Edad ---
-  const rangesData = [
-    { id: 1, minAge: 21, maxAge: 28 },   { id: 2, minAge: 28, maxAge: 35 },
-    { id: 3, minAge: 35, maxAge: 42 },   { id: 4, minAge: 42, maxAge: 49 },
-    { id: 5, minAge: 49, maxAge: 56 },   { id: 6, minAge: 56, maxAge: 63 },
-    { id: 7, minAge: 63, maxAge: 70 },   { id: 8, minAge: 70, maxAge: 77 },
-    { id: 9, minAge: 77, maxAge: 84 },   { id: 10, minAge: 84, maxAge: 91 },
-    { id: 11, minAge: 91, maxAge: 98 },  { id: 12, minAge: 98, maxAge: 105 },
-    { id: 13, minAge: 105, maxAge: 112 },{ id: 14, minAge: 112, maxAge: 120 },
-  ];
-  await prisma.range.createMany({ data: rangesData });
-  console.log('📊 Rangos de edad creados.');
+  // --- Crear Tipos de Sangre ---
+  const bloodTypes = await prisma.bloodType.createManyAndReturn({
+    data: [
+      { name: 'O' },
+      { name: 'A' },
+      { name: 'B' },
+      { name: 'AB' },
+    ],
+  });
+  const bloodTypeMap = new Map(bloodTypes.map(bt => [bt.name, bt.id]));
+  console.log('🩸 Tipos de sangre creados.');
 
-  // --- 3. Crear Baremos (Boards) ---
-  const biophysicsBoards = [
-    // % Grasa Masculino
-    ...Array(14).fill(0).map((_, i) => ({ name: 'male_fat', minValue: 10 + i * 3, maxValue: 14 + i * 3, rangeId: i + 1, inverse: false, type: 'FORM_BIOPHYSICS' as const })),
-    // % Grasa Femenino
-    ...Array(14).fill(0).map((_, i) => ({ name: 'female_fat', minValue: 18 + i * 3, maxValue: 22 + i * 3, rangeId: i + 1, inverse: false, type: 'FORM_BIOPHYSICS' as const })),
-    // IMC
-    ...Array(14).fill(0).map((_, i) => ({ name: 'body_mass', minValue: 18 + i * 3, maxValue: 22 + i * 3, rangeId: i + 1, inverse: false, type: 'FORM_BIOPHYSICS' as const })),
-    // Reflejos Digitales
-    { name: 'digital_reflections', minValue: 45, maxValue: 50, rangeId: 1, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 35, maxValue: 45, rangeId: 2, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 30, maxValue: 35, rangeId: 3, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 25, maxValue: 30, rangeId: 4, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 20, maxValue: 25, rangeId: 5, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 15, maxValue: 20, rangeId: 6, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 10, maxValue: 15, rangeId: 7, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 8, maxValue: 10, rangeId: 8, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 6, maxValue: 8, rangeId: 9, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 4, maxValue: 6, rangeId: 10, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 3, maxValue: 4, rangeId: 11, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 2, maxValue: 3, rangeId: 12, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 1, maxValue: 2, rangeId: 13, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-    { name: 'digital_reflections', minValue: 0, maxValue: 1, rangeId: 14, inverse: true, type: 'FORM_BIOPHYSICS' as const },
-  ];
+  // --- Crear Alimentos y sus relaciones ---
+  const allFoods = new Map<string, { id: string }>();
+  const foodBenefitLinks = [];
 
-  const biochemistryBoards = [
-    // Somatomedina C (IGF-1)
-    { name: 'somatomedinC', minValue: 325, maxValue: 350, rangeId: 1, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 300, maxValue: 325, rangeId: 2, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 250, maxValue: 300, rangeId: 3, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 200, maxValue: 250, rangeId: 4, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 150, maxValue: 200, rangeId: 5, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 100, maxValue: 150, rangeId: 6, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 80, maxValue: 100, rangeId: 7, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 60, maxValue: 80, rangeId: 8, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 50, maxValue: 60, rangeId: 9, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 40, maxValue: 50, rangeId: 10, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 30, maxValue: 40, rangeId: 11, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 20, maxValue: 30, rangeId: 12, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 10, maxValue: 20, rangeId: 13, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    { name: 'somatomedinC', minValue: 0, maxValue: 10, rangeId: 14, inverse: true, type: 'FORM_BIOCHEMISTRY' as const },
-    // Hemoglobina Glicosilada (HbA1c)
-    ...Array(14).fill(0).map((_, i) => ({ name: 'hba1c', minValue: i * 1, maxValue: (i * 1) + 0.5, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Insulina Basal
-    ...Array(14).fill(0).map((_, i) => ({ name: 'insulinBasal', minValue: 1 + i * 10, maxValue: 2 + i * 10, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // DHEA-S
-    ...Array(14).fill(0).map((_, i) => ({ name: 'dheaS', minValue: 400 - i * 20, maxValue: 450 - i * 20, rangeId: i + 1, inverse: true, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Testosterona Libre
-    ...Array(14).fill(0).map((_, i) => ({ name: 'freeTestosterone', minValue: 50 - i * 3, maxValue: 55 - i * 3, rangeId: i + 1, inverse: true, type: 'FORM_BIOCHEMISTRY' as const })),
-    // SHBG
-    ...Array(14).fill(0).map((_, i) => ({ name: 'shbg', minValue: 20 + i * 5, maxValue: 25 + i * 5, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Antígeno Prostático (PSA)
-    ...Array(14).fill(0).map((_, i) => ({ name: 'prostateAntigen', minValue: 1 + i * 0.2, maxValue: 1.5 + i * 0.2, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Ácido Úrico
-    ...Array(14).fill(0).map((_, i) => ({ name: 'uricAcid', minValue: 4.5 + i * 0.1, maxValue: 5.0 + i * 0.1, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Ferritina
-    ...Array(14).fill(0).map((_, i) => ({ name: 'ferritin', minValue: 80 + i * 5, maxValue: 100 + i * 5, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Vitamina D
-    ...Array(14).fill(0).map((_, i) => ({ name: 'vitaminD', minValue: 50 - i * 2, maxValue: 55 - i * 2, rangeId: i + 1, inverse: true, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Homocisteína
-    ...Array(14).fill(0).map((_, i) => ({ name: 'homocysteine', minValue: 7 + i * 0.5, maxValue: 8 + i * 0.5, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Proteína C Reactiva (PCR)
-    ...Array(14).fill(0).map((_, i) => ({ name: 'pcr', minValue: 0.5 + i * 0.1, maxValue: 1.0 + i * 0.1, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Fibrinógeno
-    ...Array(14).fill(0).map((_, i) => ({ name: 'fibrinogen', minValue: 250 + i * 10, maxValue: 270 + i * 10, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Triglicéridos
-    ...Array(14).fill(0).map((_, i) => ({ name: 'triglycerides', minValue: 70 + i * 5, maxValue: 90 + i * 5, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Colesterol HDL
-    ...Array(14).fill(0).map((_, i) => ({ name: 'hdl', minValue: 70 - i * 2, maxValue: 75 - i * 2, rangeId: i + 1, inverse: true, type: 'FORM_BIOCHEMISTRY' as const })),
-    // Relación TG/HDL
-    ...Array(14).fill(0).map((_, i) => ({ name: 'tgHdlRatio', minValue: 1 + i * 0.2, maxValue: 1.5 + i * 0.2, rangeId: i + 1, inverse: false, type: 'FORM_BIOCHEMISTRY' as const })),
-  ];
+  for (const [bloodTypeName, benefits] of Object.entries(foodData)) {
+    const bloodTypeId = bloodTypeMap.get(bloodTypeName);
+    if (!bloodTypeId) continue;
 
-  const allBoardsToCreate = [...biophysicsBoards, ...biochemistryBoards];
+    for (const [benefitLevel, categories] of Object.entries(benefits)) {
+      for (const [categoryName, foods] of Object.entries(categories)) {
+        for (const foodName of foods) {
+          // Crear el alimento si no existe
+          if (!allFoods.has(foodName)) {
+            const newFood = await prisma.food.create({
+              data: {
+                name: foodName,
+                category: categoryName as FoodCategory,
+              },
+            });
+            allFoods.set(foodName, newFood);
+          }
 
-  await prisma.board.createMany({ data: allBoardsToCreate });
-  console.log('📏 Baremos (boards) creados/actualizados.');
+          // Crear el enlace entre el alimento y el tipo de sangre
+          const foodId = allFoods.get(foodName)!.id;
+          foodBenefitLinks.push({
+            foodId,
+            bloodTypeId,
+            benefit: benefitLevel as BenefitLevel,
+          });
+        }
+      }
+    }
+  }
   
-  const adminEmail = 'admin@doctorantivejez.com';
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-
-  if (!existingAdmin) {
-    const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    await prisma.user.create({
-      data: {
-        email: adminEmail,
-        password: hashedPassword,
-        name: 'Dr. Admin',
-        role: 'ADMINISTRATIVO',
-      },
+  // Usar createMany para eficiencia
+  if (foodBenefitLinks.length > 0) {
+    await prisma.foodBloodTypeBenefit.createMany({
+      data: foodBenefitLinks,
+      skipDuplicates: true, // Evita errores si el enlace ya existe
     });
-    console.log('👤 Usuario administrador creado.');
-  } else {
-    console.log('👤 Usuario administrador ya existe.');
   }
 
-  // ===== SEEDING DE GUÍA DE ALIMENTACIÓN (VERSIÓN COMPLETA) =====
-  console.log('🍓 Iniciando seeding completo de la guía de alimentación...');
-  await prisma.foodItem.deleteMany({});
-  console.log('🗑️ Alimentos antiguos eliminados.');
+  console.log(`🍎 Creados ${allFoods.size} alimentos y ${foodBenefitLinks.length} relaciones de beneficio.`);
 
-  const foodItems = [
-    // --- DESAYUNO ---
-    // Grupo O o B
-    { name: 'Cereales de', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Creps de yuca', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Suero de leche (Whey protein)', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Huevo revuelto con vegetales y queso de cabra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Huevo duro cocido con tiras de queso de cabra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Omelette de claras con champiñones', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Infusiones o café sin azúcar', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    // Grupo A o AB
-    { name: 'Cereales de trigo sarraceno, avena sin gluten', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Tortilla de huevo con avena s/g', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Creps de avena s/g', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Leche de soya o almendras', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Huevo escalfado con verduras al vapor', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    // Ambos Grupos (ALL)
-    { name: 'Pan sin gluten', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'ALL' as const },
-    
-    // --- ALMUERZO ---
-    // Grupo O o B
-    { name: 'Carnes rojas o blanca', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Pasticho de berenjena con carne', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Tomate relleno con carne molida', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Rissoto o ñoquis', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Pizza de casabe con queso de cabra', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Kibbe con ensalada Fatush', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Lomito con jojoticos chinos', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    // Grupo A o AB
-    { name: 'Carnes blancas', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Pasticho de berenjena con pollo', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Tomate relleno con pollo', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Pizza de coliflor con queso de cabra', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Falafel con ensalada Tabule de quinoa', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Pollo a la naranja con ensalada budda', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    // Ambos Grupos (ALL)
-    { name: 'Ensaladas', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const },
-    { name: 'Granos', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const },
-    { name: 'Pan sin gluten', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const },
-
-    // --- CENA ---
-    // Grupo O o B
-    { name: 'Ensaladas de sardinas, salmón o mariscos', mealType: 'CENA' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Keto o Paleo', mealType: 'CENA' as const, bloodTypeGroup: 'O_B' as const },
-    // Grupo A o AB
-    { name: 'Sushi', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Ceviche', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Antipasto', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Carpaccio', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const },
-    
-    // --- MERIENDAS Y POSTRES ---
-    // Grupo O o B
-    { name: 'Gelatina de lámina o 1 cda de polvo sin sabor en infusión con stevia o limón (GELATE)', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'O_B' as const },
-    // Grupo A o AB
-    { name: '7 Semillas: almendras, nueces, pistacho, merey, guyama tostada', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Batido de proteina: 1 cda de suero o ricotta sin sal, whey protein o soy protein', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Helado Vegano (leche de almendras o coco)', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Tableta de Cacao Antivejez 100%', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const },
-    // Ambos Grupos (ALL)
-    { name: 'Ensaladas: hojas verdes, berenjenas, calabacines, pepinos, tomates, pimentones, brócoli, champiñones, alcachofas, germinados, espárragos, rábanos', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'ALL' as const },
-    { name: 'Aderezos: vinagreta balsámica, yogurt con perejil, aceite de oliva', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'ALL' as const },
-    { name: 'Bebidas: agua mineral con o sin limón, soda con limón, infusiones frías', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'ALL' as const },
-  ];
-
-  await prisma.foodItem.createMany({ data: foodItems });
-  console.log(`🍓 ${foodItems.length} alimentos creados.`);
-
-  // ===== SEEDING DE GUÍA GENERAL Y CLAVES DE BIENESTAR =====
-  await prisma.generalGuideItem.deleteMany({});
-  await prisma.wellnessKey.deleteMany({});
-  console.log('🗑️ Guía General y Claves de Bienestar antiguas eliminadas.');
-
-  const foodsToAvoid = [
-    "Cocina y sus derivados, atún, pez espada, grasas, frituras, huevos fritos.",
-    "Caseína: lácteos de vaca y búfala, parmesano, embutidos con preservativos, refrescos, azúcar, edulcorantes, chucherías, harinas refinadas y sus derivados, cereales refinados, jugos naturales.",
-    "Papaya, mango, banana, melón, patilla, piña (una vez por semana).",
-    "Tubérculos: gluten, trigo, avena, cebada, centeno integral."
-  ];
-
-  const foodSubstitutes = [
-    "Carnes a la plancha, sancochado, al horno, huevos sancochados, revueltos o en agua.",
-    "Quesos blanco, fresco o yogurt de cabra, leches vegetales (soja, almendra...).",
-    "Infusiones de plantas (malojillo, toronjil, té verde, café...), productos naturales, frutas frescas o secas, harinas integrales, germinados, verduras frescas, semillas tostadas (almendras, avellanas, nueces, pistacho, merey, ajonjolí, germen de trigo, maní en concha, etc.).",
-    "Enlatados en agua o en aceite. Suero o ricota (sin sal), lácteos de cabra, Pecorino o Manchego.",
-    "Leche de soya, almendra, coco..., productos sin gluten: pan, maíz, fororo, arroz, yuca, plátano, papa, batata, granola, avena."
-  ];
-
-  await prisma.generalGuideItem.createMany({
-    data: [
-      ...foodsToAvoid.map(text => ({ text, type: 'AVOID' as const })),
-      ...foodSubstitutes.map(text => ({ text, type: 'SUBSTITUTE' as const })),
-    ]
-  });
-  console.log('📖 Guía General creada.');
-
-  const longevityKeys = [
-    { title: 'ALIMENTACION Sana', description: 'Frutas de Bajo Índice Glicémico (exclusivamente en el desayuno): manzana, pera, cerezas, fresas, moras, uvas, ciruela, kiwi, grapefruit, toronja, naranja.' },
-    { title: 'AYUNO INTERMITENTE', description: 'Cenar temprano y tomar un termo de café, té verde o cacao kero (con aceite TRIOIL) hasta el mediodía del siguiente día (2-3 veces por semana).' },
-    { title: 'HIDRATACIÓN', description: 'Tomar 6-8 vasos de agua de limón o infusiones fuera de las comidas (con agua mineral).' },
-    { title: 'ACTIVIDAD FISICA', description: '3 a 6 veces por semana, 1-2 horas/día: 10 min. calentamiento, 20 min. Cardio/Musculación 30 min. en la mañana para bajar de grasa corporal y en la tarde para aumentar MUSCULACIÓN con ligas, mancuernas, pesos 10 min. Estiramiento. Frecuencia Cardiaca de Entrenamiento 220 - edad x 60-80%.' },
-    { title: 'REPOSO REPARADOR', description: 'Acostarse antes de las 10 PM y dormir de 6 a 8 horas.' },
-    { title: 'ACTITUD ADECUADA', description: 'Cultivar pensamientos y sentimientos positivos frente al stress.' },
-    { title: 'AMBIENTE ARMÓNICO', description: 'Crear un ambiente de familia y trabajo lo más armónico posible. Evitar estimulantes, licor o cigarrillo para obtener máximos resultados.' },
-  ];
-
-  await prisma.wellnessKey.createMany({ data: longevityKeys });
-  console.log('🔑 Claves de Bienestar creadas.');
-  // ==================================================================
-  
-  console.log('✅ Seeding completado exitosamente.');
+  console.log('✅ Seeding de nutrición completado exitosamente.');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error durante el seeding:', e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {
