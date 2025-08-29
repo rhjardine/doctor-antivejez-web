@@ -299,5 +299,6 @@ export default function NutrigenomicGuide({ patient, guide }: NutrigenomicGuideP
         </button>
       </div>
     </form>
+    
   );
 }
