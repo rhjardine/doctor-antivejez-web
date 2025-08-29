@@ -5,7 +5,6 @@ import { GuideFormValues, StandardFormItem, RevitalizationFormItem, MetabolicFor
 import { revalidatePath } from 'next/cache';
 import nodemailer from 'nodemailer';
 import { generateGuideEmailTemplate, generateGuideEmailSubject, generateGuidePlainText } from '@/utils/emailTemplates';
-
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
  * desde la base de datos para construir el formulario dinámicamente.
