@@ -4,7 +4,8 @@ import { prisma } from '@/lib/db';
 import { GuideFormValues, StandardFormItem, RevitalizationFormItem, MetabolicFormItem, RemocionFormItem, GuideCategory } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
 import nodemailer from 'nodemailer';
-import { generateGuideEmailTemplate, generateGuideEmailSubject, generateGuidePlainText } from '@/utils/emailTemplates';
+import { generateGuideEmailHTML, generatePatientGuideEmailSubject, generatePatientGuideEmailText } from '@/utils/emailTemplates';
+
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
  * desde la base de datos para construir el formulario dinámicamente.
@@ -224,7 +225,7 @@ function createEmailTransporter() {
     secure: process.env.SMTP_SECURE === 'true', // true para puerto 465, false para otros puertos
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
+      pass: process.env.SMTP_PASS,
     },
     tls: {
       rejectUnauthorized: false,
@@ -232,6 +233,107 @@ function createEmailTransporter() {
   });
 
   return transporter;
+}
+
+/**
+ * Genera el contenido HTML formateado de la guía del paciente
+ */
+function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCategory[]): string {
+  const { selections } = formData;
+  let htmlContent = '';
+
+  // Agrupar selecciones por categoría
+  const selectionsByCategory = new Map<string, any[]>();
+
+  for (const itemId in selections) {
+    const selectionData = selections[itemId];
+    if (selectionData.selected) {
+      // Buscar el ítem en las categorías
+      let foundItem = null;
+      let categoryName = '';
+
+      for (const category of guideData) {
+        const item = category.items.find(i => i.id === itemId);
+        if (item) {
+          foundItem = item;
+          categoryName = category.name;
+          break;
+        }
+      }
+
+      if (foundItem) {
+        if (!selectionsByCategory.has(categoryName)) {
+          selectionsByCategory.set(categoryName, []);
+        }
+
+        selectionsByCategory.get(categoryName)!.push({
+          name: foundItem.name,
+          details: selectionData
+        });
+      }
+    }
+  }
+
+  // Generar HTML por categoría
+  for (const [categoryName, items] of selectionsByCategory) {
+    htmlContent += `<div style="margin-bottom: 25px;">`;
+    htmlContent += `<h3 style="color: #007bff; border-bottom: 1px solid #007bff; padding-bottom: 8px;">${categoryName}</h3>`;
+    htmlContent += `<ul style="margin: 10px 0; padding-left: 20px;">`;
+
+    items.forEach(item => {
+      htmlContent += `<li style="margin-bottom: 8px;"><strong>${item.name}</strong>`;
+      
+      // Formatear detalles según el tipo
+      const details = item.details;
+      let detailsText = '';
+
+      // Campos de StandardFormItem
+      if (details.qty && details.doseType && details.freq) {
+        detailsText += `${details.qty} ${details.doseType}, ${details.freq}`;
+      }
+
+      // Campos de RevitalizationFormItem
+      if (details.complejoB_cc || details.bioquel_cc) {
+        const complejo = details.complejoB_cc ? `Complejo B: ${details.complejoB_cc}cc` : '';
+        const bioquel = details.bioquel_cc ? `Bioquel: ${details.bioquel_cc}cc` : '';
+        detailsText += [complejo, bioquel].filter(Boolean).join(', ');
+        if (details.frequency) detailsText += `, ${details.frequency}`;
+      }
+
+      // Campos de RemocionFormItem
+      if (details.cucharadas) {
+        detailsText += `${details.cucharadas} cucharadas`;
+        if (details.horario) detailsText += `, ${details.horario}`;
+        if (details.semanas) detailsText += `, por ${details.semanas} semanas`;
+        if (details.alimentacionTipo) detailsText += `, ${details.alimentacionTipo}`;
+      }
+
+      if (details.tacita_qty && details.tacita) {
+        detailsText += `${details.tacita_qty} ${details.tacita}`;
+        if (details.frascos) detailsText += `, ${details.frascos} frascos`;
+      }
+
+      // Campos de MetabolicFormItem
+      if (details.gotas && details.vecesAlDia) {
+        detailsText += `${details.gotas} gotas, ${details.vecesAlDia} veces al día`;
+      }
+
+      // Custom field
+      if (details.custom) {
+        detailsText = detailsText ? `${detailsText} - ${details.custom}` : details.custom;
+      }
+
+      if (detailsText) {
+        htmlContent += `<br><small style="color: #666;">${detailsText}</small>`;
+      }
+
+      htmlContent += `</li>`;
+    });
+
+    htmlContent += `</ul></div>`;
+  }
+
+  return htmlContent;
 }
 
 /**
@@ -244,7 +346,7 @@ export async function sendPatientGuideByEmail(
 ) {
   try {
     // Verificar configuración de email
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
       return { 
         success: false, 
         error: 'Configuración de correo no encontrada. Contacte al administrador.' 
@@ -267,29 +369,39 @@ export async function sendPatientGuideByEmail(
     // Crear transportador de email
     const transporter = createEmailTransporter();
 
-    // Generar contenido HTML del correo
-    const htmlContent = generateGuideEmailHTML({
-      patient,
-      formValues: formData,
-      guideData,
-    });
+    // Generar contenido formateado de la guía
+    const guideContent = formatGuideContentAsHTML(formData, guideData);
+
+    // Preparar datos para el template
+    const emailData = {
+      patientName: `${patient.firstName} ${patient.lastName}`,
+      doctorName: 'Medicina Anti-Aging',
+      clinicName: 'Clínica de Medicina Personalizada',
+      guideContent: guideContent,
+      generatedDate: new Intl.DateTimeFormat('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(new Date(formData.guideDate))
+    };
+
+    // Generar contenido HTML y texto plano
+    const htmlContent = generateGuideEmailHTML(emailData);
+    const textContent = generatePatientGuideEmailText(emailData);
+    const emailSubject = generatePatientGuideEmailSubject(emailData.patientName);
 
     // Configurar el mensaje
     const mailOptions = {
       from: {
-        name: 'Dr. Antivejez - Medicina Antienvejecimiento',
+        name: 'Dr. Medicina Anti-Aging',
         address: process.env.SMTP_USER,
       },
       to: patient.email,
-      subject: `Guía de Tratamiento Personalizada - ${patient.firstName} ${patient.lastName}`,
+      subject: emailSubject,
       html: htmlContent,
-      attachments: [
-        {
-          filename: 'logo-doctor-antivejez.png',
-          path: './public/images/logo.png',
-          cid: 'logo-doctor-antivejez', // ID para referenciar en el HTML
-        },
-      ],
+      text: textContent,
     };
 
     // Enviar el correo
