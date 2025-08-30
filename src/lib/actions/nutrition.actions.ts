@@ -1,187 +1,134 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { Patient, FoodPlan, Meal, MealItem, Food } from '@prisma/client';
+import { Patient, Food, MealType, BloodTypeGroup, DietType, GeneralGuideItem, WellnessKey } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-
-// Interfaz para la estructura de datos que usará el frontend
-export interface GroupedFoods {
-  [category: string]: {
-    BENEFICIAL: Food[];
-    NEUTRAL: Food[];
-    AVOID: Food[];
-  };
-}
+import { FullNutritionData } from '@/types/nutrition';
 
 /**
- * Obtiene y agrupa los alimentos según el tipo de sangre de un paciente.
+ * Obtiene la plantilla completa de nutrición Y el plan existente de un paciente.
+ * Esta acción unificada es más eficiente que múltiples llamadas a la base de datos.
  * @param patientId - El ID del paciente.
- * @returns Un objeto con los alimentos agrupados por categoría y nivel de beneficio.
+ * @returns Un objeto con todos los datos necesarios para construir la guía.
  */
-export async function getFoodsByBloodType(patientId: string): Promise<GroupedFoods> {
+export async function getFullNutritionDataForPatient(patientId: string): Promise<{ success: boolean; data?: FullNutritionData; error?: string }> {
   try {
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
-      select: { bloodType: true },
-    });
-
-    if (!patient || !patient.bloodType) {
-      // Devuelve un objeto vacío si el paciente no tiene tipo de sangre
-      console.warn(`Paciente con ID ${patientId} no encontrado o sin tipo de sangre.`);
-      return {};
-    }
-
-    const bloodTypeRecord = await prisma.bloodType.findUnique({
-      where: { name: patient.bloodType },
-    });
-
-    if (!bloodTypeRecord) {
-      console.error(`Tipo de sangre ${patient.bloodType} no encontrado en la base de datos.`);
-      return {};
-    }
-
-    const foodBenefits = await prisma.foodBloodTypeBenefit.findMany({
-      where: { bloodTypeId: bloodTypeRecord.id },
-      include: {
-        food: true,
+      include: { 
+        // Se obtiene el último plan de alimentación creado para el paciente.
+        foodPlans: { 
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: { items: true } 
+        } 
       },
     });
 
-    const groupedFoods: GroupedFoods = {};
-
-    for (const item of foodBenefits) {
-      const category = item.food.category;
-      const benefit = item.benefit;
-
-      if (!groupedFoods[category]) {
-        groupedFoods[category] = {
-          BENEFICIAL: [],
-          NEUTRAL: [],
-          AVOID: [],
-        };
-      }
-      groupedFoods[category][benefit].push(item.food);
+    if (!patient || !patient.bloodType) {
+      return { success: false, error: 'Paciente no encontrado o sin tipo de sangre asignado.' };
     }
+    
+    // ===== LÓGICA DE NEGOCIO CLAVE =====
+    // Se mapea el tipo de sangre del paciente (ej: 'A+') al grupo correspondiente ('A_AB')
+    // para filtrar los alimentos correctamente según las reglas de negocio.
+    const bloodTypeGroup = (patient.bloodType.includes('A') || patient.bloodType.includes('AB')) ? 'A_AB' : 'O_B';
+    const relevantGroups: BloodTypeGroup[] = ['ALL', bloodTypeGroup];
 
-    return groupedFoods;
+    // Se obtienen todos los datos de la plantilla (alimentos, guías, claves) en paralelo para optimizar el tiempo de carga.
+    const [allFoodItems, generalGuideItems, wellnessKeys] = await Promise.all([
+      prisma.foodItem.findMany({ where: { bloodTypeGroup: { in: relevantGroups } }, orderBy: { name: 'asc' } }),
+      prisma.generalGuideItem.findMany({ where: { isDefault: true }, orderBy: { type: 'asc' } }),
+      prisma.wellnessKey.findMany({ where: { isDefault: true }, orderBy: { id: 'asc' } }),
+    ]);
 
+    // Se estructura la plantilla de alimentos por tipo de comida (Desayuno, Almuerzo, etc.)
+    const foodTemplate = allFoodItems.reduce((acc, item) => {
+      acc[item.mealType] = acc[item.mealType] || [];
+      acc[item.mealType].push(item);
+      return acc;
+    }, {} as Record<MealType, Food[]>);
+
+    // Se estructura la guía general en "Evitar" y "Sustituir".
+    const generalGuide = {
+      AVOID: generalGuideItems.filter(i => i.type === 'AVOID'),
+      SUBSTITUTE: generalGuideItems.filter(i => i.type === 'SUBSTITUTE'),
+    };
+
+    // Se procesa el plan de alimentación más reciente del paciente, si existe.
+    const latestPlan = patient.foodPlans?.[0];
+    const existingPlan = latestPlan?.items.reduce((acc, item) => {
+      acc[item.mealType] = acc[item.mealType] || [];
+      acc[item.mealType].push(item.id);
+      return acc;
+    }, {} as Record<MealType, string[]>) || null;
+
+    return {
+      success: true,
+      data: {
+        foodTemplate,
+        generalGuide,
+        wellnessKeys,
+        patientData: {
+          bloodTypeGroup,
+          selectedDiets: patient.selectedDiets,
+          existingPlan,
+          observations: latestPlan?.observations || null,
+        }
+      },
+    };
   } catch (error) {
-    console.error('Error al obtener los alimentos por tipo de sangre:', error);
-    throw new Error('No se pudieron cargar los alimentos.');
+    console.error('Error al obtener los datos de nutrición:', error);
+    return { success: false, error: 'No se pudieron cargar los datos de la guía.' };
   }
 }
 
-
-// --- ACCIÓN EXISTENTE (SIN CAMBIOS) ---
-export async function createOrUpdateNutritionGuide(
+/**
+ * Crea o actualiza el plan de nutrición completo de un paciente de forma transaccional.
+ * Esto garantiza que todas las operaciones (actualizar paciente, borrar plan antiguo, crear nuevo plan)
+ * se completen con éxito o ninguna lo haga, evitando datos inconsistentes.
+ */
+export async function saveFullNutritionPlan(
   patientId: string,
   data: {
-    plan: {
-      breakfast: { foodIds: string[] };
-      lunch: { foodIds: string[] };
-      snack: { foodIds: string[] };
-      dinner: { foodIds: string[] };
-    },
+    selectedDiets: DietType[];
+    mealPlan: Record<MealType, string[]>;
     observations: string;
   }
 ) {
   try {
-    const { plan, observations } = data;
+    const { selectedDiets, mealPlan, observations } = data;
 
-    // Buscar una guía existente para el paciente
-    let guide = await prisma.nutritionGuide.findUnique({
-      where: { patientId },
-      include: { foodPlan: { include: { meals: true } } },
-    });
+    const allFoodItemIds = Object.values(mealPlan).flat().filter(id => !id.startsWith('custom_'));
 
-    if (guide && guide.foodPlan) {
-      // --- ACTUALIZAR GUÍA EXISTENTE ---
-      const foodPlanId = guide.foodPlan.id;
+    await prisma.$transaction([
+      // 1. Actualizar los tipos de dieta seleccionados directamente en el perfil del paciente.
+      prisma.patient.update({
+        where: { id: patientId },
+        data: { selectedDiets },
+      }),
+      
+      // 2. Borrar cualquier plan de alimentación anterior para este paciente.
+      prisma.foodPlan.deleteMany({
+        where: { patientId }
+      }),
 
-      // 1. Eliminar los items de comida antiguos para evitar duplicados
-      await prisma.mealItem.deleteMany({
-        where: {
-          mealId: {
-            in: guide.foodPlan.meals.map((m) => m.id),
-          },
-        },
-      });
-
-      // 2. Actualizar las comidas con los nuevos alimentos
-      const mealTypes = ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER'];
-      for (const mealType of mealTypes) {
-        const mealData = plan[mealType.toLowerCase() as keyof typeof plan];
-        if (mealData) {
-          await prisma.meal.update({
-            where: {
-              foodPlanId_type: {
-                foodPlanId,
-                type: mealType as any,
-              },
-            },
-            data: {
-              items: {
-                create: mealData.foodIds.map((foodId) => ({
-                  foodId,
-                })),
-              },
-            },
-          });
-        }
-      }
-      // 3. Actualizar las observaciones
-      await prisma.nutritionGuide.update({
-        where: { id: guide.id },
-        data: { observations },
-      });
-
-    } else {
-      // --- CREAR NUEVA GUÍA ---
-      await prisma.nutritionGuide.create({
+      // 3. Crear el nuevo plan de alimentación con sus relaciones a los alimentos seleccionados.
+      prisma.foodPlan.create({
         data: {
           patientId,
           observations,
-          foodPlan: {
-            create: {
-              patientId,
-              meals: {
-                create: [
-                  {
-                    type: 'BREAKFAST',
-                    items: {
-                      create: plan.breakfast.foodIds.map((foodId) => ({ foodId })),
-                    },
-                  },
-                  {
-                    type: 'LUNCH',
-                    items: {
-                      create: plan.lunch.foodIds.map((foodId) => ({ foodId })),
-                    },
-                  },
-                  {
-                    type: 'SNACK',
-                    items: {
-                      create: plan.snack.foodIds.map((foodId) => ({ foodId })),
-                    },
-                  },
-                  {
-                    type: 'DINNER',
-                    items: {
-                      create: plan.dinner.foodIds.map((foodId) => ({ foodId })),
-                    },
-                  },
-                ],
-              },
-            },
+          items: {
+            connect: allFoodItemIds.map(id => ({ id })),
           },
         },
-      });
-    }
+      }),
+    ]);
 
     revalidatePath(`/historias/${patientId}`);
-    return { success: true, message: 'Guía nutricional guardada con éxito.' };
+    return { success: true, message: 'Plan de bienestar guardado con éxito.' };
   } catch (error) {
-    console.error('Error al guardar la guía nutricional:', error);
-    return { success: false, message: 'Ocurrió un error al guardar la guía.' };
+    console.error('Error al guardar el plan de bienestar:', error);
+    return { success: false, error: 'Ocurrió un error al guardar el plan.' };
   }
 }

@@ -1,304 +1,220 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
-import { Food, MealType, NutritionGuide } from '@prisma/client';
-import { getFoodsByBloodType, GroupedFoods, createOrUpdateNutritionGuide } from '@/lib/actions/nutrition.actions';
-import { Patient } from '@/types';
+import React, { useState, useTransition } from 'react';
+import { PatientWithDetails } from '@/types';
+import { DietType, Food, MealType } from '@prisma/client';
+import { FullNutritionData, saveFullNutritionPlan } from '@/lib/actions/nutrition.actions';
 import { toast } from 'sonner';
+import NutritionPlanPreview from './NutritionPlanPreview';
+import { FaUtensils, FaExclamationTriangle, FaLightbulb, FaPlus, FaSave, FaEye } from 'react-icons/fa';
 
-// --- SUBCOMPONENTES PARA UNA MEJOR ESTRUCTURA ---
-
-// Props para el selector de comidas
-interface MealSelectorProps {
-  selectedMeal: MealType;
-  setSelectedMeal: (meal: MealType) => void;
-}
-
-// Componente para los botones de selección de comida (Desayuno, Almuerzo, etc.)
-const MealSelector: React.FC<MealSelectorProps> = ({ selectedMeal, setSelectedMeal }) => {
-  const meals: MealType[] = ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER'];
-  const mealTranslations: Record<MealType, string> = {
-    BREAKFAST: 'Desayuno',
-    LUNCH: 'Almuerzo',
-    SNACK: 'Merienda',
-    DINNER: 'Cena',
-  };
-
+// --- Sub-componente para el selector de tipo de alimentación ---
+const DietSelector = ({ selected, onChange }: { selected: DietType[], onChange: (diet: DietType) => void }) => {
+  const allDiets: { id: DietType, label: string }[] = [
+    { id: 'NINO', label: 'Niño' }, { id: 'METABOLICA', label: 'Metabólica' },
+    { id: 'ANTIDIABETICA', label: 'Antidiabética' }, { id: 'CITOSTATICA', label: 'Citostática' },
+    { id: 'RENAL', label: 'Renal' },
+  ];
   return (
-    <div className="flex flex-wrap gap-2 mb-4">
-      {meals.map((meal) => (
-        <button
-          key={meal}
-          onClick={() => setSelectedMeal(meal)}
-          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-            selectedMeal === meal
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          {mealTranslations[meal]}
-        </button>
+    <div className="flex flex-wrap gap-x-6 gap-y-2">
+      {allDiets.map(diet => (
+        <label key={diet.id} className="flex items-center space-x-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-primary">
+          <input
+            type="checkbox"
+            checked={selected.includes(diet.id)}
+            onChange={() => onChange(diet.id)}
+            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <span>{diet.label}</span>
+        </label>
       ))}
     </div>
   );
 };
 
-// Props para el visualizador de alimentos
-interface FoodDisplayProps {
-  foods: GroupedFoods;
-  onFoodSelect: (food: Food) => void;
-  selectedFoodIds: Set<string>;
-}
-
-// Componente para mostrar las listas de alimentos por categoría y beneficio
-const FoodDisplay: React.FC<FoodDisplayProps> = ({ foods, onFoodSelect, selectedFoodIds }) => {
-  const [activeCategory, setActiveCategory] = useState(Object.keys(foods)[0] || '');
-
-  const benefitColors = {
-    BENEFICIAL: 'border-green-500 bg-green-50',
-    NEUTRAL: 'border-yellow-500 bg-yellow-50',
-    AVOID: 'border-red-500 bg-red-50 text-gray-500',
-  };
-
-  const categoryTranslations: Record<string, string> = {
-    PROTEINS: 'Proteínas',
-    DAIRY_EGGS: 'Lácteos y Huevos',
-    OILS_FATS: 'Aceites y Grasas',
-    NUTS_SEEDS: 'Nueces y Semillas',
-    LEGUMES: 'Legumbres',
-    GRAINS: 'Cereales',
-    VEGETABLES: 'Vegetales',
-    FRUITS: 'Frutas',
-    JUICES: 'Jugos',
-    SPICES: 'Especias',
-    TEAS: 'Tés',
-  };
-
-  return (
-    <div className="border rounded-lg p-4">
-      <div className="flex flex-wrap gap-2 border-b mb-4 pb-2">
-        {Object.keys(foods).map((category) => (
-          <button
-            key={category}
-            onClick={() => setActiveCategory(category)}
-            className={`px-3 py-1 text-sm rounded-full ${
-              activeCategory === category ? 'bg-gray-800 text-white' : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            {categoryTranslations[category] || category}
-          </button>
-        ))}
-      </div>
-
-      {activeCategory && foods[activeCategory] && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Columna Beneficiosos */}
-          <div className={`p-2 rounded-lg border-2 ${benefitColors.BENEFICIAL}`}>
-            <h3 className="font-bold text-green-700 mb-2 text-center">Beneficiosos</h3>
-            <div className="flex flex-wrap gap-2">
-              {foods[activeCategory].BENEFICIAL.map((food) => (
-                <button key={food.id} onClick={() => onFoodSelect(food)} className={`px-2 py-1 text-xs rounded-md transition-all ${selectedFoodIds.has(food.id) ? 'bg-green-600 text-white scale-105' : 'bg-white hover:bg-green-100 border'}`}>
-                  {food.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Columna Neutros */}
-          <div className={`p-2 rounded-lg border-2 ${benefitColors.NEUTRAL}`}>
-            <h3 className="font-bold text-yellow-700 mb-2 text-center">Neutros</h3>
-             <div className="flex flex-wrap gap-2">
-              {foods[activeCategory].NEUTRAL.map((food) => (
-                <button key={food.id} onClick={() => onFoodSelect(food)} className={`px-2 py-1 text-xs rounded-md transition-all ${selectedFoodIds.has(food.id) ? 'bg-yellow-600 text-white scale-105' : 'bg-white hover:bg-yellow-100 border'}`}>
-                  {food.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Columna A Evitar */}
-          <div className={`p-2 rounded-lg border-2 ${benefitColors.AVOID}`}>
-            <h3 className="font-bold text-red-700 mb-2 text-center">A Evitar</h3>
-             <div className="flex flex-wrap gap-2">
-              {foods[activeCategory].AVOID.map((food) => (
-                <div key={food.id} className="px-2 py-1 text-xs rounded-md bg-gray-200 cursor-not-allowed">
-                  {food.name}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// --- COMPONENTE PRINCIPAL ---
-
+// --- Componente Principal ---
 interface NutrigenomicGuideProps {
-  patient: Patient;
-  guide: NutritionGuide | null;
+  patient: PatientWithDetails;
+  initialData: FullNutritionData;
 }
 
-export default function NutrigenomicGuide({ patient, guide }: NutrigenomicGuideProps) {
+export default function NutrigenomicGuide({ patient, initialData }: NutrigenomicGuideProps) {
+  const [activeTab, setActiveTab] = useState<'plan' | 'guide' | 'keys'>('plan');
   const [isPending, startTransition] = useTransition();
-  const [foods, setFoods] = useState<GroupedFoods>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedMeal, setSelectedMeal] = useState<MealType>('BREAKFAST');
-  
-  // Estado para almacenar los alimentos seleccionados para cada comida
-  const [mealPlan, setMealPlan] = useState<Record<MealType, Food[]>>({
-    BREAKFAST: [],
-    LUNCH: [],
-    SNACK: [],
-    DINNER: [],
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Estados del formulario, inicializados con los datos del servidor
+  const [selectedDiets, setSelectedDiets] = useState<DietType[]>(initialData.patientData.selectedDiets);
+  const [mealPlan, setMealPlan] = useState<Record<MealType, string[]>>(initialData.patientData.existingPlan || {
+    DESAYUNO: [], ALMUERZO: [], CENA: [], MERIENDAS_POSTRES: []
   });
+  const [observations, setObservations] = useState(initialData.patientData.observations || '');
+  const [customItems, setCustomItems] = useState<Record<MealType, string>>({
+    DESAYUNO: '', ALMUERZO: '', CENA: '', MERIENDAS_POSTRES: ''
+  });
+
+  const handleDietChange = (diet: DietType) => {
+    setSelectedDiets(prev =>
+      prev.includes(diet) ? prev.filter(d => d !== diet) : [...prev, diet]
+    );
+  };
   
-  const [observations, setObservations] = useState('');
-
-  // Efecto para cargar los alimentos según el tipo de sangre al montar el componente
-  useEffect(() => {
-    const fetchFoods = async () => {
-      if (!patient.bloodType) {
-        toast.warning('El paciente no tiene un tipo de sangre asignado.');
-        setIsLoading(false);
-        return;
-      }
-      try {
-        setIsLoading(true);
-        const groupedFoods = await getFoodsByBloodType(patient.id);
-        setFoods(groupedFoods);
-      } catch (error) {
-        toast.error('Error al cargar la lista de alimentos.');
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchFoods();
-  }, [patient.id, patient.bloodType]);
-
-  // Efecto para inicializar el plan de comidas si ya existe una guía
-  useEffect(() => {
-    if (guide?.foodPlan?.meals) {
-      const initialPlan: Record<MealType, Food[]> = { BREAKFAST: [], LUNCH: [], SNACK: [], DINNER: [] };
-      guide.foodPlan.meals.forEach(meal => {
-        if (meal.items) {
-          initialPlan[meal.type] = meal.items.map(item => item.food);
-        }
-      });
-      setMealPlan(initialPlan);
-      setObservations(guide.observations || '');
-    }
-  }, [guide]);
-
-
-  // Maneja la selección/deselección de un alimento para la comida activa
-  const handleFoodSelect = (food: Food) => {
-    setMealPlan(prevPlan => {
-      const currentMealFoods = prevPlan[selectedMeal];
-      const isSelected = currentMealFoods.some(f => f.id === food.id);
-      
-      const newMealFoods = isSelected
-        ? currentMealFoods.filter(f => f.id !== food.id) // Deseleccionar
-        : [...currentMealFoods, food]; // Seleccionar
-        
-      return { ...prevPlan, [selectedMeal]: newMealFoods };
-    });
+  const handleAddItem = (mealType: MealType) => {
+    const itemName = customItems[mealType].trim();
+    if (!itemName) return;
+    
+    // NOTA: Esta es una adición temporal solo en la UI.
+    // La lógica de negocio real requeriría guardar este nuevo `FoodItem` en la base de datos
+    // a través de otra server action si se desea que sea reutilizable.
+    const tempId = `custom_${itemName.replace(/\s+/g, '_')}_${Date.now()}`;
+    initialData.foodTemplate[mealType].push({ id: tempId, name: itemName, mealType, bloodTypeGroup: 'ALL', isDefault: false, createdAt: new Date() });
+    
+    setMealPlan(prev => ({...prev, [mealType]: [...(prev[mealType] || []), tempId]}));
+    setCustomItems(prev => ({...prev, [mealType]: ''}));
   };
 
-  // Maneja el guardado del formulario
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     startTransition(async () => {
-      const planData = {
-        breakfast: { foodIds: mealPlan.BREAKFAST.map(f => f.id) },
-        lunch: { foodIds: mealPlan.LUNCH.map(f => f.id) },
-        snack: { foodIds: mealPlan.SNACK.map(f => f.id) },
-        dinner: { foodIds: mealPlan.DINNER.map(f => f.id) },
-      };
-
-      const result = await createOrUpdateNutritionGuide(patient.id, {
-        plan: planData,
-        observations,
-      });
-
+      const result = await saveFullNutritionPlan(patient.id, { selectedDiets, mealPlan, observations });
       if (result.success) {
         toast.success(result.message);
       } else {
-        toast.error(result.message);
+        toast.error(result.error);
       }
     });
   };
-  
-  const selectedFoodIdsForCurrentMeal = new Set(mealPlan[selectedMeal].map(f => f.id));
+
   const mealTranslations: Record<MealType, string> = {
-    BREAKFAST: 'Desayuno', LUNCH: 'Almuerzo', SNACK: 'Merienda', DINNER: 'Cena',
+    DESAYUNO: 'Desayuno',
+    ALMUERZO: 'Almuerzo',
+    CENA: 'Cena',
+    MERIENDAS_POSTRES: 'Meriendas y Postres'
   };
 
-  if (isLoading) {
-    return <div className="text-center p-8">Cargando guía de alimentos...</div>;
-  }
-
-  if (!patient.bloodType) {
-    return <div className="text-center p-8 bg-yellow-100 border border-yellow-300 rounded-md">Por favor, asigne un tipo de sangre al paciente para ver las recomendaciones.</div>;
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-4 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold text-gray-800">Guía Nutrigenómica - Tipo de Sangre: {patient.bloodType}</h2>
-      
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Seleccione una comida para añadir alimentos:</h3>
-        <MealSelector selectedMeal={selectedMeal} setSelectedMeal={setSelectedMeal} />
-      </div>
-
-      <FoodDisplay foods={foods} onFoodSelect={handleFoodSelect} selectedFoodIds={selectedFoodIdsForCurrentMeal} />
-
-      {/* Vista previa del plan de comidas */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-bold text-gray-800 border-b pb-2">Plan de Comidas Sugerido</h3>
-        {Object.entries(mealPlan).map(([mealType, foods]) => (
-          <div key={mealType}>
-            <h4 className="font-semibold text-blue-700">{mealTranslations[mealType as MealType]}</h4>
-            <div className="flex flex-wrap gap-2 mt-2 p-2 bg-gray-50 rounded-md min-h-[40px]">
-              {foods.length > 0 ? (
-                foods.map(food => (
-                  <span key={food.id} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                    {food.name}
-                  </span>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No hay alimentos seleccionados.</p>
-              )}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="card">
+        <h2 className="text-lg font-semibold mb-4 text-gray-800">Perfil del Paciente</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="label">Grupo Sanguíneo</label>
+            <input type="text" readOnly value={`Compatible con Grupo ${initialData.patientData.bloodTypeGroup.replace('_', ' y ')}`} className="input bg-gray-100 cursor-not-allowed"/>
+          </div>
+          <div>
+            <label className="label">Tipo de Alimentación Aplicada</label>
+            <div className="p-2 border rounded-md bg-gray-50">
+              <DietSelector selected={selectedDiets} onChange={handleDietChange} />
             </div>
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* Campo de observaciones */}
-      <div>
-        <label htmlFor="observations" className="block text-lg font-semibold text-gray-700 mb-2">
-          Observaciones
-        </label>
-        <textarea
-          id="observations"
-          value={observations}
-          onChange={(e) => setObservations(e.target.value)}
-          rows={4}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-          placeholder="Añadir observaciones o indicaciones adicionales..."
-        />
+      <div className="border-b border-gray-200">
+          <nav className="flex space-x-2 overflow-x-auto custom-scrollbar-tabs pb-2">
+            <button type="button" onClick={() => setActiveTab('plan')} className={`tab-button ${activeTab === 'plan' ? 'active' : ''}`}>Plan Alimentario</button>
+            <button type="button" onClick={() => setActiveTab('guide')} className={`tab-button ${activeTab === 'guide' ? 'active' : ''}`}>Guía General</button>
+            <button type="button" onClick={() => setActiveTab('keys')} className={`tab-button ${activeTab === 'keys' ? 'active' : ''}`}>Claves de Bienestar</button>
+          </nav>
       </div>
 
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="px-6 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 disabled:bg-gray-400 transition-colors"
-        >
-          {isPending ? 'Guardando...' : 'Guardar Guía'}
+      {activeTab === 'plan' && (
+        <div className="space-y-4 animate-fadeIn">
+          {Object.entries(mealTranslations).map(([mealType, mealLabel]) => (
+            <div key={mealType} className="card">
+              <h3 className="text-lg font-bold text-primary mb-3 flex items-center gap-2"><FaUtensils /> {mealLabel}</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-2">
+                {initialData.foodTemplate[mealType as MealType]?.map(item => (
+                  <label key={item.id} className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={mealPlan[mealType as MealType]?.includes(item.id)}
+                      onChange={(e) => {
+                        const currentItems = mealPlan[mealType as MealType] || [];
+                        const newItems = e.target.checked ? [...currentItems, item.id] : currentItems.filter(id => id !== item.id);
+                        setMealPlan(prev => ({ ...prev, [mealType as MealType]: newItems }));
+                      }}
+                    />
+                    <span className="text-sm text-gray-700">{item.name}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-200 flex items-center gap-2">
+                  <input type="text" placeholder={`Añadir otro alimento a ${mealLabel}...`} className="input flex-grow text-sm" value={customItems[mealType as MealType]} onChange={e => setCustomItems(prev => ({...prev, [mealType as MealType]: e.target.value}))} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddItem(mealType as MealType))} />
+                  <button type="button" onClick={() => handleAddItem(mealType as MealType)} className="btn-primary py-2 px-3 text-sm flex items-center gap-2"><FaPlus /> Añadir</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {activeTab === 'guide' && (
+        <div className="card animate-fadeIn grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
+                <h3 className="font-semibold text-red-600 flex items-center gap-2 mb-3"><FaExclamationTriangle /> Alimentos a Evitar</h3>
+                <ul className="space-y-2 pl-5 list-disc text-slate-700 text-sm">
+                    {initialData.generalGuide.AVOID.map((item) => <li key={item.id}>{item.text}</li>)}
+                </ul>
+            </div>
+            <div>
+                <h3 className="font-semibold text-green-600 flex items-center gap-2 mb-3"><FaLightbulb /> Sustitutos Recomendados</h3>
+                <ul className="space-y-2 pl-5 list-disc text-slate-700 text-sm">
+                    {initialData.generalGuide.SUBSTITUTE.map((item) => <li key={item.id}>{item.text}</li>)}
+                </ul>
+            </div>
+        </div>
+      )}
+
+      {activeTab === 'keys' && (
+         <div className="card animate-fadeIn space-y-5">
+            {initialData.wellnessKeys.map((key) => (
+                <div key={key.id} className="pl-4 border-l-4 border-primary/70">
+                    <p className="font-semibold text-slate-800">{key.title}</p>
+                    <p className="text-slate-600 text-sm">{key.description}</p>
+                </div>
+            ))}
+        </div>
+      )}
+
+      <div className="card">
+        <label className="label">Observaciones Adicionales</label>
+        <textarea value={observations} onChange={(e) => setObservations(e.target.value)} rows={4} className="input" placeholder="Escriba aquí notas, recetas o indicaciones personalizadas para el paciente..." />
+      </div>
+
+      <div className="flex justify-end items-center gap-4 pt-4 border-t">
+        <button type="button" onClick={() => setIsPreviewOpen(true)} className="btn-secondary flex items-center gap-2">
+            <FaEye /> Vista Previa
+        </button>
+        <button type="submit" disabled={isPending} className="btn-primary flex items-center gap-2">
+          <FaSave />
+          {isPending ? 'Guardando...' : 'Guardar Plan de Bienestar'}
         </button>
       </div>
+      
+      {isPreviewOpen && (
+        <NutritionPlanPreview
+          patient={patient}
+          planData={{
+            bloodType: initialData.patientData.bloodTypeGroup,
+            selectedDiets: selectedDiets,
+            foodPlan: {
+                DESAYUNO: initialData.foodTemplate.DESAYUNO.filter(f => mealPlan.DESAYUNO.includes(f.id)),
+                ALMUERZO: initialData.foodTemplate.ALMUERZO.filter(f => mealPlan.ALMUERZO.includes(f.id)),
+                CENA: initialData.foodTemplate.CENA.filter(f => mealPlan.CENA.includes(f.id)),
+                MERIENDAS_POSTRES: initialData.foodTemplate.MERIENDAS_POSTRES.filter(f => mealPlan.MERIENDAS_POSTRES.includes(f.id)),
+            },
+            generalGuide: initialData.generalGuide,
+            wellnessKeys: initialData.wellnessKeys
+          }}
+          onClose={() => setIsPreviewOpen(false)}
+        />
+      )}
+
+      <style jsx>{`
+        .tab-button { @apply flex-shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-primary hover:border-primary/50; }
+        .tab-button.active { @apply text-primary border-primary; }
+      `}</style>
     </form>
-    
   );
 }
