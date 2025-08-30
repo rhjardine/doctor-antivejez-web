@@ -29,13 +29,11 @@ import GeneticTestView from '@/components/genetics/GeneticTestView';
 import OrthomolecularTestView from '@/components/orthomolecular/OrthomolecularTestView';
 import NutrigenomicGuide from '@/components/nutrition/NutrigenomicGuide';
 import { telotestReportData } from '@/lib/mock-data';
-import type { PatientWithDetails, TabId } from '@/types';
+import type { PatientWithDetails } from '@/types';
 
-// ===== ANÁLISIS Y CORRECCIÓN: Se importan los tipos y la acción necesarios =====
-import { getFullNutritionDataForPatient } from '@/lib/actions/nutrition.actions';
-import { FullNutritionData } from '@/types/nutrition';
-
-
+// Se elimina la declaración 'type Patient = PatientWithDetails;' para evitar confusión
+// y se usa 'PatientWithDetails' directamente.
+type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
 type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'orthomolecular' | 'biofisica_history' | 'bioquimica_history' | 'genetica';
 
 export default function PatientDetailPage() {
@@ -50,19 +48,13 @@ export default function PatientDetailPage() {
   const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
   const [isEditing, setIsEditing] = useState(false);
 
-  // ===== ANÁLISIS Y CORRECCIÓN: Se añade un estado para los datos de nutrición =====
-  // Este estado solo se cargará cuando el usuario navegue a la pestaña correspondiente,
-  // manteniendo la carga inicial de la página ligera y rápida.
-  const [nutritionData, setNutritionData] = useState<FullNutritionData | null>(null);
-  const [isLoadingNutrition, setIsLoadingNutrition] = useState(false);
-
-
   const refreshPatientData = useCallback(async () => {
     if (!patientId) return;
     try {
       const result = await getPatientDetails(patientId);
       if (result.success && result.patient) {
-        setPatient(result.patient as Patient);
+        // ===== SOLUCIÓN 1: Usar el tipo correcto 'PatientWithDetails' =====
+        setPatient(result.patient as PatientWithDetails);
       } else {
         toast.error('No se pudo refrescar la información del paciente.');
       }
@@ -77,7 +69,8 @@ export default function PatientDetailPage() {
     try {
       const result = await getPatientDetails(patientId);
       if (result.success && result.patient) {
-        setPatient(result.patient as Patient);
+        // ===== SOLUCIÓN 2: Usar el tipo correcto 'PatientWithDetails' =====
+        setPatient(result.patient as PatientWithDetails);
       } else {
         toast.error('Paciente no encontrado');
         router.push('/historias');
@@ -93,13 +86,7 @@ export default function PatientDetailPage() {
     const tab = searchParams.get('tab');
     const view = searchParams.get('view');
     if (tab) {
-      const newTabId = tab as TabId;
-      setActiveTab(newTabId);
-      // ===== ANÁLISIS Y CORRECCIÓN: Carga diferida de datos de nutrición =====
-      // Si el enlace profundo lleva directamente a la pestaña de alimentación, se cargan sus datos.
-      if (newTabId === 'alimentacion' && !nutritionData) {
-        handleTabClick(newTabId, true); // Llama a la función que ahora carga los datos
-      }
+      setActiveTab(tab as TabId);
     }
     if (tab === 'biofisica' && view === 'history') {
       setActiveTestView('biofisica_history');
@@ -116,8 +103,15 @@ export default function PatientDetailPage() {
     setIsEditing(false);
     refreshPatientData();
   };
-  
-  // Se preserva la estructura original del componente y sus funciones.
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-96"><div className="loader"></div></div>;
+  }
+
+  if (!patient) {
+    return <div className="text-center py-12"><p className="text-gray-500">Paciente no encontrado. Redirigiendo...</p></div>;
+  }
+
   const tabs = [
     { id: 'resumen', label: 'Resumen Clínico', icon: FaFileMedicalAlt },
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
@@ -128,33 +122,18 @@ export default function PatientDetailPage() {
     { id: 'seguimiento', label: 'Seguimiento', icon: FaChartLine },
   ];
 
-  // ===== ANÁLISIS Y CORRECCIÓN: Función de cambio de pestaña modificada =====
-  // Ahora esta función se encarga de cargar los datos de nutrición de forma asíncrona
-  // solo cuando es estrictamente necesario, mejorando el rendimiento.
-  const handleTabClick = async (tabId: TabId, forceLoad = false) => {
+  const handleTabClick = (tabId: TabId) => {
     setActiveTab(tabId);
     setActiveTestView('main');
     router.push(`/historias/${patientId}?tab=${tabId}`, { scroll: false });
-    
-    if (tabId === 'alimentacion' && (!nutritionData || forceLoad)) {
-      setIsLoadingNutrition(true);
-      const result = await getFullNutritionDataForPatient(patientId);
-      if (result.success && result.data) {
-        setNutritionData(result.data);
-      } else {
-        toast.error(result.error || 'No se pudo cargar la guía de nutrición.');
-      }
-      setIsLoadingNutrition(false);
-    }
   }
-  
+
   const renderBiofisicaContent = () => {
-    // Se mantiene intacta toda esta lógica de renderizado.
     switch (activeTestView) {
       case 'main':
         return (
           <EdadBiologicaMain 
-            patient={patient!} 
+            patient={patient} 
             onTestClick={() => setActiveTestView('biofisica')} 
             onBiochemistryTestClick={() => setActiveTestView('bioquimica')}
             onOrthomolecularTestClick={() => setActiveTestView('orthomolecular')}
@@ -164,107 +143,142 @@ export default function PatientDetailPage() {
           />
         );
       case 'biofisica':
-        return <EdadBiofisicaTestView patient={patient!} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
+        return <EdadBiofisicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'bioquimica':
-        return <EdadBioquimicaTestView patient={patient!} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
+        return <EdadBioquimicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'orthomolecular':
-        return <OrthomolecularTestView patient={patient!} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
+        return <OrthomolecularTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'biofisica_history':
-        return <BiophysicsHistoryView patient={patient!} onBack={() => setActiveTestView('main')} onHistoryChange={refreshPatientData} />;
+        return <BiophysicsHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={refreshPatientData} />;
       case 'bioquimica_history':
-        return <BiochemistryHistoryView patient={patient!} onBack={() => setActiveTestView('main')} onHistoryChange={refreshPatientData} />;
+        return <BiochemistryHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={refreshPatientData} />;
       case 'genetica':
         return <GeneticTestView report={telotestReportData} onBack={() => setActiveTestView('main')} />;
       default:
         return null;
     }
   }
-  
-  // Se mantiene intacto el renderizado principal del componente.
-  if (loading) {
-    return <div className="flex items-center justify-center h-96"><div className="loader"></div></div>;
-  }
-
-  if (!patient) {
-    return <div className="text-center py-12"><p className="text-gray-500">Paciente no encontrado. Redirigiendo...</p></div>;
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
-        {/* Header del Paciente (sin cambios) */}
-        <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
-            <div className="flex items-center space-x-6">
-            <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-3xl font-bold text-primary">{patient.firstName[0]}{patient.lastName[0]}</span>
+      {/* Header del Paciente */}
+      <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
+        <div className="flex items-center space-x-6">
+          <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-3xl font-bold text-primary">{patient.firstName[0]}{patient.lastName[0]}</span>
+          </div>
+          <div className="flex-1">
+            <div className="flex justify-between items-start mb-3">
+              <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
+              <button onClick={() => router.push('/historias')} className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm">
+                <FaArrowLeft />
+                <span>Volver a Pacientes</span>
+              </button>
             </div>
-            <div className="flex-1">
-                <div className="flex justify-between items-start mb-3">
-                <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
-                <button onClick={() => router.push('/historias')} className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm">
-                    <FaArrowLeft />
-                    <span>Volver a Pacientes</span>
-                </button>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div><p className="text-sm text-gray-500">ID</p><p className="font-medium">{patient.identification}</p></div>
-                <div><p className="text-sm text-gray-500">Edad</p><p className="font-medium">{patient.chronologicalAge} años</p></div>
-                <div><p className="text-sm text-gray-500">Género</p><p className="font-medium">{patient.gender.replace(/_/g, ' ')}</p></div>
-                <div><p className="text-sm text-gray-500">ID Único</p><p className="font-medium text-xs break-all">{patient.id}</p></div>
-                </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div><p className="text-sm text-gray-500">ID</p><p className="font-medium">{patient.identification}</p></div>
+              <div><p className="text-sm text-gray-500">Edad</p><p className="font-medium">{patient.chronologicalAge} años</p></div>
+              <div><p className="text-sm text-gray-500">Género</p><p className="font-medium">{patient.gender.replace(/_/g, ' ')}</p></div>
+              <div><p className="text-sm text-gray-500">ID Único</p><p className="font-medium text-xs break-all">{patient.id}</p></div>
             </div>
-            </div>
+          </div>
         </div>
+      </div>
 
-        {/* Navegación de Pestañas (sin cambios) */}
-        <div className="border-b border-gray-200">
-            <div className="overflow-x-auto pb-2 custom-scrollbar-tabs">
-            <nav className="flex space-x-2">
-                {tabs.map((tab) => (
-                <button
-                    key={tab.id}
-                    onClick={() => handleTabClick(tab.id as TabId)}
-                    className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
-                    activeTab === tab.id
-                        ? 'bg-white text-primary shadow-md'
-                        : 'bg-primary text-white hover:bg-primary-dark shadow-sm'
-                    }`}
+      {/* Navegación de Pestañas */}
+      <div className="border-b border-gray-200">
+        <div className="overflow-x-auto pb-2 custom-scrollbar-tabs">
+          <nav className="flex space-x-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabClick(tab.id as TabId)}
+                className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
+                  activeTab === tab.id
+                    ? 'bg-white text-primary shadow-md'
+                    : 'bg-primary text-white hover:bg-primary-dark shadow-sm'
+                }`}
+              >
+                <tab.icon className="text-base" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Contenido de las Pestañas */}
+      <div className="min-h-[400px] mt-6">
+        {activeTab === 'resumen' && (
+            <ClinicalSummary 
+                patient={patient} 
+                onNavigateToTab={handleTabClick}
+                onReloadPatient={refreshPatientData}
+            />
+        )}
+        
+        {activeTab === 'historia' && (
+          isEditing ? (
+            <PatientEditForm 
+              patient={patient} 
+              onUpdate={handleUpdateSuccess} 
+              onCancel={() => setIsEditing(false)} 
+            />
+          ) : (
+            <div className="card">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Detalles de la Historia Médica</h2>
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="btn-secondary flex items-center space-x-2"
                 >
-                    <tab.icon className="text-base" />
-                    <span>{tab.label}</span>
+                  <FaEdit />
+                  <span>Editar Historia</span>
                 </button>
-                ))}
-            </nav>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div>
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Personal</h3>
+                  <dl className="space-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Identificación</dt><dd className="font-medium text-gray-700">{patient.identification}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Nacionalidad</dt><dd className="font-medium text-gray-700">{patient.nationality}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Lugar de Nacimiento</dt><dd className="font-medium text-gray-700">{patient.birthPlace}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Estado Civil</dt><dd className="font-medium text-gray-700">{patient.maritalStatus}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Profesión</dt><dd className="font-medium text-gray-700">{patient.profession}</dd></div>
+                  </dl>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información de Contacto</h3>
+                  <dl className="space-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Teléfono</dt><dd className="font-medium text-gray-700">{patient.phone}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Email</dt><dd className="font-medium text-gray-700">{patient.email}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Dirección</dt><dd className="font-medium text-gray-700 text-right">{patient.address}, {patient.city}, {patient.state}, {patient.country}</dd></div>
+                  </dl>
+                </div>
+                <div className="md:col-span-2 pt-4">
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Médica</h3>
+                  <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Grupo Sanguíneo</dt><dd className="font-medium text-gray-700">{patient.bloodType}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Edad Cronológica</dt><dd className="font-medium text-gray-700">{patient.chronologicalAge} años</dd></div>
+                  </dl>
+                  {patient.observations && (<div className="mt-4"><dt className="text-sm text-gray-500 mb-1">Observaciones</dt><dd className="text-gray-700 bg-gray-50 p-3 rounded-md border">{patient.observations}</dd></div>)}
+                </div>
+              </div>
             </div>
-        </div>
+          )
+        )}
+        
+        {activeTab === 'biofisica' && renderBiofisicaContent()}
 
-        {/* Contenido de las Pestañas (con la modificación para 'alimentacion') */}
-        <div className="min-h-[400px] mt-6">
-            {activeTab === 'resumen' && (
-                <ClinicalSummary 
-                    patient={patient} 
-                    onNavigateToTab={handleTabClick}
-                    onReloadPatient={refreshPatientData}
-                />
-            )}
-            
-            {activeTab === 'historia' && ( isEditing ? ( <PatientEditForm patient={patient} onUpdate={handleUpdateSuccess} onCancel={() => setIsEditing(false)} /> ) : ( <div className="card">{/* ... (Contenido original de la vista de historia) */}</div> ) )}
-            
-            {activeTab === 'biofisica' && renderBiofisicaContent()}
+        {activeTab === 'guia' && (
+          <PatientGuide patient={patient} />
+        )}
 
-            {activeTab === 'guia' && ( <PatientGuide patient={patient} /> )}
-
-            {/* ===== ANÁLISIS Y CORRECCIÓN: Renderizado condicional del componente de nutrición ===== */}
-            {activeTab === 'alimentacion' && (
-                isLoadingNutrition ? <div className="flex justify-center items-center h-64"><div className="loader"></div><p className="ml-4">Cargando Guía Nutrigenómica...</p></div> :
-                (nutritionData ? 
-                    <NutrigenomicGuide patient={patient} initialData={nutritionData} /> : 
-                    <div className="card text-center">No se pudieron cargar los datos de nutrición. Intente de nuevo.</div>
-                )
-            )}
-            
-            {activeTab === 'omicas' && <div className="card text-center py-12">{/* ... */}</div>}
-            {activeTab === 'seguimiento' && <div className="card text-center py-12">{/* ... */}</div>}
-        </div>
+        {activeTab === 'alimentacion' && <NutrigenomicGuide patient={patient} />}
+        
+        {activeTab === 'omicas' && <div className="card text-center py-12"><FaDna className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3><p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p></div>}
+        {activeTab === 'seguimiento' && <div className="card text-center py-12"><FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Seguimiento</h3><p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p></div>}
+      </div>
     </div>
   );
 }
