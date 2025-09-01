@@ -13,7 +13,6 @@ import {
 import { FaPrint, FaTimes, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import Image from 'next/image';
 
-// ===== SOLUCIÓN: Se define la estructura de la prop 'planData' =====
 interface NutritionPlanPreviewProps {
   patient: PatientWithDetails;
   planData: {
@@ -28,7 +27,6 @@ interface NutritionPlanPreviewProps {
   };
   onClose: () => void;
 }
-// =================================================================
 
 const mealTitles: Record<MealType, string> = {
     DESAYUNO: 'Desayuno',
@@ -138,7 +136,8 @@ export default function NutritionPlanPreview({ patient, planData, onClose }: Nut
                     {planData.wellnessKeys.map((key) => (
                         <div key={key.id} className="pl-4 border-l-4 border-sky-500">
                             <p className="font-semibold text-slate-800">{key.title}</p>
-                            <p className="text-slate-600 text-sm">{key.description}</p>
+                            {/* ===== MODIFICACIÓN: Añadida clase para respetar saltos de línea ===== */}
+                            <p className="text-slate-600 text-sm whitespace-pre-wrap">{key.description}</p>
                         </div>
                     ))}
                 </div>
