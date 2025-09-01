@@ -1,92 +1,112 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { FoodPlanTemplate, MealType, GeneralGuideType, FullNutritionData, DietType } from '@/types/nutrition';
+import { GuideFormValues, GuideCategory, StandardGuideItem, RevitalizationGuideItem, MetabolicActivator, RemocionItem } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
 
 /**
- * Obtiene todos los datos necesarios para la plantilla de la guía de alimentación.
+ * Obtiene la estructura completa de la guía (categorías e ítems)
+ * desde la base de datos para construir el formulario dinámicamente.
  */
-export async function getFullNutritionData(): Promise<{ success: boolean; data?: FullNutritionData; error?: string }> {
+export async function getGuideTemplate() {
   try {
-    const [foodItems, generalGuideItems, wellnessKeys] = await Promise.all([
-      prisma.foodItem.findMany({ where: { isDefault: true }, orderBy: { name: 'asc' } }),
-      prisma.generalGuideItem.findMany({ where: { isDefault: true } }),
-      prisma.wellnessKey.findMany({ where: { isDefault: true }, orderBy: { id: 'asc' } }),
-    ]);
-
-    const foodTemplate = (Object.values(MealType) as MealType[]).reduce((acc, mealType) => {
-        acc[mealType] = foodItems.filter(item => item.mealType === mealType);
-        return acc;
-    }, {} as FoodPlanTemplate);
-
-    const generalGuide = {
-      AVOID: generalGuideItems.filter(item => item.type === GeneralGuideType.AVOID),
-      SUBSTITUTE: generalGuideItems.filter(item => item.type === GeneralGuideType.SUBSTITUTE),
-    };
-
-    return { 
-      success: true, 
-      data: { foodTemplate, generalGuide, wellnessKeys } 
-    };
+    const categories = await prisma.guideCategory.findMany({
+      include: {
+        items: {
+          where: { isDefault: true },
+          orderBy: { name: 'asc' },
+        },
+      },
+      orderBy: { order: 'asc' },
+    });
+    return { success: true, data: categories };
   } catch (error) {
-    console.error('Error fetching full nutrition data:', error);
-    return { success: false, error: 'No se pudo cargar la plantilla de alimentación.' };
+    console.error('Error fetching guide template:', error);
+    return { success: false, error: 'No se pudo cargar la plantilla de la guía.' };
   }
 }
 
 /**
- * Guarda el plan de alimentación completo de un paciente.
+ * Guarda la guía personalizada de un paciente en la base de datos.
  */
-export async function savePatientNutritionPlan(
-  patientId: string, 
-  foodData: FoodPlanTemplate,
-  selectedDiets: DietType[]
-) {
-    try {
-        const result = await prisma.$transaction(async (tx) => {
-            await tx.patient.update({
-                where: { id: patientId },
-                data: { selectedDiets: { set: selectedDiets } },
-            });
+export async function savePatientGuide(patientId: string, formData: GuideFormValues) {
+  try {
+    const { guideDate, selections, observaciones } = formData;
 
-            const allItemsInPlan = Object.values(foodData).flat();
-            
-            const itemsToCreate = allItemsInPlan
-                .filter(item => item.id.startsWith('temp_'))
-                .map(item => ({
-                    name: item.name,
-                    mealType: item.mealType,
-                    bloodTypeGroup: item.bloodTypeGroup,
-                    isDefault: false,
-                }));
+    // Iniciar una transacción para asegurar la consistencia de los datos
+    const newGuide = await prisma.$transaction(async (tx) => {
+      // 1. Crear la cabecera de la guía
+      const createdGuide = await tx.patientGuide.create({
+        data: {
+          patientId,
+          guideDate: new Date(guideDate),
+          // 'observaciones' se manejará en un campo separado si es necesario
+        },
+      });
 
-            if (itemsToCreate.length > 0) {
-                await tx.foodItem.createMany({ data: itemsToCreate });
-            }
-
-            const allCurrentDbItems = await tx.foodItem.findMany({ select: { id: true, name: true } });
-            const nameToIdMap = new Map(allCurrentDbItems.map(i => [i.name, i.id]));
-            const selectedItemIds = allItemsInPlan.map(item => nameToIdMap.get(item.name)).filter((id): id is string => !!id);
-
-            let foodPlan = await tx.foodPlan.findFirst({ where: { patientId } });
-            if (!foodPlan) {
-                foodPlan = await tx.foodPlan.create({ data: { patientId } });
-            }
-
-            const updatedPlan = await tx.foodPlan.update({
-                where: { id: foodPlan.id },
-                data: { items: { set: selectedItemIds.map(id => ({ id })) } },
-            });
-
-            return updatedPlan;
+      // 2. Preparar los datos de las selecciones para la inserción
+      const selectionData = Object.entries(selections)
+        .filter(([, details]) => details.selected)
+        .map(([guideItemId, details]) => {
+          // Asegurarse de que los valores numéricos sean números o null
+          const qty = details.qty ? String(details.qty) : null;
+          const complejoB_cc = 'complejoB_cc' in details ? String(details.complejoB_cc) : null;
+          const bioquel_cc = 'bioquel_cc' in details ? String(details.bioquel_cc) : null;
+          
+          return {
+            patientGuideId: createdGuide.id,
+            guideItemId,
+            qty,
+            freq: details.freq || null,
+            custom: details.custom || null,
+            complejoB_cc,
+            bioquel_cc,
+            frequency: 'frequency' in details ? details.frequency : null,
+          };
         });
-        
-        revalidatePath(`/historias/${patientId}`);
-        return { success: true, data: result };
 
-    } catch (error) {
-        console.error('Error saving patient nutrition plan:', error);
-        return { success: false, error: 'No se pudo guardar el plan de alimentación.' };
+      // 3. Insertar todas las selecciones
+      if (selectionData.length > 0) {
+        await tx.patientGuideSelection.createMany({
+          data: selectionData,
+        });
+      }
+
+      return createdGuide;
+    });
+
+    revalidatePath(`/historias/${patientId}`);
+    return { success: true, message: 'Guía guardada exitosamente.', data: newGuide };
+  } catch (error) {
+    console.error('Error saving patient guide:', error);
+    return { success: false, error: 'Ocurrió un error al guardar la guía.' };
+  }
+}
+
+// Función auxiliar para encontrar un ítem por ID en la estructura de datos anidada
+function findItemInGuide(guideData: GuideCategory[], itemId: string): { item: StandardGuideItem | RevitalizationGuideItem | RemocionItem | MetabolicActivatorItem | null, categoryName: string | null } {
+    let foundItem: StandardGuideItem | RevitalizationGuideItem | RemocionItem | MetabolicActivatorItem | null = null;
+    let categoryName: string | null = null;
+
+    for (const category of guideData) {
+        if (category.type === 'METABOLIC') {
+            const activator = category.items[0] as MetabolicActivator;
+            let item = activator.homeopathy.find(i => i.id === itemId) || activator.bachFlowers.find(i => i.id === itemId);
+            if (item) {
+                foundItem = item;
+                categoryName = category.title;
+                break;
+            }
+        } else {
+            const item = (category.items as (StandardGuideItem | RevitalizationGuideItem | RemocionItem)[]).find(i => i.id === itemId);
+            if (item) {
+                foundItem = item;
+                // ===== SOLUCIÓN: Acceder a 'category.title' en lugar de 'category.name' =====
+                categoryName = category.title;
+                // ========================================================================
+                break;
+            }
+        }
     }
+    return { item: foundItem, categoryName };
 }
