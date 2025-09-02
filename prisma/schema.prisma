@@ -35,7 +35,6 @@ enum GuideItemType {
   STANDARD
   METABOLIC
   REVITALIZATION
-  REMOCION
 }
 
 enum MealType {
@@ -63,23 +62,6 @@ enum DietType {
   CITOSTATICA
   RENAL
 }
-
-// ===== INICIO DE LA CORRECCIÓN: Enums añadidos =====
-enum RemocionAlimentacionType {
-  Nino
-  Antienvejecimiento
-  Antidiabetica
-  Metabolica
-  Citostatica
-  Renal
-}
-
-enum NoniAloeVeraTime {
-  AntesDesayuno
-  AntesDesayunoCena
-  AntesCena
-}
-// ===== FIN DE LA CORRECCIÓN =====
 
 // =================================================================
 // Modelos de Autenticación y Usuarios (NextAuth.js)
@@ -144,7 +126,7 @@ model VerificationToken {
 
 model Patient {
   id                  String               @id @default(cuid())
-  controlNumber       Int                  @unique @default(autoincrement())
+  controlNumber       Int                  @default(autoincrement())
   userId              String
   photo               String?
   nationality         String
@@ -273,6 +255,8 @@ model OrthomolecularTest {
   testDate          DateTime @default(now())
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  // --- Parámetros del Test ---
   aluminio          Float?
   antimonio         Float?
   arsenico          Float?
@@ -319,6 +303,8 @@ model OrthomolecularTest {
   germanio          Float?
   rubidio           Float?
   zirconio          Float?
+
+  // --- Edades Parciales Calculadas ---
   aluminioAge       Float?
   antimonioAge      Float?
   arsenicoAge       Float?
@@ -434,38 +420,27 @@ model GuideItem {
 }
 
 model PatientGuide {
-  id           String                  @id @default(cuid())
-  patientId    String
-  guideDate    DateTime
-  observations String?
-  createdAt    DateTime                @default(now())
-  patient      Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  selections   PatientGuideSelection[]
+  id         String                  @id @default(cuid())
+  patientId  String
+  guideDate  DateTime
+  createdAt  DateTime                @default(now())
+  patient    Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  selections PatientGuideSelection[]
 
   @@map("patient_guides")
 }
 
 model PatientGuideSelection {
-  id               String       @id @default(cuid())
-  patientGuideId   String
-  guideItemId      String
-  qty              String?
-  doseType         String?
-  freq             String?
-  custom           String?
-  complejoB_cc     String?
-  bioquel_cc       String?
-  frequency        String?
-  cucharadas       Int?
-  horario          String?
-  semanas          Int?
-  alimentacionTipo RemocionAlimentacionType[]
-  tacita_qty       Int?
-  tacita           NoniAloeVeraTime?
-  frascos          Int?
-  gotas            Int?
-  vecesAlDia       Int?
-  
+  id             String       @id @default(cuid())
+  patientGuideId String
+  guideItemId    String
+  qty            String?
+  freq           String?
+  custom         String?
+  complejoB_cc   String?
+  bioquel_cc     String?
+  frequency      String?
+
   patientGuide PatientGuide @relation(fields: [patientGuideId], references: [id], onDelete: Cascade)
   guideItem    GuideItem    @relation(fields: [guideItemId], references: [id], onDelete: Cascade)
 
@@ -490,10 +465,11 @@ model FoodItem {
 }
 
 model FoodPlan {
-  id        String   @id @default(cuid())
-  patientId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  patientId    String
+  observations String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   items   FoodItem[]
