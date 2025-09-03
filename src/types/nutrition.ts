@@ -10,7 +10,6 @@ import type {
 } from '@prisma/client';
 
 // ===== SOLUCIÓN: Se exporta el OBJETO 'DietType' además del TIPO =====
-// Esto hace que 'DietType' esté disponible en tiempo de ejecución para iterar sobre él.
 export { MealType, BloodTypeGroup, DietType, GeneralGuideType };
 // ====================================================================
 
