@@ -2,16 +2,18 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PatientWithDetails } from '@/types';
+// ===== SOLUCIÓN: Se ajusta la importación para traer tanto el valor como el tipo =====
 import { 
     FoodPlanTemplate, 
     FoodItem, 
     MealType, 
     BloodTypeGroup, 
-    DietType, // Ahora importamos el OBJETO
-    type DietTypeEnum, // Importamos el TIPO con un alias
+    DietType, // Importa el OBJETO
+    type DietTypeEnum, // Importa el TIPO
     GeneralGuideItem, 
     WellnessKey
 } from '@/types/nutrition';
+// =================================================================================
 import { getFullNutritionData, savePatientNutritionPlan } from '@/lib/actions/nutrition.actions';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -113,7 +115,6 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         setIsSaving(false);
     };
 
-    // ===== SOLUCIÓN: Asegurar que filteredFoodData siempre devuelva un objeto válido =====
     const filteredFoodData = useMemo(() => {
         const emptyPlan: FoodPlanTemplate = {
             DESAYUNO: [],
@@ -121,15 +122,11 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
             CENA: [],
             MERIENDAS_POSTRES: []
         };
-
-        if (!foodData) {
-            return emptyPlan;
-        }
-
+        if (!foodData) return emptyPlan;
         const filtered = { ...emptyPlan };
         for (const key in foodData) {
             const mealType = key as MealType;
-            if (filtered[mealType]) { // Type guard
+            if (filtered[mealType]) {
                 filtered[mealType] = (foodData[mealType] || []).filter(item => 
                     item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType
                 );
@@ -137,7 +134,6 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         }
         return filtered;
     }, [foodData, bloodType]);
-    // =================================================================================
 
     const TabButton = ({ id, label }: { id: string, label: string }) => (
         <button onClick={() => setActiveTab(id)} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === id ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-200'}`}>
