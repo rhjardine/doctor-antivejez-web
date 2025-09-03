@@ -13,7 +13,7 @@ type Channel = 'email' | 'sms' | 'whatsapp';
 export default function NotificacionesPage() {
   const router = useRouter();
   const [targetGroup, setTargetGroup] = useState<TargetGroup>('all');
-  // ===== SOLUCIÓN: Se especifica el tipo genérico en la creación del Set =====
+  // ===== SOLUCIÓN 1: Se especifica el tipo genérico en la creación del Set =====
   const [channels, setChannels] = useState<Set<Channel>>(new Set<Channel>(['email']));
   // ========================================================================
   const [message, setMessage] = useState('');
@@ -50,7 +50,9 @@ export default function NotificacionesPage() {
         toast.success(result.message || 'Notificación enviada con éxito.');
         setMessage('');
         setMediaUrl('');
-        setChannels(new Set(['email']));
+        // ===== SOLUCIÓN 2: Se aplica la misma corrección al resetear el estado =====
+        setChannels(new Set<Channel>(['email']));
+        // =======================================================================
         setTargetGroup('all');
       } else {
         toast.error(result.error || 'No se pudo enviar la notificación.');
