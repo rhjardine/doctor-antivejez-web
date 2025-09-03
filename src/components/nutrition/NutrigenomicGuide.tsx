@@ -1,7 +1,8 @@
-// src/components/nutrition/NutrigenomicGuide.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+// ===== SOLUCIÓN: Se añaden 'useMemo' y 'useCallback' a la importación de React =====
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+// =================================================================================
 import { PatientWithDetails } from '@/types';
 import { 
     FoodPlanTemplate, 
@@ -160,12 +161,8 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                 />
             )}
 
-            <div className="bg-slate-100 p-4 sm:p-6 rounded-xl shadow-sm">
-                <motion.section 
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-primary-dark rounded-xl p-6 mb-6 shadow-lg border border-white/20"
-                >
+            <div className="bg-slate-50 p-4 sm:p-6 rounded-xl shadow-sm">
+                <section className="bg-primary-dark rounded-xl p-6 mb-6 shadow-lg border border-white/20">
                     <h2 className="text-2xl font-bold mb-4 text-white">Perfil del Paciente</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -192,7 +189,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                             </div>
                         </div>
                     </div>
-                </motion.section>
+                </section>
 
                 <nav className="flex gap-2 mb-6 overflow-x-auto">
                     <TabButton id="plan" label="Plan Alimentario" />
