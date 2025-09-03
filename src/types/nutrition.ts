@@ -24,11 +24,6 @@ export type FoodPlanTemplate = {
   [key in MealType]: FoodItem[];
 };
 
-export interface PatientFoodPlan {
-  id: string;
-  selectedItemIds: Set<string>;
-}
-
 export interface FullNutritionData {
   foodTemplate: FoodPlanTemplate;
   generalGuide: {
