@@ -21,7 +21,10 @@ export interface GeneralGuideItem extends PrismaGeneralGuideItem {}
 export interface WellnessKey extends PrismaWellnessKey {}
 
 export type FoodPlanTemplate = {
-  [key in MealType]: FoodItem[];
+  DESAYUNO: FoodItem[];
+  ALMUERZO: FoodItem[];
+  CENA: FoodItem[];
+  MERIENDAS_POSTRES: FoodItem[];
 };
 
 export interface FullNutritionData {

@@ -1,16 +1,14 @@
 'use client';
 
-// ===== SOLUCIÓN: Se añaden 'useMemo' y 'useCallback' a la importación de React =====
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-// =================================================================================
 import { PatientWithDetails } from '@/types';
 import { 
     FoodPlanTemplate, 
     FoodItem, 
     MealType, 
     BloodTypeGroup, 
-    DietType,
-    type DietTypeEnum,
+    DietType, // Ahora importamos el OBJETO
+    type DietTypeEnum, // Importamos el TIPO con un alias
     GeneralGuideItem, 
     WellnessKey
 } from '@/types/nutrition';
@@ -115,17 +113,31 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         setIsSaving(false);
     };
 
+    // ===== SOLUCIÓN: Asegurar que filteredFoodData siempre devuelva un objeto válido =====
     const filteredFoodData = useMemo(() => {
-        if (!foodData) return {};
-        const filtered = {} as FoodPlanTemplate;
+        const emptyPlan: FoodPlanTemplate = {
+            DESAYUNO: [],
+            ALMUERZO: [],
+            CENA: [],
+            MERIENDAS_POSTRES: []
+        };
+
+        if (!foodData) {
+            return emptyPlan;
+        }
+
+        const filtered = { ...emptyPlan };
         for (const key in foodData) {
             const mealType = key as MealType;
-            filtered[mealType] = (foodData[mealType] || []).filter(item => 
-                item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType
-            );
+            if (filtered[mealType]) { // Type guard
+                filtered[mealType] = (foodData[mealType] || []).filter(item => 
+                    item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType
+                );
+            }
         }
         return filtered;
     }, [foodData, bloodType]);
+    // =================================================================================
 
     const TabButton = ({ id, label }: { id: string, label: string }) => (
         <button onClick={() => setActiveTab(id)} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === id ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-200'}`}>
