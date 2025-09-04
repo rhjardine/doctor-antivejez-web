@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PatientWithDetails } from '@/types';
-// ===== SOLUCIÓN: Importación corregida =====
+// ===== ANÁLISIS Y CORRECCIÓN ESTRATÉGICA =====
+// La importación se simplifica. 'DietType' ahora es el enum oficial de Prisma.
+// Ya no se necesita un 'DietTypeEnum' separado.
 import { 
     FoodPlanTemplate, 
     FoodItem, 
     MealType, 
     BloodTypeGroup, 
-    DietType, // Objeto con valores
-    type DietTypeEnum, // Tipo
+    DietType, // Se utiliza el enum unificado.
     GeneralGuideItem, 
     WellnessKey
 } from '@/types/nutrition';
@@ -29,7 +30,12 @@ import ActivityGuide from './ActivityGuide';
 export default function NutrigenomicGuide({ patient }: { patient: PatientWithDetails }) {
     const [activeTab, setActiveTab] = useState('plan');
     const [bloodType, setBloodType] = useState<BloodTypeGroup>('O_B');
-    const [selectedDiets, setSelectedDiets] = useState<Set<DietTypeEnum>>(new Set(patient.selectedDiets || []));
+    // ===== ANÁLISIS Y CORRECCIÓN ESTRATÉGICA =====
+    // El estado se tipa directamente con el enum 'DietType'.
+    // El error de tipo desaparece porque `patient.selectedDiets` (que es DietType[]
+    // desde la base de datos) es 100% compatible con `Set<DietType>`.
+    const [selectedDiets, setSelectedDiets] = useState<Set<DietType>>(new Set(patient.selectedDiets || []));
+    // ===========================================
     const [foodData, setFoodData] = useState<FoodPlanTemplate | null>(null);
     const [generalGuide, setGeneralGuide] = useState<{ AVOID: GeneralGuideItem[], SUBSTITUTE: GeneralGuideItem[] }>({ AVOID: [], SUBSTITUTE: [] });
     const [wellnessKeys, setWellnessKeys] = useState<WellnessKey[]>([]);
@@ -49,7 +55,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                 const patientItems = patientPlan.items;
                 patientItems.forEach(item => {
                     if (!initialTemplate[item.mealType].some(tItem => tItem.name === item.name)) {
-                        initialTemplate[item.mealType].push(item);
+                        initialTemplate[item.mealType].push(item as FoodItem);
                     }
                 });
             }
@@ -66,7 +72,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         loadInitialData();
     }, [loadInitialData]);
 
-    const handleDietToggle = (diet: DietTypeEnum) => {
+    const handleDietToggle = (diet: DietType) => {
         setSelectedDiets(prev => {
             const newSet = new Set(prev);
             if (newSet.has(diet)) newSet.delete(diet);
@@ -78,8 +84,8 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     const handleAddItem = (mealType: MealType, name: string) => {
         if (!foodData) return;
         const newItem: FoodItem = {
-            id: `temp_${Date.now()}`, name, mealType, bloodTypeGroup: 'ALL', isDefault: false, createdAt: new Date()
-        } as FoodItem;
+            id: `temp_${Date.now()}`, name, mealType, bloodTypeGroup: 'ALL', isDefault: false, createdAt: new Date(), updatedAt: new Date(), foodPlanId: null
+        };
         const updatedMeal = [...foodData[mealType], newItem];
         setFoodData({ ...foodData, [mealType]: updatedMeal });
     };
@@ -108,7 +114,6 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         const result = await savePatientNutritionPlan(patient.id, foodData, Array.from(selectedDiets));
         if (result.success) {
             toast.success('Plan de bienestar guardado exitosamente.');
-            await loadInitialData();
         } else {
             toast.error(result.error || 'No se pudo guardar el plan.');
         }
@@ -117,16 +122,13 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
 
     const filteredFoodData = useMemo(() => {
         const emptyPlan: FoodPlanTemplate = {
-            DESAYUNO: [],
-            ALMUERZO: [],
-            CENA: [],
-            MERIENDAS_POSTRES: []
+            DESAYUNO: [], ALMUERZO: [], CENA: [], MERIENDAS_POSTRES: []
         };
         if (!foodData) return emptyPlan;
         const filtered = { ...emptyPlan };
         for (const key in foodData) {
             const mealType = key as MealType;
-            if (filtered[mealType]) {
+            if (Object.prototype.hasOwnProperty.call(filtered, mealType)) {
                 filtered[mealType] = (foodData[mealType] || []).filter(item => 
                     item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType
                 );
@@ -155,7 +157,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
 
     return (
         <>
-            {isPreviewOpen && (
+            {isPreviewOpen && foodData && (
                 <NutritionPlanPreview
                     patient={patient}
                     planData={{
@@ -190,7 +192,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                             <div className="flex flex-wrap gap-x-4 gap-y-2">
                                 {Object.values(DietType).map(diet => (
                                     <label key={diet} className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={selectedDiets.has(diet as DietTypeEnum)} onChange={() => handleDietToggle(diet as DietTypeEnum)} className="w-4 h-4 text-sky-400 bg-white/20 border-gray-500 rounded focus:ring-sky-500"/>
+                                        <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="w-4 h-4 text-sky-400 bg-white/20 border-gray-500 rounded focus:ring-sky-500"/>
                                         <span className="text-sm text-gray-200 font-medium capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
                                     </label>
                                 ))}
