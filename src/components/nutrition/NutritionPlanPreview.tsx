@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Printer, CheckCircle, XCircle } from 'lucide-react';
 import { PatientWithDetails } from '@/types';
-import { FullNutritionData, MealType, DietTypeEnum } from '@/types/nutrition';
+// ===== INICIO DE LA CORRECCIÓN =====
+// 1. Se elimina la importación de 'DietTypeEnum' que ya no existe.
+// 2. Se importa el enum 'DietType' que es la fuente de la verdad desde Prisma.
+import { FullNutritionData, MealType, DietType } from '@/types/nutrition';
+// ===== FIN DE LA CORRECCIÓN =====
 import Image from 'next/image';
 
 const mealTitles: Record<MealType, string> = {
@@ -16,19 +20,26 @@ const mealTitles: Record<MealType, string> = {
   MERIENDAS_POSTRES: 'Meriendas y Postres'
 };
 
-const dietLabels: Record<DietTypeEnum, string> = {
+// ===== INICIO DE LA CORRECCIÓN =====
+// 3. Se tipa el objeto 'dietLabels' con el enum 'DietType' en lugar de 'DietTypeEnum'.
+//    TypeScript ahora puede validar que todas las claves del enum están presentes.
+const dietLabels: Record<DietType, string> = {
   NINO: 'Niño',
   METABOLICA: 'Metabólica', 
   ANTIDIABETICA: 'Antidiabética',
   CITOSTATICA: 'Citostática',
   RENAL: 'Renal'
 };
+// ===== FIN DE LA CORRECCIÓN =====
 
 interface NutritionPlanPreviewProps {
   patient: PatientWithDetails;
   planData: {
     bloodType: string;
-    selectedDiets: DietTypeEnum[];
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // 4. Se actualiza el tipo en la interfaz de props.
+    selectedDiets: DietType[];
+    // ===== FIN DE LA CORRECCIÓN =====
     foodPlan: FullNutritionData['foodTemplate'];
     generalGuide: FullNutritionData['generalGuide'];
     wellnessKeys: FullNutritionData['wellnessKeys'];
