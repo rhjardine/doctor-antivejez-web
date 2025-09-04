@@ -5,17 +5,28 @@ import type {
     BloodTypeGroup, 
     GeneralGuideItem as PrismaGeneralGuideItem, 
     WellnessKey as PrismaWellnessKey, 
-    DietType, 
     GeneralGuideType 
 } from '@prisma/client';
 
-// ===== SOLUCIÓN: Se exporta el OBJETO 'DietType' además del TIPO =====
-export { MealType, BloodTypeGroup, DietType, GeneralGuideType };
-// ====================================================================
+// ===== SOLUCIÓN: Definir objeto DietType con valores explícitos =====
+export const DietType = {
+    VEGETARIAN: 'VEGETARIAN',
+    VEGAN: 'VEGAN',
+    GLUTEN_FREE: 'GLUTEN_FREE',
+    DAIRY_FREE: 'DAIRY_FREE',
+    PALEO: 'PALEO',
+    KETO: 'KETO',
+    LOW_CARB: 'LOW_CARB',
+    LOW_FAT: 'LOW_FAT',
+} as const;
 
-// También exportamos los tipos para usarlos en las definiciones
-export type { DietType as DietTypeEnum };
+// Exportar el tipo basado en los valores del objeto
+export type DietTypeEnum = keyof typeof DietType;
 
+// Exportar tipos y enums de Prisma
+export { MealType, BloodTypeGroup, GeneralGuideType };
+
+// Interfaces extendidas
 export interface FoodItem extends PrismaFoodItem {}
 export interface GeneralGuideItem extends PrismaGeneralGuideItem {}
 export interface WellnessKey extends PrismaWellnessKey {}

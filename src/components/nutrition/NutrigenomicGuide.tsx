@@ -2,18 +2,18 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PatientWithDetails } from '@/types';
-// ===== SOLUCIÓN: Se ajusta la importación para traer tanto el valor como el tipo =====
+// ===== SOLUCIÓN: Importación corregida =====
 import { 
     FoodPlanTemplate, 
     FoodItem, 
     MealType, 
     BloodTypeGroup, 
-    DietType, // Importa el OBJETO
-    type DietTypeEnum, // Importa el TIPO
+    DietType, // Objeto con valores
+    type DietTypeEnum, // Tipo
     GeneralGuideItem, 
     WellnessKey
 } from '@/types/nutrition';
-// =================================================================================
+// ===========================================
 import { getFullNutritionData, savePatientNutritionPlan } from '@/lib/actions/nutrition.actions';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -190,7 +190,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                             <div className="flex flex-wrap gap-x-4 gap-y-2">
                                 {Object.values(DietType).map(diet => (
                                     <label key={diet} className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="w-4 h-4 text-sky-400 bg-white/20 border-gray-500 rounded focus:ring-sky-500"/>
+                                        <input type="checkbox" checked={selectedDiets.has(diet as DietTypeEnum)} onChange={() => handleDietToggle(diet as DietTypeEnum)} className="w-4 h-4 text-sky-400 bg-white/20 border-gray-500 rounded focus:ring-sky-500"/>
                                         <span className="text-sm text-gray-200 font-medium capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
                                     </label>
                                 ))}
@@ -245,7 +245,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                                         {wellnessKeys.map((key, index) => (
                                             <div key={key.id} className="border-l-4 border-sky-500 pl-6 py-2">
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <Badge variant="outline" className="text-sky-600 border-sky-200">{index + 1}</Badge>
+                                                    <div className="text-sky-600 border-sky-200 border rounded px-2 py-1 text-xs">{index + 1}</div>
                                                     <h4 className="font-semibold text-lg text-gray-800">{key.title}</h4>
                                                 </div>
                                                 <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{key.description}</p>
