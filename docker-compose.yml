@@ -11,6 +11,8 @@ services:
       - /app/node_modules
     ports:
       - "3001:3000"
+      # Mapea el puerto 5555 de tu máquina (host) al puerto 5555 del contenedor.
+      - "5555:5555"
     environment:
       DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
       # DIRECT_URL es útil para que Prisma pueda ejecutar migraciones dentro del contenedor
