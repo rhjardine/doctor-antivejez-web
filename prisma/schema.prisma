@@ -55,25 +55,12 @@ enum GeneralGuideType {
   SUBSTITUTE
 }
 
-// ===== AJUSTE REQUERIDO (ENUM) =====
-// Se ha detectado una inconsistencia en el enum DietType.
-// El código del frontend usa valores como 'VEGETARIAN', 'VEGAN', etc.
-// mientras que el schema actual tiene 'NINO', 'METABOLICA', etc.
-// Para que la aplicación funcione como se espera, es crucial unificar estos valores.
-// Se mantendrán los valores actuales del schema para no romper datos existentes,
-// pero se debe ser consciente de que el frontend necesita ser ajustado para usar
-// 'NINO', 'METABOLICA', etc., en lugar de 'VEGETARIAN'.
-// Si la intención es usar 'VEGETARIAN', etc., este enum debe ser reemplazado.
-// Por ahora, se mantiene para asegurar la integridad de la base de datos actual.
 enum DietType {
   NINO
   METABOLICA
   ANTIDIABETICA
   CITOSTATICA
   RENAL
-  // Si se necesitan más tipos, se añaden aquí. Ejemplo:
-  // VEGETARIAN
-  // VEGAN
 }
 
 // =================================================================
@@ -433,6 +420,13 @@ model PatientGuide {
   patientId  String
   guideDate  DateTime
   createdAt  DateTime                @default(now())
+  
+  // ===== CORRECCIÓN FINAL =====
+  // Se añade el campo 'observations' como un String opcional para que coincida
+  // con la lógica de la Server Action 'savePatientGuide'.
+  // Esto resolverá el error de compilación final.
+  observations String?
+
   patient    Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
   selections PatientGuideSelection[]
 
@@ -467,23 +461,9 @@ model FoodItem {
   bloodTypeGroup BloodTypeGroup @default(ALL)
   isDefault      Boolean        @default(true)
   createdAt      DateTime       @default(now())
-  
-  // ===== AJUSTE REQUERIDO 1 =====
-  // Se añade el campo `updatedAt` con la directiva @updatedAt.
-  // Esto asegura que cada modificación al registro actualice este timestamp,
-  // y lo más importante, lo añade al tipo `FoodItem` generado por Prisma,
-  // resolviendo el error de compilación.
   updatedAt      DateTime       @updatedAt
-
-  // ===== AJUSTE REQUERIDO 2 =====
-  // Se modifica la relación para que sea de "uno a muchos" explícita.
-  // Un FoodItem pertenece a UN FoodPlan (o a ninguno, por eso es opcional `?`).
-  // Esto simplifica la lógica de creación de ítems personalizados para un plan específico.
   foodPlanId     String?
   foodPlan       FoodPlan?      @relation(fields: [foodPlanId], references: [id], onDelete: Cascade)
-  
-  // Se elimina la relación muchos-a-muchos implícita anterior.
-  // foodPlans FoodPlan[]
 
   @@map("food_items")
 }
@@ -495,11 +475,7 @@ model FoodPlan {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  
-  // ===== AJUSTE REQUERIDO 3 =====
-  // Se define el lado "muchos" de la relación uno a muchos.
-  // Un FoodPlan ahora tiene MUCHOS FoodItems.
+  patient Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
   items   FoodItem[]
 
   @@map("food_plans")
