@@ -1,49 +1,111 @@
+/* src/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Variables CSS para el tema */
-:root {
-  --primary-color: rgb(35, 188, 239);
-  --primary-dark: rgb(25, 168, 219);
-  --secondary-color: rgb(99, 102, 241);
-  --success-color: rgb(34, 197, 94);
-  --warning-color: rgb(251, 191, 36);
-  --error-color: rgb(239, 68, 68);
-  --gray-50: rgb(249, 250, 251);
-  --gray-100: rgb(243, 244, 246);
-  --gray-200: rgb(229, 231, 235);
-  --gray-300: rgb(209, 213, 219);
-  --gray-400: rgb(156, 163, 175);
-  --gray-500: rgb(107, 114, 128);
-  --gray-600: rgb(75, 85, 99);
-  --gray-700: rgb(55, 65, 81);
-  --gray-800: rgb(31, 41, 55);
-  --gray-900: rgb(17, 24, 39);
+/* ================================================================== */
+/* ===== CORRECCIÓN DE TEMA: FUENTE ÚNICA DE LA VERDAD PARA COLORES ===== */
+/* ================================================================== */
 
-  /* ===== INICIO DE LA MODIFICACIÓN ===== */
-  /* Colores para los estados de edad biológica */
-  --status-green: rgb(22, 163, 74);   /* Verde para Rejuvenecido */
-  --status-yellow: rgb(234, 179, 8);  /* Amarillo para Normal */
-  --status-red: rgb(220, 38, 38);      /* Rojo para Envejecido */
-  /* ===== FIN DE LA MODIFICACIÓN ===== */
+@layer base {
+  :root {
+    /* --- Colores Base --- */
+    --background: 240 5% 96%; /* #f4f4f5 - Un gris muy claro para el fondo */
+    --foreground: 224 71% 4%; /* #0a0a10 - Texto principal oscuro */
+
+    /* --- Color Primario (Azul Cielo Corporativo) --- */
+    /* HSL para rgb(35, 188, 239) o #23bcef */
+    --primary: 195.5 85.3% 53.3%;
+    /* Color del texto que va sobre el color primario (blanco) */
+    --primary-foreground: 210 40% 98%;
+
+    /* --- Colores para Tarjetas (Azul Oscuro Corporativo) --- */
+    /* HSL para #293B64 */
+    --card: 220 44% 28%;
+    /* Color del texto que va sobre las tarjetas (blanco) */
+    --card-foreground: 210 40% 98%;
+
+    /* --- Colores Secundarios y de Acento (Neutros) --- */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* --- Colores de Estado --- */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --status-green: 145 80% 35%; /* HSL para rgb(22, 163, 74) */
+    --status-yellow: 45 93% 47%; /* HSL para rgb(234, 179, 8) */
+    --status-red: 0 72% 51%;     /* HSL para rgb(220, 38, 38) */
+
+    /* --- Bordes, Inputs y Anillos --- */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 195.5 85.3% 53.3%; /* Usamos el color primario para el anillo de foco */
+
+    /* --- Popover (usando colores base) --- */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* --- Variables para Gráficos (sin cambios) --- */
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    /* --- Radio de Borde --- */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* El tema oscuro no se modifica, ya que no está en uso activo */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
 }
 
-/* Estilos base */
-* {
-  box-sizing: border-box;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: var(--gray-50);
-  color: var(--gray-900);
-  line-height: 1.6;
-}
+/* ================================================================== */
+/* ===== ESTILOS PERSONALIZADOS (PRESERVADOS ÍNTEGRAMENTE) ===== */
+/* ================================================================== */
 
 /* Estilos para la barra de desplazamiento horizontal personalizada */
 @layer utilities {
@@ -55,11 +117,11 @@ body {
     border-radius: 10px;
   }
   .custom-scrollbar-tabs::-webkit-scrollbar-thumb {
-    background-color: var(--primary-color); /* Color azul para la barra */
+    background-color: hsl(var(--primary)); /* Color azul para la barra */
     border-radius: 10px;
   }
   .custom-scrollbar-tabs::-webkit-scrollbar-thumb:hover {
-    background-color: var(--primary-dark); /* Color azul oscuro al pasar el ratón */
+    background-color: hsl(var(--primary) / 0.8); /* Color azul oscuro al pasar el ratón */
   }
 }
 
@@ -67,7 +129,7 @@ body {
 @layer components {
   /* Header con el nuevo color */
   .header {
-    background-color: var(--primary-color);
+    background-color: hsl(var(--primary));
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
 
@@ -92,12 +154,12 @@ body {
 
   /* Botones */
   .btn-primary {
-    @apply px-6 py-3 text-white font-medium rounded-lg transition-all duration-200;
-    background-color: var(--primary-color);
+    @apply px-6 py-3 text-primary-foreground font-medium rounded-lg transition-all duration-200;
+    background-color: hsl(var(--primary));
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--primary-dark);
+    background-color: hsl(var(--primary) / 0.9);
     @apply transform -translate-y-0.5 shadow-lg;
   }
 
@@ -111,7 +173,7 @@ body {
 
   .btn-success {
     @apply px-6 py-3 text-white font-medium rounded-lg transition-all duration-200;
-    background-color: var(--success-color);
+    background-color: hsl(var(--status-green));
   }
 
   .btn-success:hover:not(:disabled) {
@@ -120,7 +182,7 @@ body {
 
   .btn-warning {
     @apply px-6 py-3 text-white font-medium rounded-lg transition-all duration-200;
-    background-color: var(--warning-color);
+    background-color: hsl(var(--status-yellow));
   }
 
   .btn-warning:hover:not(:disabled) {
@@ -129,7 +191,7 @@ body {
 
   .btn-danger {
     @apply px-6 py-3 text-white font-medium rounded-lg transition-all duration-200;
-    background-color: var(--error-color);
+    background-color: hsl(var(--status-red));
   }
 
   .btn-danger:hover:not(:disabled) {
@@ -154,7 +216,7 @@ body {
 
   .input:focus {
     @apply outline-none ring-2 border-transparent;
-    ring-color: var(--primary-color);
+    ring-color: hsl(var(--primary));
   }
 
   .input:disabled {
@@ -177,7 +239,7 @@ body {
 
   .nav-link.active {
     background-color: white;
-    color: var(--primary-color);
+    color: hsl(var(--primary));
     @apply shadow-sm;
   }
 
@@ -289,7 +351,7 @@ body {
   /* Loading states */
   .loading-spinner {
     @apply animate-spin rounded-full border-b-2;
-    border-color: var(--primary-color);
+    border-color: hsl(var(--primary));
   }
 
   /* Tooltips */
@@ -328,15 +390,13 @@ body {
     @apply bg-blue-50 border-blue-400 text-blue-800;
   }
 
-  /* ===== INICIO DE LA MODIFICACIÓN ===== */
   /* Clases de utilidad para los colores de estado */
-  .text-status-green { color: var(--status-green); }
-  .text-status-yellow { color: var(--status-yellow); }
-  .text-status-red { color: var(--status-red); }
-  .bg-status-green { background-color: var(--status-green); }
-  .bg-status-yellow { background-color: var(--status-yellow); }
-  .bg-status-red { background-color: var(--status-red); }
-  /* ===== FIN DE LA MODIFICACIÓN ===== */
+  .text-status-green { color: hsl(var(--status-green)); }
+  .text-status-yellow { color: hsl(var(--status-yellow)); }
+  .text-status-red { color: hsl(var(--status-red)); }
+  .bg-status-green { background-color: hsl(var(--status-green)); }
+  .bg-status-yellow { background-color: hsl(var(--status-yellow)); }
+  .bg-status-red { background-color: hsl(var(--status-red)); }
 }
 
 /* Keyframes para animaciones */
@@ -376,13 +436,13 @@ body {
 
 /* Estilos específicos para el header */
 .header-bg {
-  background-color: rgb(35, 188, 239) !important;
+  background-color: hsl(var(--primary)) !important;
 }
 
 /* Estilos mejorados para el scrollbar personalizado */
 .custom-scrollbar-tabs {
   scrollbar-width: thin;
-  scrollbar-color: var(--primary-color) #e2f5fd;
+  scrollbar-color: hsl(var(--primary)) #e2f5fd;
 }
 
 .custom-scrollbar-tabs::-webkit-scrollbar {
@@ -396,12 +456,12 @@ body {
 }
 
 .custom-scrollbar-tabs::-webkit-scrollbar-thumb {
-  background-color: var(--primary-color);
+  background-color: hsl(var(--primary));
   border-radius: 10px;
 }
 
 .custom-scrollbar-tabs::-webkit-scrollbar-thumb:hover {
-  background-color: var(--primary-dark);
+  background-color: hsl(var(--primary) / 0.8);
 }
 
 /* Scrollbar personalizado */
@@ -425,7 +485,7 @@ body {
 /* Focus visible para accesibilidad */
 .focus-visible {
   @apply outline-none ring-2 ring-offset-2;
-  ring-color: var(--primary-color);
+  ring-color: hsl(var(--primary));
 }
 
 /* Print styles */
@@ -436,70 +496,5 @@ body {
 
   .card {
     @apply shadow-none border border-gray-300;
-  }
-}
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
   }
 }
