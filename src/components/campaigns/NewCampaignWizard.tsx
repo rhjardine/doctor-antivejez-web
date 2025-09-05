@@ -6,13 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-// Importaremos los componentes de los pasos cuando los creemos
-// import Step1SelectContacts from './wizard/Step1SelectContacts';
-// import Step2ComposeMessage from './wizard/Step2ComposeMessage';
-// import Step3ReviewAndSend from './wizard/Step3ReviewAndSend';
+// Importamos los componentes de los pasos
+import Step1SelectContacts from './wizard/Step1SelectContacts';
+import Step2ComposeMessage from './wizard/Step2ComposeMessage';
+import Step3ReviewAndSend from './wizard/Step3ReviewAndSend';
 
-// ===== ANÁLISIS Y CONVERSIÓN =====
-// 1. Definimos tipos para la configuración de la campaña y los contactos
 export type Channel = 'EMAIL' | 'SMS';
 
 export interface Contact {
@@ -37,34 +35,16 @@ const steps = [
   { id: 3, name: 'Revisar y Enviar', description: 'Confirma los detalles antes de lanzar.' },
 ];
 
-// Componentes de Pasos (simulados por ahora)
-const Step1SelectContacts = ({ selectedContacts, setSelectedContacts }: { selectedContacts: Contact[], setSelectedContacts: React.Dispatch<React.SetStateAction<Contact[]>> }) => (
-    <div className="text-center p-10">
-        <h2 className="text-xl font-semibold">Paso 1: Seleccionar Contactos</h2>
-        <p className="text-gray-500 mt-2">Aquí irá la tabla de contactos para seleccionar.</p>
-        <p className="mt-4 font-bold">Contactos seleccionados: {selectedContacts.length}</p>
-    </div>
-);
-const Step2ComposeMessage = ({ campaignConfig, setCampaignConfig }: { campaignConfig: CampaignConfig, setCampaignConfig: React.Dispatch<React.SetStateAction<CampaignConfig>> }) => (
-    <div className="text-center p-10">
-        <h2 className="text-xl font-semibold">Paso 2: Crear Mensaje</h2>
-        <p className="text-gray-500 mt-2">Aquí irán los campos para el mensaje y la selección de canales.</p>
-    </div>
-);
-const Step3ReviewAndSend = ({ contacts, config }: { contacts: Contact[], config: CampaignConfig }) => (
-    <div className="text-center p-10">
-        <h2 className="text-xl font-semibold">Paso 3: Revisar y Enviar</h2>
-        <p className="text-gray-500 mt-2">Aquí se mostrará el resumen final de la campaña.</p>
-        <p className="mt-4 font-bold">{contacts.length} contactos recibirán el mensaje por {Array.from(config.channels).join(', ')}.</p>
-    </div>
-);
-
-
 export default function NewCampaignWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
   const [campaignConfig, setCampaignConfig] = useState<CampaignConfig>({
-    channels: new Set(['EMAIL']),
+    // ===== CORRECCIÓN FINAL =====
+    // Le indicamos explícitamente a TypeScript que el Set contendrá
+    // elementos del tipo 'Channel', no del tipo genérico 'string'.
+    // Esto resuelve el error de compilación.
+    channels: new Set<Channel>(['EMAIL']),
+    // ============================
     message: '',
     mediaFile: null,
     name: `Campaña ${new Date().toLocaleDateString('es-ES')}`,
@@ -78,10 +58,8 @@ export default function NewCampaignWizard() {
     setIsSending(true);
     toast.info('Encolando campaña para envío...');
     
-    // Simulación de la lógica de envío
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Lógica real con Server Action irá aquí
     console.log("Creando campaña con la siguiente configuración:", {
       config: campaignConfig,
       contacts: selectedContacts.map(c => c.id),
@@ -91,11 +69,10 @@ export default function NewCampaignWizard() {
       description: `${selectedContacts.length * campaignConfig.channels.size} mensajes se enviarán en segundo plano.`,
     });
     
-    // Resetear estado para una nueva campaña
     setCurrentStep(1);
     setSelectedContacts([]);
     setCampaignConfig({
-      channels: new Set(['EMAIL']), message: '', mediaFile: null, name: `Campaña ${new Date().toLocaleDateString('es-ES')}`
+      channels: new Set<Channel>(['EMAIL']), message: '', mediaFile: null, name: `Campaña ${new Date().toLocaleDateString('es-ES')}`
     });
     setIsSending(false);
   };
@@ -115,7 +92,6 @@ export default function NewCampaignWizard() {
 
   return (
     <div className="space-y-6">
-      {/* Step Indicator */}
       <div className="flex items-center justify-center space-x-4 md:space-x-8">
         {steps.map((step, index) => (
           <React.Fragment key={step.id}>
