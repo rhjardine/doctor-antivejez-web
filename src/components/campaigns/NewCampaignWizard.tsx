@@ -1,15 +1,18 @@
 // components/campaigns/NewCampaignWizard.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-// Importamos los componentes de los pasos
 import Step1SelectContacts from './wizard/Step1SelectContacts';
 import Step2ComposeMessage from './wizard/Step2ComposeMessage';
 import Step3ReviewAndSend from './wizard/Step3ReviewAndSend';
+
+// ===== INICIO DE LA INTEGRACIÓN =====
+import { sendCampaign } from '@/lib/actions/campaigns.actions';
+// ===== FIN DE LA INTEGRACIÓN =====
 
 export type Channel = 'EMAIL' | 'SMS';
 
@@ -39,41 +42,45 @@ export default function NewCampaignWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
   const [campaignConfig, setCampaignConfig] = useState<CampaignConfig>({
-    // ===== CORRECCIÓN FINAL =====
-    // Le indicamos explícitamente a TypeScript que el Set contendrá
-    // elementos del tipo 'Channel', no del tipo genérico 'string'.
-    // Esto resuelve el error de compilación.
     channels: new Set<Channel>(['EMAIL']),
-    // ============================
     message: '',
     mediaFile: null,
     name: `Campaña ${new Date().toLocaleDateString('es-ES')}`,
   });
   const [isSending, setIsSending] = useState(false);
 
+  const memoizedSetCampaignConfig = useCallback((value: React.SetStateAction<CampaignConfig>) => {
+    setCampaignConfig(value);
+  }, []);
+
   const goToNextStep = () => setCurrentStep((prev) => Math.min(prev + 1, steps.length));
   const goToPrevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
   const handleCreateCampaign = async () => {
     setIsSending(true);
-    toast.info('Encolando campaña para envío...');
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    toast.info('Iniciando envío de campaña...');
 
-    console.log("Creando campaña con la siguiente configuración:", {
-      config: campaignConfig,
-      contacts: selectedContacts.map(c => c.id),
-    });
+    // ===== LÓGICA DE ENVÍO REAL =====
+    // Se llama a la nueva Server Action con los datos del estado actual.
+    const result = await sendCampaign(
+      selectedContacts, 
+      Array.from(campaignConfig.channels), 
+      campaignConfig.message
+    );
 
-    toast.success('¡Campaña encolada exitosamente!', {
-      description: `${selectedContacts.length * campaignConfig.channels.size} mensajes se enviarán en segundo plano.`,
-    });
-    
-    setCurrentStep(1);
-    setSelectedContacts([]);
-    setCampaignConfig({
-      channels: new Set<Channel>(['EMAIL']), message: '', mediaFile: null, name: `Campaña ${new Date().toLocaleDateString('es-ES')}`
-    });
+    if (result.success) {
+      toast.success(result.message || 'Campaña enviada exitosamente.');
+      // Resetear estado para una nueva campaña
+      setCurrentStep(1);
+      setSelectedContacts([]);
+      setCampaignConfig({
+        channels: new Set<Channel>(['EMAIL']), message: '', mediaFile: null, name: `Campaña ${new Date().toLocaleDateString('es-ES')}`
+      });
+    } else {
+      toast.error(result.error || 'Ocurrió un error al enviar la campaña.');
+    }
+    // ===================================
+
     setIsSending(false);
   };
 
@@ -82,7 +89,7 @@ export default function NewCampaignWizard() {
       case 1:
         return <Step1SelectContacts selectedContacts={selectedContacts} setSelectedContacts={setSelectedContacts} />;
       case 2:
-        return <Step2ComposeMessage campaignConfig={campaignConfig} setCampaignConfig={setCampaignConfig} />;
+        return <Step2ComposeMessage campaignConfig={campaignConfig} setCampaignConfig={memoizedSetCampaignConfig} />;
       case 3:
         return <Step3ReviewAndSend contacts={selectedContacts} config={campaignConfig} />;
       default:
@@ -147,7 +154,7 @@ export default function NewCampaignWizard() {
         ) : (
           <Button 
             onClick={handleCreateCampaign} 
-            disabled={isSending} 
+            disabled={isSending || selectedContacts.length === 0 || campaignConfig.message.trim() === ''} 
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             {isSending ? 'Enviando...' : 'Confirmar y Enviar Campaña'}
