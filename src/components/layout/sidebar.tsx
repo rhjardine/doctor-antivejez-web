@@ -1,3 +1,4 @@
+// src/components/layout/Sidebar.tsx
 'use client';
 
 import Link from 'next/link';
@@ -15,7 +16,8 @@ import {
   FaSignOutAlt,
   FaChevronDown,
   FaChevronUp,
-  FaCalendarAlt // <-- Icono añadido
+  FaCalendarAlt,
+  FaPaperPlane // <-- Icono añadido para Campañas
 } from 'react-icons/fa';
 
 const menuItems = [
@@ -31,7 +33,6 @@ const menuItems = [
     href: '/historias',
     color: 'text-blue-500'
   },
-  // --- NUEVO ENLACE A CITAS ---
   { 
     name: 'Citas', 
     icon: FaCalendarAlt, 
@@ -56,6 +57,14 @@ const menuItems = [
     href: '/edad-biologica',
     color: 'text-red-500'
   },
+  // ===== NUEVO ENLACE A CAMPAÑAS =====
+  {
+    name: 'Campañas',
+    icon: FaPaperPlane,
+    href: '/dashboard/campaigns', // Ruta que creamos
+    color: 'text-orange-500'
+  },
+  // ===================================
   { 
     name: 'Reportes', 
     icon: FaChartBar, 
@@ -76,12 +85,12 @@ export function Sidebar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    // Aquí iría la lógica de logout
+    // Aquí iría la lógica de logout (ej. signOut() de NextAuth)
     router.push('/login');
   };
 
   return (
-    <div className="w-64 bg-primary-dark flex flex-col">
+    <div className="w-64 bg-primary-dark flex flex-col fixed h-full">
       {/* Logo */}
       <div className="p-6 border-b border-gray-700 flex justify-center items-center">
         <Link href="/dashboard" passHref>
@@ -96,11 +105,12 @@ export function Sidebar() {
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 px-4 py-6">
+      <nav className="flex-1 px-4 py-6 overflow-y-auto">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            // Se ajusta la lógica para que coincida con la ruta anidada
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
             return (
               <li key={item.name}>
