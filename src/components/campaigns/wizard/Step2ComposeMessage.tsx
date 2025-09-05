@@ -39,6 +39,19 @@ export default function Step2ComposeMessage({ campaignConfig, setCampaignConfig 
     setCampaignConfig(prev => ({ ...prev, mediaFile: null }));
   };
 
+  // ===== INICIO DE LA CORRECCIÓN =====
+  // Se crea un manejador de eventos específico para el Textarea.
+  // Esto asegura que la actualización del estado sea eficiente y no cause
+  // re-renderizados innecesarios que interrumpan la escritura.
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newMessage = e.target.value;
+    setCampaignConfig(prevConfig => ({
+      ...prevConfig,
+      message: newMessage,
+    }));
+  };
+  // ===== FIN DE LA CORRECCIÓN =====
+
   return (
     <div className="space-y-6">
       <div>
@@ -94,7 +107,8 @@ export default function Step2ComposeMessage({ campaignConfig, setCampaignConfig 
               rows={8}
               placeholder="Escribe tu mensaje aquí..."
               value={campaignConfig.message}
-              onChange={(e) => setCampaignConfig(prev => ({ ...prev, message: e.target.value }))}
+              // ===== CORRECCIÓN APLICADA =====
+              onChange={handleMessageChange}
               className="mt-2"
             />
           </div>

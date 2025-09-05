@@ -24,35 +24,35 @@ export default function Step3ReviewAndSend({ contacts, config }: Step3ReviewAndS
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Resumen de la Campaña */}
-        <Card>
+        {/* ===== INICIO DE LA CORRECCIÓN DE ESTILOS ===== */}
+        <Card className="bg-card text-card-foreground">
           <CardHeader>
             <CardTitle>Resumen de la Campaña</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Nombre:</span>
-              <span className="font-medium text-gray-800">{config.name}</span>
+              <span className="text-gray-300">Nombre:</span>
+              <span className="font-medium">{config.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Destinatarios:</span>
-              <span className="font-medium text-gray-800">{contacts.length}</span>
+              <span className="text-gray-300">Destinatarios:</span>
+              <span className="font-medium">{contacts.length}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Canales:</span>
+              <span className="text-gray-300">Canales:</span>
               <div className="flex gap-2">
-                {config.channels.has('EMAIL') && <Badge variant="outline"><Mail className="w-3 h-3 mr-1"/>Email</Badge>}
-                {config.channels.has('SMS') && <Badge variant="outline"><Smartphone className="w-3 h-3 mr-1"/>SMS</Badge>}
+                {config.channels.has('EMAIL') && <Badge variant="secondary"><Mail className="w-3 h-3 mr-1"/>Email</Badge>}
+                {config.channels.has('SMS') && <Badge variant="secondary"><Smartphone className="w-3 h-3 mr-1"/>SMS</Badge>}
               </div>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Total de Mensajes:</span>
-              <span className="font-medium text-gray-800">{totalMessages}</span>
+              <span className="text-gray-300">Total de Mensajes:</span>
+              <span className="font-medium">{totalMessages}</span>
             </div>
             {config.mediaFile && (
-              <div className="flex justify-between items-center pt-2 border-t">
-                <span className="text-gray-600">Adjunto:</span>
-                <div className="flex items-center gap-1 text-gray-800 font-medium">
+              <div className="flex justify-between items-center pt-2 border-t border-gray-600">
+                <span className="text-gray-300">Adjunto:</span>
+                <div className="flex items-center gap-1 font-medium">
                   <Paperclip className="w-4 h-4" />
                   <span>{config.mediaFile.name}</span>
                 </div>
@@ -61,17 +61,17 @@ export default function Step3ReviewAndSend({ contacts, config }: Step3ReviewAndS
           </CardContent>
         </Card>
 
-        {/* Vista Previa del Mensaje */}
-        <Card>
+        <Card className="bg-card text-card-foreground">
           <CardHeader>
             <CardTitle>Cuerpo del Mensaje</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="p-4 bg-slate-50 rounded-md border max-h-48 overflow-y-auto">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{config.message || "(Sin mensaje)"}</p>
+            <div className="p-4 bg-slate-800 rounded-md border border-gray-600 max-h-48 overflow-y-auto">
+              <p className="text-sm text-gray-200 whitespace-pre-wrap">{config.message || "(Sin mensaje)"}</p>
             </div>
           </CardContent>
         </Card>
+        {/* ===== FIN DE LA CORRECCIÓN DE ESTILOS ===== */}
       </div>
     </div>
   );
