@@ -275,11 +275,7 @@ function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCat
     const item = category.items.find((i) => i.id === itemId);
     if (item) {
     foundItem = item;
-    // ===== INICIO DE LA CORRECCIÓN =====
-    // El modelo GuideCategory tiene un campo 'title', no 'name'.
-    // Se corrige la propiedad para que coincida con el schema.prisma.
     categoryName = category.title;
-    // ===== FIN DE LA CORRECCIÓN =====
     break;
     }
     }
@@ -297,8 +293,11 @@ function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCat
     }
   }
 
-  // Generar HTML por categoría
-  for (const [categoryName, items] of selectionsByCategory) {
+  // ===== CORRECCIÓN FINAL Y ÚNICA =====
+  // Se reemplaza el bucle `for...of` que causa el error de compilación
+  // por el método `.forEach()`, que es universalmente compatible y no requiere
+  // cambios en la configuración de TypeScript (tsconfig.json).
+  selectionsByCategory.forEach((items, categoryName) => {
     htmlContent += `<div style="margin-bottom: 25px;">`;
     htmlContent += `<h3 style="color: #007bff; border-bottom: 1px solid #007bff; padding-bottom: 8px;">${categoryName}</h3>`;
     htmlContent += `<ul style="margin: 10px 0; padding-left: 20px;">`;
@@ -354,7 +353,8 @@ function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCat
     });
 
     htmlContent += `</ul></div>`;
-  }
+  });
+  // ===== FIN DE LA CORRECCIÓN =====
 
   return htmlContent;
 }
