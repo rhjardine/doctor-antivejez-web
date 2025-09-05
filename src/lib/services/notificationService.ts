@@ -1,6 +1,12 @@
-'use server';
+// src/lib/services/notificationService.ts
 
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se elimina la directiva "'use server';" de este archivo.
+// Este archivo es un módulo de utilidad que se ejecuta en el servidor,
+// pero sus funciones NO son Server Actions. Son funciones normales
+// que serán LLAMADAS por las Server Actions (en campaigns.actions.ts).
 import twilio from 'twilio';
+// ===== FIN DE LA CORRECCIÓN =====
 
 // Interfaz que define el "contrato" para cualquier proveedor de SMS.
 // Esto nos permite cambiar de proveedor en el futuro sin cambiar la lógica de negocio.
@@ -59,7 +65,7 @@ class CentauroProvider implements SmsProvider {
 }
 
 // Función principal que elige el proveedor según una variable de entorno.
-// Esto nos da la flexibilidad de cambiar de proveedor fácilmente.
+// Esta es una función síncrona normal, y ahora el compilador lo entenderá.
 export function getSmsProvider(): SmsProvider {
   if (process.env.SMS_PROVIDER === 'CENTAURO') {
     return new CentauroProvider();
