@@ -275,7 +275,11 @@ function formatGuideContentAsHTML(formData: GuideFormValues, guideData: GuideCat
     const item = category.items.find((i) => i.id === itemId);
     if (item) {
     foundItem = item;
-    categoryName = category.name;
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // El modelo GuideCategory tiene un campo 'title', no 'name'.
+    // Se corrige la propiedad para que coincida con el schema.prisma.
+    categoryName = category.title;
+    // ===== FIN DE LA CORRECCIÓN =====
     break;
     }
     }
