@@ -10,9 +10,7 @@ import Step1SelectContacts from './wizard/Step1SelectContacts';
 import Step2ComposeMessage from './wizard/Step2ComposeMessage';
 import Step3ReviewAndSend from './wizard/Step3ReviewAndSend';
 
-// ===== INICIO DE LA INTEGRACIÓN =====
 import { sendCampaign } from '@/lib/actions/campaigns.actions';
-// ===== FIN DE LA INTEGRACIÓN =====
 
 export type Channel = 'EMAIL' | 'SMS';
 
@@ -60,13 +58,16 @@ export default function NewCampaignWizard() {
     setIsSending(true);
     toast.info('Iniciando envío de campaña...');
 
-    // ===== LÓGICA DE ENVÍO REAL =====
-    // Se llama a la nueva Server Action con los datos del estado actual.
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // Se pasa el 'campaignConfig.name' a la Server Action.
+    // Este valor se usará como el asunto (subject) del correo electrónico.
     const result = await sendCampaign(
       selectedContacts, 
       Array.from(campaignConfig.channels), 
-      campaignConfig.message
+      campaignConfig.message,
+      campaignConfig.name
     );
+    // ===== FIN DE LA CORRECCIÓN =====
 
     if (result.success) {
       toast.success(result.message || 'Campaña enviada exitosamente.');
@@ -79,7 +80,6 @@ export default function NewCampaignWizard() {
     } else {
       toast.error(result.error || 'Ocurrió un error al enviar la campaña.');
     }
-    // ===================================
 
     setIsSending(false);
   };

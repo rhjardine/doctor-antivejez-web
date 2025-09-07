@@ -2,9 +2,8 @@
 
 import { prisma } from '@/lib/db';
 import { Contact, Channel } from '@/components/campaigns/NewCampaignWizard';
-// ===== INICIO DE LA INTEGRACIÓN =====
-import { getSmsProvider } from '@/lib/services/notificationService';
-// ===== FIN DE LA INTEGRACIÓN =====
+// ===== SE IMPORTAN LOS NUEVOS SERVICIOS =====
+import { getSmsProvider, getEmailProvider } from '@/lib/services/notificationService';
 
 export async function getContactsFromDB() {
   // ... (esta función no cambia)
@@ -28,53 +27,72 @@ export async function getContactsFromDB() {
   }
 }
 
-// ===== NUEVA SERVER ACTION PARA ENVIAR LA CAMPAÑA =====
-export async function sendCampaign(contacts: Contact[], channels: Channel[], message: string) {
-  console.log(`[Campaign Action] Iniciando envío de campaña a ${contacts.length} contactos por los canales: ${channels.join(', ')}`);
+export async function sendCampaign(contacts: Contact[], channels: Channel[], message: string, campaignName: string) {
+  console.log(`[Campaign Action] Iniciando envío de campaña a ${contacts.length} contactos por: ${channels.join(', ')}`);
 
   let successfulSends = 0;
   let failedSends = 0;
+  const totalJobs = contacts.length * channels.length;
 
-  // Por ahora, nos enfocamos solo en el canal SMS
-  if (channels.includes('SMS')) {
-    const smsProvider = getSmsProvider();
-    
-    // Usamos Promise.all para enviar los mensajes en paralelo (con un límite para no sobrecargar)
-    const sendPromises = contacts.map(async (contact) => {
-      if (!contact.phone) {
-        console.log(`[Campaign Action] Omitiendo contacto ${contact.name} (ID: ${contact.id}) por falta de número de teléfono.`);
+  const sendPromises: Promise<void>[] = [];
+
+  // --- LÓGICA DE ENVÍO DE EMAIL ---
+  if (channels.includes('EMAIL')) {
+    const emailProvider = getEmailProvider();
+    contacts.forEach(contact => {
+      if (!contact.email) {
+        console.log(`[Email] Omitiendo a ${contact.name} por falta de email.`);
         failedSends++;
         return;
       }
-
-      console.log(`[Campaign Action] Intentando enviar SMS a ${contact.name} (${contact.phone})`);
-      const result = await smsProvider.send(contact.phone, message);
-
-      if (result.success) {
-        console.log(`[Campaign Action] SMS enviado exitosamente a ${contact.name}. MessageID: ${result.messageId}`);
-        successfulSends++;
-      } else {
-        console.error(`[Campaign Action] Falló el envío de SMS a ${contact.name}. Error: ${result.error}`);
-        failedSends++;
-      }
+      const promise = emailProvider.send(contact.email, campaignName, message).then(result => {
+        if (result.success) {
+          console.log(`[Email] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+          successfulSends++;
+        } else {
+          console.error(`[Email] Falló el envío a ${contact.name}. Error: ${result.error}`);
+          failedSends++;
+        }
+      });
+      sendPromises.push(promise);
     });
-
-    await Promise.all(sendPromises);
   }
 
-  // Aquí iría la lógica para el canal EMAIL en el futuro
+  // --- LÓGICA DE ENVÍO DE SMS ---
+  if (channels.includes('SMS')) {
+    const smsProvider = getSmsProvider();
+    contacts.forEach(contact => {
+      if (!contact.phone) {
+        console.log(`[SMS] Omitiendo a ${contact.name} por falta de teléfono.`);
+        failedSends++;
+        return;
+      }
+      const promise = smsProvider.send(contact.phone, message).then(result => {
+        if (result.success) {
+          console.log(`[SMS] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+          successfulSends++;
+        } else {
+          console.error(`[SMS] Falló el envío a ${contact.name}. Error: ${result.error}`);
+          failedSends++;
+        }
+      });
+      sendPromises.push(promise);
+    });
+  }
 
-  console.log(`[Campaign Action] Envío completado. Exitosos: ${successfulSends}, Fallidos: ${failedSends}`);
+  await Promise.all(sendPromises);
+
+  console.log(`[Campaign Action] Envío completado. Total: ${totalJobs}, Exitosos: ${successfulSends}, Fallidos: ${failedSends}`);
 
   if (failedSends > 0) {
     return {
       success: false,
-      error: `Envío completado con ${failedSends} errores. Revise los logs para más detalles.`,
+      error: `Envío completado con ${failedSends} de ${totalJobs} errores. Revise los logs.`,
     };
   }
 
   return {
     success: true,
-    message: `Campaña enviada exitosamente a ${successfulSends} contactos.`,
+    message: `Campaña enviada exitosamente. ${successfulSends} mensajes procesados.`,
   };
 }
