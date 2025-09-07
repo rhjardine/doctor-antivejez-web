@@ -1,14 +1,18 @@
-'use server';
+// src/lib/services/notificationService.ts
 
+// ===== CORRECCIÓN DEFINITIVA =====
+// Se ELIMINA la directiva "'use server';" de la parte superior de este archivo.
+// Este módulo contiene lógica de servidor, pero no son Server Actions directas.
+// Esto resuelve el error de compilación.
 import twilio from 'twilio';
 import sgMail from '@sendgrid/mail';
 
-// ===== 1. DEFINIMOS LA INTERFAZ PARA PROVEEDORES DE EMAIL =====
+// ===== Interfaz para Proveedores de Email =====
 interface EmailProvider {
   send(to: string, subject: string, body: string): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-// ===== 2. IMPLEMENTAMOS EL PROVEEDOR DE SENDGRID =====
+// ===== Implementación del Proveedor de SendGrid =====
 class SendGridProvider implements EmailProvider {
   constructor() {
     if (process.env.SENDGRID_API_KEY) {
@@ -32,7 +36,6 @@ class SendGridProvider implements EmailProvider {
 
     try {
       const response = await sgMail.send(msg);
-      // La respuesta de SendGrid es un array, el message-id está en los headers del primer elemento.
       const messageId = response[0]?.headers['x-message-id'];
       return { success: true, messageId };
     } catch (error: any) {
@@ -42,9 +45,8 @@ class SendGridProvider implements EmailProvider {
   }
 }
 
-// ===== 3. CREAMOS LA FUNCIÓN PARA OBTENER EL PROVEEDOR DE EMAIL =====
+// ===== Función para Obtener el Proveedor de Email =====
 export function getEmailProvider(): EmailProvider {
-  // Por ahora solo tenemos SendGrid, pero la arquitectura permite añadir otros en el futuro.
   return new SendGridProvider();
 }
 
