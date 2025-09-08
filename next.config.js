@@ -1,14 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Se elimina la opción `output: 'standalone'` para usar el modo de servidor estándar de Next.js,
-  // que es más compatible con el entorno de Render y debería resolver los errores 404.
+  // Se preserva tu configuración existente de 'images'.
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
+        protocol: 'https'
         hostname: 'placehold.co',
       },
     ],
   },
+
+  // ===== INICIO DE LA CORRECCIÓN =====
+  // Se añade esta configuración para aumentar el límite de tamaño del cuerpo
+  // de las Server Actions. El valor '10mb' es un punto de partida razonable
+  // para permitir el envío de PDFs e imágenes en los correos electrónicos.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
+  // ===== FIN DE LA CORRECCIÓN =====
 }
+
 module.exports = nextConfig

@@ -30,9 +30,8 @@ export interface CampaignConfig {
   mediaFile: File | null;
 }
 
-// Interfaz para el adjunto que se pasará a la Server Action
 export interface AttachmentPayload {
-  content: string; // Base64 encoded content
+  content: string;
   filename: string;
   type: string;
   disposition: 'attachment';
@@ -45,19 +44,16 @@ const steps = [
   { id: 3, name: 'Revisar y Enviar', description: 'Confirma los detalles antes de lanzar.' },
 ];
 
-// Función helper para convertir un archivo a una cadena Base64
 const fileToBase64 = (file: File): Promise<string> => 
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
-      // Extraemos solo la parte Base64 del Data URL (ej. "data:image/jpeg;base64,LzlqLz...")
       const base64String = (reader.result as string).split(',')[1];
       resolve(base64String);
     };
     reader.onerror = error => reject(error);
 });
-
 
 export default function NewCampaignWizard() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -74,16 +70,31 @@ export default function NewCampaignWizard() {
     setCampaignConfig(value);
   }, []);
 
-  const goToNextStep = () => setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+  const goToNextStep = () => {
+    if (currentStep === 1 && selectedContacts.length === 0) {
+      toast.error('Debe seleccionar al menos un contacto para continuar.');
+      return;
+    }
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+  };
+
   const goToPrevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
-  // Función para navegar directamente a un paso (desde los indicadores)
-  const goToStep = (stepNumber: number) => {
-    // Solo permitimos navegar a pasos que ya han sido completados
+  // ===== INICIO DE LA CORRECCIÓN DE NAVEGACIÓN =====
+  const handleStepClick = (stepNumber: number) => {
+    if (stepNumber === currentStep || isSending) return;
+
+    // Permite navegar a cualquier paso anterior libremente
     if (stepNumber < currentStep) {
       setCurrentStep(stepNumber);
+    } 
+    // Permite navegar al siguiente paso solo si las condiciones se cumplen
+    else if (stepNumber === currentStep + 1) {
+      goToNextStep();
     }
+    // No se permite saltar pasos hacia adelante
   };
+  // ===== FIN DE LA CORRECCIÓN DE NAVEGACIÓN =====
 
   const handleCreateCampaign = async () => {
     setIsSending(true);
@@ -119,7 +130,6 @@ export default function NewCampaignWizard() {
 
     if (result.success) {
       toast.success(result.message || 'Campaña enviada exitosamente.');
-      // Resetear estado para una nueva campaña
       setCurrentStep(1);
       setSelectedContacts([]);
       setCampaignConfig({
@@ -151,13 +161,15 @@ export default function NewCampaignWizard() {
         {steps.map((step, index) => {
           const isCompleted = currentStep > step.id;
           const isCurrent = currentStep === step.id;
-          const canNavigate = isCompleted; // Solo se puede navegar a pasos ya completados
+          
+          // Se puede hacer clic en cualquier paso anterior o en el siguiente inmediato
+          const canNavigate = (isCompleted || (currentStep + 1 === step.id)) && !isSending;
 
           return (
             <React.Fragment key={step.id}>
               <div 
                 className={`flex flex-col items-center text-center ${canNavigate ? 'cursor-pointer' : 'cursor-default'}`}
-                onClick={() => canNavigate && goToStep(step.id)}
+                onClick={() => handleStepClick(step.id)}
               >
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
@@ -203,7 +215,7 @@ export default function NewCampaignWizard() {
         {currentStep < steps.length ? (
           <Button 
             onClick={goToNextStep} 
-            disabled={currentStep === 1 && selectedContacts.length === 0}
+            disabled={isSending}
             className="bg-primary text-white hover:bg-primary/90"
           >
             Siguiente
