@@ -12,7 +12,8 @@ import Step3ReviewAndSend from './wizard/Step3ReviewAndSend';
 
 import { sendCampaign } from '@/lib/actions/campaigns.actions';
 
-export type Channel = 'EMAIL' | 'SMS';
+// ===== TIPO CHANNEL ACTUALIZADO =====
+export type Channel = 'EMAIL' | 'SMS' | 'WHATSAPP';
 
 export interface Contact {
   id: string;
@@ -80,21 +81,15 @@ export default function NewCampaignWizard() {
 
   const goToPrevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
-  // ===== INICIO DE LA CORRECCIÓN DE NAVEGACIÓN =====
   const handleStepClick = (stepNumber: number) => {
     if (stepNumber === currentStep || isSending) return;
-
-    // Permite navegar a cualquier paso anterior libremente
     if (stepNumber < currentStep) {
       setCurrentStep(stepNumber);
     } 
-    // Permite navegar al siguiente paso solo si las condiciones se cumplen
     else if (stepNumber === currentStep + 1) {
       goToNextStep();
     }
-    // No se permite saltar pasos hacia adelante
   };
-  // ===== FIN DE LA CORRECCIÓN DE NAVEGACIÓN =====
 
   const handleCreateCampaign = async () => {
     setIsSending(true);
@@ -161,8 +156,6 @@ export default function NewCampaignWizard() {
         {steps.map((step, index) => {
           const isCompleted = currentStep > step.id;
           const isCurrent = currentStep === step.id;
-          
-          // Se puede hacer clic en cualquier paso anterior o en el siguiente inmediato
           const canNavigate = (isCompleted || (currentStep + 1 === step.id)) && !isSending;
 
           return (

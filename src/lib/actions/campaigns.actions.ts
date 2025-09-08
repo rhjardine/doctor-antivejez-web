@@ -3,7 +3,7 @@
 
 import { prisma } from '@/lib/db';
 import { Contact, Channel, AttachmentPayload } from '@/components/campaigns/NewCampaignWizard';
-import { getSmsProvider, getEmailProvider } from '@/lib/services/notificationService';
+import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/services/notificationService';
 
 export async function getContactsFromDB() {
   try {
@@ -26,8 +26,7 @@ export async function getContactsFromDB() {
       email: p.email,
       phone: p.phone,
       origin: 'RENDER PG',
-      // Lógica de consentimiento (a implementar en el futuro)
-      consent: ['EMAIL', 'SMS'], 
+      consent: ['EMAIL', 'SMS', 'WHATSAPP'], // Asumimos consentimiento para la prueba
     }));
 
     return { success: true, data: contacts };
@@ -42,14 +41,13 @@ export async function sendCampaign(
   channels: Channel[], 
   message: string, 
   campaignName: string,
-  attachment: AttachmentPayload | null // <-- Nuevo parámetro para adjuntos
+  attachment: AttachmentPayload | null
 ) {
   console.log(`[Campaign Action] Iniciando envío de campaña a ${contacts.length} contactos por: ${channels.join(', ')}`);
 
   let successfulSends = 0;
   let failedSends = 0;
-  const totalJobs = contacts.length * channels.length;
-
+  
   const sendPromises: Promise<void>[] = [];
 
   // --- LÓGICA DE ENVÍO DE EMAIL ---
@@ -58,10 +56,8 @@ export async function sendCampaign(
     contacts.forEach(contact => {
       if (!contact.email) {
         console.log(`[Email] Omitiendo a ${contact.name} por falta de email.`);
-        // No contamos esto como un fallo, sino como un trabajo omitido.
         return;
       }
-      // Se pasa el adjunto al proveedor de email
       const promise = emailProvider.send(contact.email, campaignName, message, attachment).then(result => {
         if (result.success) {
           console.log(`[Email] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
@@ -81,7 +77,6 @@ export async function sendCampaign(
     contacts.forEach(contact => {
       if (!contact.phone) {
         console.log(`[SMS] Omitiendo a ${contact.name} por falta de teléfono.`);
-        // No contamos esto como un fallo, sino como un trabajo omitido.
         return;
       }
       const promise = smsProvider.send(contact.phone, message).then(result => {
@@ -90,6 +85,35 @@ export async function sendCampaign(
           successfulSends++;
         } else {
           console.error(`[SMS] Falló el envío a ${contact.name}. Error: ${result.error}`);
+          failedSends++;
+        }
+      });
+      sendPromises.push(promise);
+    });
+  }
+
+  // --- LÓGICA DE ENVÍO DE WHATSAPP ---
+  if (channels.includes('WHATSAPP')) {
+    const whatsAppProvider = getWhatsAppProvider();
+    const templateName = 'HXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'; // Reemplazar con el SID de la plantilla 'campaign_notification' una vez aprobada
+    
+    contacts.forEach(contact => {
+      if (!contact.phone) {
+        console.log(`[WhatsApp] Omitiendo a ${contact.name} por falta de teléfono.`);
+        return;
+      }
+      
+      const variables = {
+        '1': contact.name,
+        '2': message,
+      };
+
+      const promise = whatsAppProvider.sendTemplate(contact.phone, templateName, variables).then(result => {
+        if (result.success) {
+          console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+          successfulSends++;
+        } else {
+          console.error(`[WhatsApp] Falló el envío a ${contact.name}. Error: ${result.error}`);
           failedSends++;
         }
       });
