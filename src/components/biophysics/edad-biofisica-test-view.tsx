@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Patient } from '../../types';
 import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, PartialAges } from '../../types/biophysics';
-// ===== INICIO DE LA CORRECCIÓN: Importar la función correcta =====
 import { getBiophysicsBoardsAndRanges, calculateAndSaveBiophysicsTest } from '../../lib/actions/biophysics.actions';
-// ===== FIN DE LA CORRECCIÓN =====
 import { getAgeStatus, getStatusColor } from '../../utils/biofisica-calculations';
 import { toast } from 'sonner';
 import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle, FaUndo, FaSave } from 'react-icons/fa';
@@ -17,7 +15,7 @@ interface EdadBiofisicaTestViewProps {
   onTestComplete: () => void;
 }
 
-// --- Componente de Modal de Éxito (Sin cambios) ---
+// --- Componente de Modal de Éxito ---
 function SuccessModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
@@ -100,8 +98,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     setCalculated(false);
     setIsSaved(false);
   };
-
-  // ===== INICIO DE LA CORRECCIÓN: Lógica unificada de cálculo y guardado =====
+  
   const handleCalculateAndSave = async () => {
     setProcessing(true);
 
@@ -157,7 +154,6 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       setProcessing(false);
     }
   };
-  // ===== FIN DE LA CORRECCIÓN =====
   
   const handleEdit = () => {
     setIsSaved(false);
@@ -206,7 +202,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
           <h3 className="text-lg font-semibold mb-4">Test de Edad Biofísica</h3>
 
-          <div className="space-y-4 pr-2">
+          <div className="space-y-4 pr-2 biophysics-form">
             {BIOPHYSICS_ITEMS.map(item => {
               const itemKey = item.key;
               const partialAgeKey = PARTIAL_AGE_KEYS_MAP[itemKey];
@@ -218,15 +214,18 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                     {item.label} {item.unit && `(${item.unit})`}
                   </label>
 
+                  {/* ===== INICIO DE LA CORRECCIÓN DE EMERGENCIA ===== */}
+                  {/* Se reemplaza la clase 'input' por 'form-input-custom' para evitar conflictos de estilo. */}
                   {item.hasDimensions ? (
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')} className="input" disabled={isSaved || processing} />
-                      <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')} className="input" disabled={isSaved || processing} />
-                      <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')} className="input" disabled={isSaved || processing} />
+                      <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')} className="form-input-custom" disabled={isSaved || processing} />
+                      <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')} className="form-input-custom" disabled={isSaved || processing} />
+                      <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')} className="form-input-custom" disabled={isSaved || processing} />
                     </div>
                   ) : (
-                    <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))} className="input w-full" disabled={isSaved || processing} />
+                    <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))} className="form-input-custom w-full" disabled={isSaved || processing} />
                   )}
+                  {/* ===== FIN DE LA CORRECCIÓN DE EMERGENCIA ===== */}
 
                   {calculated && (
                     <div className="mt-2 text-sm">
