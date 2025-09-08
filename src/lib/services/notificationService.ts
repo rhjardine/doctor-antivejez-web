@@ -1,18 +1,22 @@
 // src/lib/services/notificationService.ts
-
-// ===== CORRECCIÓN DEFINITIVA =====
-// Se ELIMINA la directiva "'use server';" de la parte superior de este archivo.
-// Este módulo contiene lógica de servidor, pero no son Server Actions directas.
-// Esto resuelve el error de compilación.
 import twilio from 'twilio';
 import sgMail from '@sendgrid/mail';
 
-// ===== Interfaz para Proveedores de Email =====
-interface EmailProvider {
-  send(to: string, subject: string, body: string): Promise<{ success: boolean; messageId?: string; error?: string }>;
+// Interfaz para la estructura del adjunto, consistente con la API de SendGrid
+interface Attachment {
+  content: string; // Contenido en Base64
+  filename: string;
+  type: string;
+  disposition: 'attachment';
+  content_id: string;
 }
 
-// ===== Implementación del Proveedor de SendGrid =====
+// ===== Interfaz para Proveedores de Email (actualizada para aceptar adjuntos) =====
+interface EmailProvider {
+  send(to: string, subject: string, body: string, attachment: Attachment | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
+}
+
+// ===== Implementación del Proveedor de SendGrid (actualizada para manejar adjuntos) =====
 class SendGridProvider implements EmailProvider {
   constructor() {
     if (process.env.SENDGRID_API_KEY) {
@@ -20,19 +24,25 @@ class SendGridProvider implements EmailProvider {
     }
   }
 
-  async send(to: string, subject: string, body: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async send(to: string, subject: string, body: string, attachment: Attachment | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!process.env.SENDGRID_API_KEY || !process.env.SENDGRID_FROM_EMAIL) {
       console.error('SendGrid credentials are not configured.');
       return { success: false, error: 'El servicio de Email no está configurado.' };
     }
 
-    const msg = {
+    // Usamos 'any' para poder añadir la propiedad 'attachments' de forma condicional
+    const msg: any = {
       to: to,
       from: process.env.SENDGRID_FROM_EMAIL,
       subject: subject,
       text: body, // Versión en texto plano
       html: `<p>${body.replace(/\n/g, '<br>')}</p>`, // Versión HTML simple
     };
+
+    // Si se proporciona un adjunto, lo añadimos al objeto del mensaje
+    if (attachment) {
+      msg.attachments = [attachment];
+    }
 
     try {
       const response = await sgMail.send(msg);
@@ -49,7 +59,6 @@ class SendGridProvider implements EmailProvider {
 export function getEmailProvider(): EmailProvider {
   return new SendGridProvider();
 }
-
 
 // ==================================================================
 // ===== CÓDIGO DE SMS (SIN CAMBIOS) =====

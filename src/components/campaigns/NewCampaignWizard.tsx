@@ -30,11 +30,34 @@ export interface CampaignConfig {
   mediaFile: File | null;
 }
 
+// Interfaz para el adjunto que se pasará a la Server Action
+export interface AttachmentPayload {
+  content: string; // Base64 encoded content
+  filename: string;
+  type: string;
+  disposition: 'attachment';
+  content_id: string;
+}
+
 const steps = [
   { id: 1, name: 'Seleccionar Contactos', description: 'Elige los destinatarios para tu campaña.' },
   { id: 2, name: 'Crear Mensaje', description: 'Redacta el contenido y elige los canales.' },
   { id: 3, name: 'Revisar y Enviar', description: 'Confirma los detalles antes de lanzar.' },
 ];
+
+// Función helper para convertir un archivo a una cadena Base64
+const fileToBase64 = (file: File): Promise<string> => 
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      // Extraemos solo la parte Base64 del Data URL (ej. "data:image/jpeg;base64,LzlqLz...")
+      const base64String = (reader.result as string).split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = error => reject(error);
+});
+
 
 export default function NewCampaignWizard() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -54,20 +77,45 @@ export default function NewCampaignWizard() {
   const goToNextStep = () => setCurrentStep((prev) => Math.min(prev + 1, steps.length));
   const goToPrevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
+  // Función para navegar directamente a un paso (desde los indicadores)
+  const goToStep = (stepNumber: number) => {
+    // Solo permitimos navegar a pasos que ya han sido completados
+    if (stepNumber < currentStep) {
+      setCurrentStep(stepNumber);
+    }
+  };
+
   const handleCreateCampaign = async () => {
     setIsSending(true);
     toast.info('Iniciando envío de campaña...');
 
-    // ===== INICIO DE LA CORRECCIÓN =====
-    // Se pasa el 'campaignConfig.name' a la Server Action.
-    // Este valor se usará como el asunto (subject) del correo electrónico.
+    let attachmentPayload: AttachmentPayload | null = null;
+    if (campaignConfig.mediaFile) {
+      try {
+        toast.info('Procesando archivo adjunto...');
+        const base64Content = await fileToBase64(campaignConfig.mediaFile);
+        attachmentPayload = {
+          content: base64Content,
+          filename: campaignConfig.mediaFile.name,
+          type: campaignConfig.mediaFile.type,
+          disposition: 'attachment',
+          content_id: campaignConfig.mediaFile.name,
+        };
+      } catch (error) {
+        console.error("Error processing attachment:", error);
+        toast.error('Error al procesar el archivo adjunto.');
+        setIsSending(false);
+        return;
+      }
+    }
+
     const result = await sendCampaign(
       selectedContacts, 
       Array.from(campaignConfig.channels), 
       campaignConfig.message,
-      campaignConfig.name
+      campaignConfig.name,
+      attachmentPayload
     );
-    // ===== FIN DE LA CORRECCIÓN =====
 
     if (result.success) {
       toast.success(result.message || 'Campaña enviada exitosamente.');
@@ -100,25 +148,34 @@ export default function NewCampaignWizard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-center space-x-4 md:space-x-8">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center text-center">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                  currentStep >= step.id ? 'bg-primary border-primary text-white' : 'bg-white border-gray-300 text-gray-500'
-                }`}
+        {steps.map((step, index) => {
+          const isCompleted = currentStep > step.id;
+          const isCurrent = currentStep === step.id;
+          const canNavigate = isCompleted; // Solo se puede navegar a pasos ya completados
+
+          return (
+            <React.Fragment key={step.id}>
+              <div 
+                className={`flex flex-col items-center text-center ${canNavigate ? 'cursor-pointer' : 'cursor-default'}`}
+                onClick={() => canNavigate && goToStep(step.id)}
               >
-                {step.id}
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                    isCurrent || isCompleted ? 'bg-primary border-primary text-white' : 'bg-white border-gray-300 text-gray-500'
+                  } ${canNavigate ? 'hover:bg-primary/80' : ''}`}
+                >
+                  {step.id}
+                </div>
+                <p className={`mt-2 text-sm font-medium ${isCurrent || isCompleted ? 'text-primary' : 'text-gray-500'}`}>
+                  {step.name}
+                </p>
               </div>
-              <p className={`mt-2 text-sm font-medium ${currentStep >= step.id ? 'text-primary' : 'text-gray-500'}`}>
-                {step.name}
-              </p>
-            </div>
-            {index < steps.length - 1 && (
-              <div className={`flex-1 h-0.5 mt-[-20px] ${currentStep > index + 1 ? 'bg-primary' : 'bg-gray-300'}`} />
-            )}
-          </React.Fragment>
-        ))}
+              {index < steps.length - 1 && (
+                <div className={`flex-1 h-0.5 mt-[-20px] ${isCompleted ? 'bg-primary' : 'bg-gray-300'}`} />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
       
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border min-h-[400px]">

@@ -1,7 +1,7 @@
 // components/campaigns/wizard/Step2ComposeMessage.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,8 +15,35 @@ interface Step2ComposeMessageProps {
   setCampaignConfig: React.Dispatch<React.SetStateAction<CampaignConfig>>;
 }
 
-export default function Step2ComposeMessage({ campaignConfig, setCampaignConfig }: Step2ComposeMessageProps) {
+// Se envuelve en React.memo para optimizar re-renderizados
+const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignConfig, setCampaignConfig }: Step2ComposeMessageProps) {
   
+  // ===== INICIO DE LA CORRECCIÓN DEL TEXTAREA =====
+  // 1. Creamos un estado local para manejar el valor del textarea.
+  const [localMessage, setLocalMessage] = useState(campaignConfig.message);
+
+  // 2. Sincronizamos el estado local si la prop externa cambia.
+  useEffect(() => {
+    setLocalMessage(campaignConfig.message);
+  }, [campaignConfig.message]);
+
+  // 3. El manejador de 'onChange' ahora solo actualiza el estado local.
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setLocalMessage(e.target.value);
+  };
+
+  // 4. Cuando el usuario deja de escribir (onBlur), actualizamos el estado del padre.
+  const handleMessageBlur = () => {
+    // Solo actualizamos si el mensaje ha cambiado para evitar re-renderizados innecesarios.
+    if (localMessage !== campaignConfig.message) {
+      setCampaignConfig(prevConfig => ({
+        ...prevConfig,
+        message: localMessage,
+      }));
+    }
+  };
+  // ===== FIN DE LA CORRECCIÓN DEL TEXTAREA =====
+
   const handleChannelChange = (channel: Channel, checked: boolean) => {
     setCampaignConfig(prev => {
       const newChannels = new Set(prev.channels);
@@ -37,20 +64,12 @@ export default function Step2ComposeMessage({ campaignConfig, setCampaignConfig 
 
   const clearFile = () => {
     setCampaignConfig(prev => ({ ...prev, mediaFile: null }));
+    // También reseteamos el input de archivo para poder seleccionar el mismo archivo de nuevo
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
-
-  // ===== INICIO DE LA CORRECCIÓN =====
-  // Se crea un manejador de eventos específico para el Textarea.
-  // Esto asegura que la actualización del estado sea eficiente y no cause
-  // re-renderizados innecesarios que interrumpan la escritura.
-  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newMessage = e.target.value;
-    setCampaignConfig(prevConfig => ({
-      ...prevConfig,
-      message: newMessage,
-    }));
-  };
-  // ===== FIN DE LA CORRECCIÓN =====
 
   return (
     <div className="space-y-6">
@@ -106,9 +125,9 @@ export default function Step2ComposeMessage({ campaignConfig, setCampaignConfig 
               id="message-body"
               rows={8}
               placeholder="Escribe tu mensaje aquí..."
-              value={campaignConfig.message}
-              // ===== CORRECCIÓN APLICADA =====
+              value={localMessage}
               onChange={handleMessageChange}
+              onBlur={handleMessageBlur}
               className="mt-2"
             />
           </div>
@@ -116,11 +135,11 @@ export default function Step2ComposeMessage({ campaignConfig, setCampaignConfig 
             <Label className="font-semibold">Adjunto (Opcional)</Label>
             {campaignConfig.mediaFile ? (
               <div className="mt-2 flex items-center justify-between bg-slate-100 p-2 rounded-lg">
-                <div className="flex items-center gap-2 text-sm text-gray-700">
+                <div className="flex items-center gap-2 text-sm text-gray-700 truncate">
                   <Paperclip size={16} />
-                  <span>{campaignConfig.mediaFile.name}</span>
+                  <span className="truncate">{campaignConfig.mediaFile.name}</span>
                 </div>
-                <Button onClick={clearFile} variant="ghost" size="icon" className="h-6 w-6">
+                <Button onClick={clearFile} variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
                   <X size={16} />
                 </Button>
               </div>
@@ -134,4 +153,6 @@ export default function Step2ComposeMessage({ campaignConfig, setCampaignConfig 
       </div>
     </div>
   );
-}
+});
+
+export default Step2ComposeMessage;

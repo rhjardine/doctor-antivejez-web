@@ -1,25 +1,35 @@
+// src/lib/actions/campaigns.actions.ts
 'use server';
 
 import { prisma } from '@/lib/db';
-import { Contact, Channel } from '@/components/campaigns/NewCampaignWizard';
-// ===== SE IMPORTAN LOS NUEVOS SERVICIOS =====
+import { Contact, Channel, AttachmentPayload } from '@/components/campaigns/NewCampaignWizard';
 import { getSmsProvider, getEmailProvider } from '@/lib/services/notificationService';
 
 export async function getContactsFromDB() {
-  // ... (esta función no cambia)
   try {
     const patients = await prisma.patient.findMany({
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true },
-      orderBy: { lastName: 'asc' },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+      },
+      orderBy: {
+        lastName: 'asc',
+      },
     });
+
     const contacts: Contact[] = patients.map(p => ({
       id: p.id,
       name: `${p.firstName} ${p.lastName}`,
       email: p.email,
       phone: p.phone,
       origin: 'RENDER PG',
+      // Lógica de consentimiento (a implementar en el futuro)
       consent: ['EMAIL', 'SMS'], 
     }));
+
     return { success: true, data: contacts };
   } catch (error) {
     console.error('Error fetching contacts:', error);
@@ -27,7 +37,13 @@ export async function getContactsFromDB() {
   }
 }
 
-export async function sendCampaign(contacts: Contact[], channels: Channel[], message: string, campaignName: string) {
+export async function sendCampaign(
+  contacts: Contact[], 
+  channels: Channel[], 
+  message: string, 
+  campaignName: string,
+  attachment: AttachmentPayload | null // <-- Nuevo parámetro para adjuntos
+) {
   console.log(`[Campaign Action] Iniciando envío de campaña a ${contacts.length} contactos por: ${channels.join(', ')}`);
 
   let successfulSends = 0;
@@ -42,10 +58,11 @@ export async function sendCampaign(contacts: Contact[], channels: Channel[], mes
     contacts.forEach(contact => {
       if (!contact.email) {
         console.log(`[Email] Omitiendo a ${contact.name} por falta de email.`);
-        failedSends++;
+        // No contamos esto como un fallo, sino como un trabajo omitido.
         return;
       }
-      const promise = emailProvider.send(contact.email, campaignName, message).then(result => {
+      // Se pasa el adjunto al proveedor de email
+      const promise = emailProvider.send(contact.email, campaignName, message, attachment).then(result => {
         if (result.success) {
           console.log(`[Email] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
           successfulSends++;
@@ -64,7 +81,7 @@ export async function sendCampaign(contacts: Contact[], channels: Channel[], mes
     contacts.forEach(contact => {
       if (!contact.phone) {
         console.log(`[SMS] Omitiendo a ${contact.name} por falta de teléfono.`);
-        failedSends++;
+        // No contamos esto como un fallo, sino como un trabajo omitido.
         return;
       }
       const promise = smsProvider.send(contact.phone, message).then(result => {
@@ -82,12 +99,13 @@ export async function sendCampaign(contacts: Contact[], channels: Channel[], mes
 
   await Promise.all(sendPromises);
 
-  console.log(`[Campaign Action] Envío completado. Total: ${totalJobs}, Exitosos: ${successfulSends}, Fallidos: ${failedSends}`);
+  const processedJobs = successfulSends + failedSends;
+  console.log(`[Campaign Action] Envío completado. Total procesados: ${processedJobs}, Exitosos: ${successfulSends}, Fallidos: ${failedSends}`);
 
   if (failedSends > 0) {
     return {
       success: false,
-      error: `Envío completado con ${failedSends} de ${totalJobs} errores. Revise los logs.`,
+      error: `Envío completado con ${failedSends} de ${processedJobs} errores. Revise los logs.`,
     };
   }
 
