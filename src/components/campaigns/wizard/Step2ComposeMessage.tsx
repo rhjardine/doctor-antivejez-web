@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Mail, Smartphone, Paperclip, X } from 'lucide-react';
+import { Mail, Smartphone, Paperclip, X, MessageSquare } from 'lucide-react';
 import { CampaignConfig, Channel } from '../NewCampaignWizard';
 
 interface Step2ComposeMessageProps {
@@ -15,26 +15,19 @@ interface Step2ComposeMessageProps {
   setCampaignConfig: React.Dispatch<React.SetStateAction<CampaignConfig>>;
 }
 
-// Se envuelve en React.memo para optimizar re-renderizados
 const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignConfig, setCampaignConfig }: Step2ComposeMessageProps) {
   
-  // ===== INICIO DE LA CORRECCIÓN DEL TEXTAREA =====
-  // 1. Creamos un estado local para manejar el valor del textarea.
   const [localMessage, setLocalMessage] = useState(campaignConfig.message);
 
-  // 2. Sincronizamos el estado local si la prop externa cambia.
   useEffect(() => {
     setLocalMessage(campaignConfig.message);
   }, [campaignConfig.message]);
 
-  // 3. El manejador de 'onChange' ahora solo actualiza el estado local.
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setLocalMessage(e.target.value);
   };
 
-  // 4. Cuando el usuario deja de escribir (onBlur), actualizamos el estado del padre.
   const handleMessageBlur = () => {
-    // Solo actualizamos si el mensaje ha cambiado para evitar re-renderizados innecesarios.
     if (localMessage !== campaignConfig.message) {
       setCampaignConfig(prevConfig => ({
         ...prevConfig,
@@ -42,7 +35,6 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
       }));
     }
   };
-  // ===== FIN DE LA CORRECCIÓN DEL TEXTAREA =====
 
   const handleChannelChange = (channel: Channel, checked: boolean) => {
     setCampaignConfig(prev => {
@@ -64,7 +56,6 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
 
   const clearFile = () => {
     setCampaignConfig(prev => ({ ...prev, mediaFile: null }));
-    // También reseteamos el input de archivo para poder seleccionar el mismo archivo de nuevo
     const fileInput = document.getElementById('file-upload') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
@@ -79,7 +70,6 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Columna Izquierda: Canales y Nombre */}
         <div className="space-y-6">
           <div>
             <Label className="font-semibold">Canales de Envío</Label>
@@ -104,6 +94,17 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
                   <Smartphone className="w-5 h-5 text-gray-600" /> SMS
                 </Label>
               </div>
+              {/* ===== NUEVO CHECKBOX PARA WHATSAPP ===== */}
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="channel-whatsapp" 
+                  checked={campaignConfig.channels.has('WHATSAPP')}
+                  onCheckedChange={(checked) => handleChannelChange('WHATSAPP', !!checked)}
+                />
+                <Label htmlFor="channel-whatsapp" className="flex items-center gap-2 cursor-pointer">
+                  <MessageSquare className="w-5 h-5 text-gray-600" /> WhatsApp
+                </Label>
+              </div>
             </div>
           </div>
           <div>
@@ -117,7 +118,6 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
           </div>
         </div>
 
-        {/* Columna Derecha: Mensaje y Adjunto */}
         <div className="space-y-6">
           <div>
             <Label htmlFor="message-body" className="font-semibold">Cuerpo del Mensaje</Label>

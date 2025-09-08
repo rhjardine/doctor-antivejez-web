@@ -12,7 +12,7 @@ import Step3ReviewAndSend from './wizard/Step3ReviewAndSend';
 
 import { sendCampaign } from '@/lib/actions/campaigns.actions';
 
-// ===== TIPO CHANNEL ACTUALIZADO =====
+// ===== TIPO CHANNEL ACTUALIZADO PARA INCLUIR WHATSAPP =====
 export type Channel = 'EMAIL' | 'SMS' | 'WHATSAPP';
 
 export interface Contact {
