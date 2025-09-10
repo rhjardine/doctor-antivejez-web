@@ -5,10 +5,6 @@ import { prisma } from '@/lib/db';
 import { Contact, Channel } from '@/components/campaigns/NewCampaignWizard';
 import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/services/notificationService';
 
-/**
- * Obtiene todos los pacientes de la base de datos de PostgreSQL y los formatea
- * como contactos para el módulo de campañas.
- */
 export async function getContactsFromDB() {
   try {
     const patients = await prisma.patient.findMany({
@@ -40,16 +36,12 @@ export async function getContactsFromDB() {
   }
 }
 
-/**
- * Orquesta el envío de una campaña multicanal a una lista de contactos.
- * @param mediaUrl - Una URL pública al archivo adjunto, alojado en Cloudinary.
- */
 export async function sendCampaign(
   contacts: Contact[], 
   channels: Channel[], 
   message: string, 
   campaignName: string,
-  mediaUrl: string | null // <-- AHORA RECIBE UNA URL (string) en lugar de AttachmentPayload
+  mediaUrl: string | null
 ) {
   console.log(`[Campaign Action] Iniciando envío de campaña a ${contacts.length} contactos por: ${channels.join(', ')}`);
 
@@ -66,7 +58,6 @@ export async function sendCampaign(
         console.log(`[Email] Omitiendo a ${contact.name} por falta de email.`);
         return;
       }
-      // Pasamos la mediaUrl directamente al proveedor de email
       const promise = emailProvider.send(contact.email, campaignName, message, mediaUrl).then(result => {
         if (result.success) {
           console.log(`[Email] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
@@ -88,7 +79,6 @@ export async function sendCampaign(
         console.log(`[SMS] Omitiendo a ${contact.name} por falta de teléfono.`);
         return;
       }
-      // Para SMS, añadimos la URL del medio al final del cuerpo del mensaje.
       const messageWithMedia = mediaUrl ? `${message}\n\nVer adjunto: ${mediaUrl}` : message;
       const promise = smsProvider.send(contact.phone, messageWithMedia).then(result => {
         if (result.success) {

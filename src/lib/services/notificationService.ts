@@ -31,9 +31,10 @@ class SendGridProvider implements EmailProvider {
       html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
     };
 
+    // Si hay una URL de un medio, lo descargamos y lo adjuntamos como Base64
     if (mediaUrl) {
       try {
-        // Descargamos el archivo desde la URL para obtener su contenido en Base64
+        console.log(`[SendGrid] Descargando adjunto desde: ${mediaUrl}`);
         const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
         const content = Buffer.from(response.data, 'binary').toString('base64');
         const filename = mediaUrl.split('/').pop() || 'attachment';
@@ -45,9 +46,10 @@ class SendGridProvider implements EmailProvider {
           type: contentType,
           disposition: 'attachment',
         }];
+        console.log(`[SendGrid] Adjunto procesado exitosamente: ${filename}`);
       } catch (error) {
         console.error('Failed to fetch attachment for email:', error);
-        // Opcional: decidir si el email debe fallar o enviarse sin adjunto
+        // Decidimos fallar el envío si el adjunto no se puede procesar
         return { success: false, error: 'No se pudo adjuntar el archivo al correo.' };
       }
     }
@@ -129,6 +131,8 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
         from: formattedFrom,
         to: formattedTo,
         contentVariables: JSON.stringify(variables),
+        // La API de Twilio espera la URL del medio en este parámetro.
+        // Debe ser un array de strings.
         mediaUrl: mediaUrl ? [mediaUrl] : undefined,
       });
       return { success: true, messageId: response.sid };

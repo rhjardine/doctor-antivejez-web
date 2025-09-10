@@ -30,8 +30,6 @@ export interface CampaignConfig {
   mediaFile: File | null;
 }
 
-// Ya no necesitamos la interfaz AttachmentPayload en el frontend
-
 const steps = [
   { id: 1, name: 'Seleccionar Contactos', description: 'Elige los destinatarios para tu campaña.' },
   { id: 2, name: 'Crear Mensaje', description: 'Redacta el contenido y elige los canales.' },
@@ -79,9 +77,7 @@ export default function NewCampaignWizard() {
 
     let mediaUrl: string | null = null;
     
-    // 1. Si hay un archivo, lo subimos a Cloudinary
     if (campaignConfig.mediaFile) {
-      // Verificamos que la variable de entorno del cloud name esté disponible
       const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
       if (!cloudName) {
         toast.error('La configuración de Cloudinary no está completa. Contacte al administrador.');
@@ -93,9 +89,7 @@ export default function NewCampaignWizard() {
         toast.info('Subiendo archivo adjunto...');
         const formData = new FormData();
         formData.append('file', campaignConfig.mediaFile);
-        // Usamos un "upload preset" que debe ser creado en Cloudinary.
-        // Es más seguro para subidas desde el cliente.
-        formData.append('upload_preset', 'ml_default'); // Asegúrate de que este preset exista en tu cuenta de Cloudinary
+        formData.append('upload_preset', 'ml_default');
 
         const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
           method: 'POST',
@@ -108,7 +102,7 @@ export default function NewCampaignWizard() {
         }
         
         const data = await response.json();
-        mediaUrl = data.secure_url; // Obtenemos la URL segura y pública
+        mediaUrl = data.secure_url;
         toast.success('Adjunto subido exitosamente.');
 
       } catch (error: any) {
@@ -119,7 +113,6 @@ export default function NewCampaignWizard() {
       }
     }
 
-    // 2. Llamamos a la Server Action con la URL del medio (o null si no hay)
     const result = await sendCampaign(
       selectedContacts, 
       Array.from(campaignConfig.channels), 
