@@ -12,7 +12,6 @@ import Step3ReviewAndSend from './wizard/Step3ReviewAndSend';
 
 import { sendCampaign } from '@/lib/actions/campaigns.actions';
 
-// ===== TIPO CHANNEL ACTUALIZADO PARA INCLUIR WHATSAPP =====
 export type Channel = 'EMAIL' | 'SMS' | 'WHATSAPP';
 
 export interface Contact {
@@ -31,30 +30,13 @@ export interface CampaignConfig {
   mediaFile: File | null;
 }
 
-export interface AttachmentPayload {
-  content: string;
-  filename: string;
-  type: string;
-  disposition: 'attachment';
-  content_id: string;
-}
+// Ya no necesitamos la interfaz AttachmentPayload en el frontend
 
 const steps = [
   { id: 1, name: 'Seleccionar Contactos', description: 'Elige los destinatarios para tu campaña.' },
   { id: 2, name: 'Crear Mensaje', description: 'Redacta el contenido y elige los canales.' },
   { id: 3, name: 'Revisar y Enviar', description: 'Confirma los detalles antes de lanzar.' },
 ];
-
-const fileToBase64 = (file: File): Promise<string> => 
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      const base64String = (reader.result as string).split(',')[1];
-      resolve(base64String);
-    };
-    reader.onerror = error => reject(error);
-});
 
 export default function NewCampaignWizard() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -95,32 +77,55 @@ export default function NewCampaignWizard() {
     setIsSending(true);
     toast.info('Iniciando envío de campaña...');
 
-    let attachmentPayload: AttachmentPayload | null = null;
+    let mediaUrl: string | null = null;
+    
+    // 1. Si hay un archivo, lo subimos a Cloudinary
     if (campaignConfig.mediaFile) {
+      // Verificamos que la variable de entorno del cloud name esté disponible
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      if (!cloudName) {
+        toast.error('La configuración de Cloudinary no está completa. Contacte al administrador.');
+        setIsSending(false);
+        return;
+      }
+
       try {
-        toast.info('Procesando archivo adjunto...');
-        const base64Content = await fileToBase64(campaignConfig.mediaFile);
-        attachmentPayload = {
-          content: base64Content,
-          filename: campaignConfig.mediaFile.name,
-          type: campaignConfig.mediaFile.type,
-          disposition: 'attachment',
-          content_id: campaignConfig.mediaFile.name,
-        };
-      } catch (error) {
-        console.error("Error processing attachment:", error);
-        toast.error('Error al procesar el archivo adjunto.');
+        toast.info('Subiendo archivo adjunto...');
+        const formData = new FormData();
+        formData.append('file', campaignConfig.mediaFile);
+        // Usamos un "upload preset" que debe ser creado en Cloudinary.
+        // Es más seguro para subidas desde el cliente.
+        formData.append('upload_preset', 'ml_default'); // Asegúrate de que este preset exista en tu cuenta de Cloudinary
+
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error.message || 'Fallo la subida del archivo.');
+        }
+        
+        const data = await response.json();
+        mediaUrl = data.secure_url; // Obtenemos la URL segura y pública
+        toast.success('Adjunto subido exitosamente.');
+
+      } catch (error: any) {
+        console.error("Error uploading attachment to Cloudinary:", error);
+        toast.error(`Error al subir el adjunto: ${error.message}`);
         setIsSending(false);
         return;
       }
     }
 
+    // 2. Llamamos a la Server Action con la URL del medio (o null si no hay)
     const result = await sendCampaign(
       selectedContacts, 
       Array.from(campaignConfig.channels), 
       campaignConfig.message,
       campaignConfig.name,
-      attachmentPayload
+      mediaUrl
     );
 
     if (result.success) {

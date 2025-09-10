@@ -2,7 +2,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { Contact, Channel, AttachmentPayload } from '@/components/campaigns/NewCampaignWizard';
+import { Contact, Channel } from '@/components/campaigns/NewCampaignWizard';
 import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/services/notificationService';
 
 /**
@@ -30,8 +30,6 @@ export async function getContactsFromDB() {
       email: p.email,
       phone: p.phone,
       origin: 'RENDER PG',
-      // En el futuro, este campo debería leerse desde la base de datos por paciente.
-      // Por ahora, asumimos consentimiento para todos los canales para facilitar las pruebas.
       consent: ['EMAIL', 'SMS', 'WHATSAPP'],
     }));
 
@@ -44,18 +42,14 @@ export async function getContactsFromDB() {
 
 /**
  * Orquesta el envío de una campaña multicanal a una lista de contactos.
- * @param contacts - Array de contactos seleccionados.
- * @param channels - Array de canales seleccionados ('EMAIL', 'SMS', 'WHATSAPP').
- * @param message - El cuerpo del mensaje de la campaña.
- * @param campaignName - El nombre de la campaña (usado como asunto del email).
- * @param attachment - Un objeto con los datos del archivo adjunto (si existe).
+ * @param mediaUrl - Una URL pública al archivo adjunto, alojado en Cloudinary.
  */
 export async function sendCampaign(
   contacts: Contact[], 
   channels: Channel[], 
   message: string, 
   campaignName: string,
-  attachment: AttachmentPayload | null
+  mediaUrl: string | null // <-- AHORA RECIBE UNA URL (string) en lugar de AttachmentPayload
 ) {
   console.log(`[Campaign Action] Iniciando envío de campaña a ${contacts.length} contactos por: ${channels.join(', ')}`);
 
@@ -72,7 +66,8 @@ export async function sendCampaign(
         console.log(`[Email] Omitiendo a ${contact.name} por falta de email.`);
         return;
       }
-      const promise = emailProvider.send(contact.email, campaignName, message, attachment).then(result => {
+      // Pasamos la mediaUrl directamente al proveedor de email
+      const promise = emailProvider.send(contact.email, campaignName, message, mediaUrl).then(result => {
         if (result.success) {
           console.log(`[Email] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
           successfulSends++;
@@ -93,7 +88,9 @@ export async function sendCampaign(
         console.log(`[SMS] Omitiendo a ${contact.name} por falta de teléfono.`);
         return;
       }
-      const promise = smsProvider.send(contact.phone, message).then(result => {
+      // Para SMS, añadimos la URL del medio al final del cuerpo del mensaje.
+      const messageWithMedia = mediaUrl ? `${message}\n\nVer adjunto: ${mediaUrl}` : message;
+      const promise = smsProvider.send(contact.phone, messageWithMedia).then(result => {
         if (result.success) {
           console.log(`[SMS] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
           successfulSends++;
@@ -112,8 +109,7 @@ export async function sendCampaign(
     const templateSid = process.env.TWILIO_WHATSAPP_TEMPLATE_SID;
 
     if (!templateSid) {
-      console.error('[WhatsApp] Error Crítico: El SID de la plantilla no está configurado en las variables de entorno (TWILIO_WHATSAPP_TEMPLATE_SID). No se enviarán mensajes de WhatsApp.');
-      // Añadimos un fallo por cada contacto que debería haber recibido un WhatsApp
+      console.error('[WhatsApp] Error Crítico: El SID de la plantilla no está configurado (TWILIO_WHATSAPP_TEMPLATE_SID).');
       failedSends += contacts.filter(c => c.phone).length;
     } else {
       contacts.forEach(contact => {
@@ -127,7 +123,7 @@ export async function sendCampaign(
           '2': message,
         };
 
-        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
+        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables, mediaUrl).then(result => {
           if (result.success) {
             console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
             successfulSends++;
@@ -141,7 +137,6 @@ export async function sendCampaign(
     }
   }
 
-  // Esperamos a que todas las promesas de envío (de todos los canales) se completen.
   await Promise.all(sendPromises);
 
   const processedJobs = successfulSends + failedSends;

@@ -1,21 +1,13 @@
 // src/lib/services/notificationService.ts
 import twilio from 'twilio';
 import sgMail from '@sendgrid/mail';
-
-// Interfaz para la estructura del adjunto, consistente con la API de SendGrid
-interface Attachment {
-  content: string; // Contenido en Base64
-  filename: string;
-  type: string;
-  disposition: 'attachment';
-  content_id: string;
-}
+import axios from 'axios';
 
 // ==================================================================
 // ===== SECCIÓN DE EMAIL =====
 // ==================================================================
 interface EmailProvider {
-  send(to: string, subject: string, body: string, attachment: Attachment | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  send(to: string, subject: string, body: string, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
 class SendGridProvider implements EmailProvider {
@@ -25,7 +17,7 @@ class SendGridProvider implements EmailProvider {
     }
   }
 
-  async send(to: string, subject: string, body: string, attachment: Attachment | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async send(to: string, subject: string, body: string, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!process.env.SENDGRID_API_KEY || !process.env.SENDGRID_FROM_EMAIL) {
       console.error('SendGrid credentials are not configured.');
       return { success: false, error: 'El servicio de Email no está configurado.' };
@@ -39,8 +31,25 @@ class SendGridProvider implements EmailProvider {
       html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
     };
 
-    if (attachment) {
-      msg.attachments = [attachment];
+    if (mediaUrl) {
+      try {
+        // Descargamos el archivo desde la URL para obtener su contenido en Base64
+        const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
+        const content = Buffer.from(response.data, 'binary').toString('base64');
+        const filename = mediaUrl.split('/').pop() || 'attachment';
+        const contentType = response.headers['content-type'];
+
+        msg.attachments = [{
+          content,
+          filename,
+          type: contentType,
+          disposition: 'attachment',
+        }];
+      } catch (error) {
+        console.error('Failed to fetch attachment for email:', error);
+        // Opcional: decidir si el email debe fallar o enviarse sin adjunto
+        return { success: false, error: 'No se pudo adjuntar el archivo al correo.' };
+      }
     }
 
     try {
@@ -94,10 +103,10 @@ export function getSmsProvider(): SmsProvider {
 }
 
 // ==================================================================
-// ===== SECCIÓN DE WHATSAPP (NUEVA) =====
+// ===== SECCIÓN DE WHATSAPP =====
 // ==================================================================
 interface WhatsAppProvider {
-  sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
 class TwilioWhatsAppProvider implements WhatsAppProvider {
@@ -105,7 +114,7 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
     ? twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN) 
     : null;
 
-  async sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.client || !process.env.TWILIO_WHATSAPP_NUMBER) {
       console.error('Twilio WhatsApp credentials are not configured.');
       return { success: false, error: 'El servicio de WhatsApp no está configurado.' };
@@ -113,14 +122,14 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
 
     const formattedTo = `whatsapp:${to}`;
     const formattedFrom = `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`;
-    const contentVariables = JSON.stringify(variables);
 
     try {
       const response = await this.client.messages.create({
         contentSid: templateSid,
         from: formattedFrom,
         to: formattedTo,
-        contentVariables: contentVariables,
+        contentVariables: JSON.stringify(variables),
+        mediaUrl: mediaUrl ? [mediaUrl] : undefined,
       });
       return { success: true, messageId: response.sid };
     } catch (error: any) {
