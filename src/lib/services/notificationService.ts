@@ -11,12 +11,13 @@ interface Attachment {
   content_id: string;
 }
 
-// ===== Interfaz para Proveedores de Email =====
+// ==================================================================
+// ===== SECCIÓN DE EMAIL =====
+// ==================================================================
 interface EmailProvider {
   send(to: string, subject: string, body: string, attachment: Attachment | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-// ===== Implementación del Proveedor de SendGrid =====
 class SendGridProvider implements EmailProvider {
   constructor() {
     if (process.env.SENDGRID_API_KEY) {
@@ -57,12 +58,13 @@ export function getEmailProvider(): EmailProvider {
   return new SendGridProvider();
 }
 
-// ===== Interfaz para Proveedores de SMS =====
+// ==================================================================
+// ===== SECCIÓN DE SMS =====
+// ==================================================================
 interface SmsProvider {
   send(to: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-// ===== Implementación del Proveedor de Twilio SMS =====
 class TwilioSmsProvider implements SmsProvider {
   private client = process.env.TWILIO_SID && process.env.TWILIO_TOKEN 
     ? twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN) 
@@ -88,24 +90,22 @@ class TwilioSmsProvider implements SmsProvider {
 }
 
 export function getSmsProvider(): SmsProvider {
-  // Aquí se podría añadir lógica para otros proveedores de SMS en el futuro
   return new TwilioSmsProvider();
 }
 
-// ===== INICIO DE LA NUEVA SECCIÓN DE WHATSAPP =====
-
-// ===== 1. DEFINIMOS LA INTERFAZ PARA WHATSAPP =====
+// ==================================================================
+// ===== SECCIÓN DE WHATSAPP (NUEVA) =====
+// ==================================================================
 interface WhatsAppProvider {
-  sendTemplate(to: string, templateName: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-// ===== 2. IMPLEMENTAMOS EL PROVEEDOR DE WHATSAPP CON TWILIO =====
 class TwilioWhatsAppProvider implements WhatsAppProvider {
   private client = process.env.TWILIO_SID && process.env.TWILIO_TOKEN 
     ? twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN) 
     : null;
 
-  async sendTemplate(to: string, templateName: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.client || !process.env.TWILIO_WHATSAPP_NUMBER) {
       console.error('Twilio WhatsApp credentials are not configured.');
       return { success: false, error: 'El servicio de WhatsApp no está configurado.' };
@@ -117,10 +117,7 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
 
     try {
       const response = await this.client.messages.create({
-        contentSid: 'HXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', // Placeholder for your actual template SID
-        // Nota: Una vez que la plantilla es aprobada, es más robusto usar su SID (ej. 'HX...') que su nombre.
-        // Por ahora, el SDK puede resolver el nombre, pero el SID es preferible.
-        // contentSid: templateName, 
+        contentSid: templateSid,
         from: formattedFrom,
         to: formattedTo,
         contentVariables: contentVariables,
@@ -133,8 +130,6 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
   }
 }
 
-// ===== 3. CREAMOS LA FUNCIÓN PARA OBTENER EL PROVEEDOR DE WHATSAPP =====
 export function getWhatsAppProvider(): WhatsAppProvider {
   return new TwilioWhatsAppProvider();
 }
-// ===== FIN DE LA NUEVA SECCIÓN DE WHATSAPP =====

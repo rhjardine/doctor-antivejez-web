@@ -29,6 +29,7 @@
     "date-fns": "^2.30.0",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.400.0",
+    "mysql2": "^3.14.5",
     "next": "^14.2.32",
     "next-auth": "^4.24.7",
     "nodemailer": "^6.10.1",

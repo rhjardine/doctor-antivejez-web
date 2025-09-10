@@ -5,6 +5,10 @@ import { prisma } from '@/lib/db';
 import { Contact, Channel, AttachmentPayload } from '@/components/campaigns/NewCampaignWizard';
 import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/services/notificationService';
 
+/**
+ * Obtiene todos los pacientes de la base de datos de PostgreSQL y los formatea
+ * como contactos para el módulo de campañas.
+ */
 export async function getContactsFromDB() {
   try {
     const patients = await prisma.patient.findMany({
@@ -26,7 +30,9 @@ export async function getContactsFromDB() {
       email: p.email,
       phone: p.phone,
       origin: 'RENDER PG',
-      consent: ['EMAIL', 'SMS', 'WHATSAPP'], // Asumimos consentimiento para la prueba
+      // En el futuro, este campo debería leerse desde la base de datos por paciente.
+      // Por ahora, asumimos consentimiento para todos los canales para facilitar las pruebas.
+      consent: ['EMAIL', 'SMS', 'WHATSAPP'],
     }));
 
     return { success: true, data: contacts };
@@ -36,6 +42,14 @@ export async function getContactsFromDB() {
   }
 }
 
+/**
+ * Orquesta el envío de una campaña multicanal a una lista de contactos.
+ * @param contacts - Array de contactos seleccionados.
+ * @param channels - Array de canales seleccionados ('EMAIL', 'SMS', 'WHATSAPP').
+ * @param message - El cuerpo del mensaje de la campaña.
+ * @param campaignName - El nombre de la campaña (usado como asunto del email).
+ * @param attachment - Un objeto con los datos del archivo adjunto (si existe).
+ */
 export async function sendCampaign(
   contacts: Contact[], 
   channels: Channel[], 
@@ -95,32 +109,39 @@ export async function sendCampaign(
   // --- LÓGICA DE ENVÍO DE WHATSAPP ---
   if (channels.includes('WHATSAPP')) {
     const whatsAppProvider = getWhatsAppProvider();
-    const templateName = 'HXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'; // Reemplazar con el SID de la plantilla 'campaign_notification' una vez aprobada
-    
-    contacts.forEach(contact => {
-      if (!contact.phone) {
-        console.log(`[WhatsApp] Omitiendo a ${contact.name} por falta de teléfono.`);
-        return;
-      }
-      
-      const variables = {
-        '1': contact.name,
-        '2': message,
-      };
+    const templateSid = process.env.TWILIO_WHATSAPP_TEMPLATE_SID;
 
-      const promise = whatsAppProvider.sendTemplate(contact.phone, templateName, variables).then(result => {
-        if (result.success) {
-          console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
-          successfulSends++;
-        } else {
-          console.error(`[WhatsApp] Falló el envío a ${contact.name}. Error: ${result.error}`);
-          failedSends++;
+    if (!templateSid) {
+      console.error('[WhatsApp] Error Crítico: El SID de la plantilla no está configurado en las variables de entorno (TWILIO_WHATSAPP_TEMPLATE_SID). No se enviarán mensajes de WhatsApp.');
+      // Añadimos un fallo por cada contacto que debería haber recibido un WhatsApp
+      failedSends += contacts.filter(c => c.phone).length;
+    } else {
+      contacts.forEach(contact => {
+        if (!contact.phone) {
+          console.log(`[WhatsApp] Omitiendo a ${contact.name} por falta de teléfono.`);
+          return;
         }
+        
+        const variables = {
+          '1': contact.name,
+          '2': message,
+        };
+
+        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
+          if (result.success) {
+            console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+            successfulSends++;
+          } else {
+            console.error(`[WhatsApp] Falló el envío a ${contact.name}. Error: ${result.error}`);
+            failedSends++;
+          }
+        });
+        sendPromises.push(promise);
       });
-      sendPromises.push(promise);
-    });
+    }
   }
 
+  // Esperamos a que todas las promesas de envío (de todos los canales) se completen.
   await Promise.all(sendPromises);
 
   const processedJobs = successfulSends + failedSends;
