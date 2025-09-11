@@ -102,32 +102,29 @@ export async function sendCampaign(
       console.error('[WhatsApp] Error Crítico: El SID de la plantilla no está configurado (TWILIO_WHATSAPP_TEMPLATE_SID).');
       failedSends += contacts.filter(c => c.phone).length;
     } else {
-      
-      // ===== INICIO DE LA PRUEBA DE AISLAMIENTO =====
-      // Forzamos el uso de una URL de imagen pública y simple para la prueba.
-      // Esta es una imagen de prueba oficial de Twilio que garantiza que la URL es válida y accesible.
-      // Ignoramos la 'mediaUrl' que viene de Cloudinary por ahora.
-      const testMediaUrl = 'https://demo.twilio.com/owl.png';
-      // =============================================
-
       contacts.forEach(contact => {
         if (!contact.phone) {
           console.log(`[WhatsApp] Omitiendo a ${contact.name} por falta de teléfono.`);
           return;
         }
         
+        // Extraemos el public_id de la URL de Cloudinary para pasarlo como variable.
+        // Ej: 'https://.../upload/v123/sample.jpg' -> 'v123/sample.jpg'
+        const mediaPublicIdWithFormat = mediaUrl ? mediaUrl.split('/upload/')[1] : '';
+
+        // Construimos el objeto de variables que coincide con la plantilla
         const variables = {
-          '1': contact.name,
-          '2': message,
+          '1': contact.name,      // Coincide con {{1}} en el Body
+          '2': message,          // Coincide con {{2}} en el Body
+          '3': mediaPublicIdWithFormat, // Coincide con {{3}} en la Media URL
         };
 
-        // Pasamos la URL de prueba en lugar de la que viene de Cloudinary
-        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables, testMediaUrl).then(result => {
+        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
           if (result.success) {
-            console.log(`[WhatsApp TEST] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+            console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
             successfulSends++;
           } else {
-            console.error(`[WhatsApp TEST] Falló el envío a ${contact.name}. Error: ${result.error}`);
+            console.error(`[WhatsApp] Falló el envío a ${contact.name}. Error: ${result.error}`);
             failedSends++;
           }
         });
