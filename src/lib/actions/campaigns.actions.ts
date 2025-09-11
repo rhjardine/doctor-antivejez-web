@@ -102,6 +102,14 @@ export async function sendCampaign(
       console.error('[WhatsApp] Error Crítico: El SID de la plantilla no está configurado (TWILIO_WHATSAPP_TEMPLATE_SID).');
       failedSends += contacts.filter(c => c.phone).length;
     } else {
+      
+      // ===== INICIO DE LA PRUEBA DE AISLAMIENTO =====
+      // Forzamos el uso de una URL de imagen pública y simple para la prueba.
+      // Esta es una imagen de prueba oficial de Twilio que garantiza que la URL es válida y accesible.
+      // Ignoramos la 'mediaUrl' que viene de Cloudinary por ahora.
+      const testMediaUrl = 'https://demo.twilio.com/owl.png';
+      // =============================================
+
       contacts.forEach(contact => {
         if (!contact.phone) {
           console.log(`[WhatsApp] Omitiendo a ${contact.name} por falta de teléfono.`);
@@ -113,12 +121,13 @@ export async function sendCampaign(
           '2': message,
         };
 
-        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables, mediaUrl).then(result => {
+        // Pasamos la URL de prueba en lugar de la que viene de Cloudinary
+        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables, testMediaUrl).then(result => {
           if (result.success) {
-            console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+            console.log(`[WhatsApp TEST] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
             successfulSends++;
           } else {
-            console.error(`[WhatsApp] Falló el envío a ${contact.name}. Error: ${result.error}`);
+            console.error(`[WhatsApp TEST] Falló el envío a ${contact.name}. Error: ${result.error}`);
             failedSends++;
           }
         });
