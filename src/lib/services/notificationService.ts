@@ -104,7 +104,7 @@ export function getSmsProvider(): SmsProvider {
 // ===== SECCIÓN DE WHATSAPP =====
 // ==================================================================
 interface WhatsAppProvider {
-  sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
 class TwilioWhatsAppProvider implements WhatsAppProvider {
@@ -112,7 +112,7 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
     ? twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN) 
     : null;
 
-  async sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.client || !process.env.TWILIO_WHATSAPP_NUMBER) {
       console.error('Twilio WhatsApp credentials are not configured.');
       return { success: false, error: 'El servicio de WhatsApp no está configurado.' };
@@ -127,8 +127,9 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
         from: formattedFrom,
         to: formattedTo,
         contentVariables: JSON.stringify(variables),
-        // El parámetro 'mediaUrl' ya no es necesario aquí, ya que la URL se construye
-        // dinámicamente en la plataforma de Twilio usando la variable {{3}}.
+        // La URL del medio se pasa como un parámetro de nivel superior.
+        // La API espera un array de strings.
+        mediaUrl: mediaUrl ? [mediaUrl] : undefined,
       });
       return { success: true, messageId: response.sid };
     } catch (error: any) {

@@ -108,18 +108,14 @@ export async function sendCampaign(
           return;
         }
         
-        // Extraemos el public_id de la URL de Cloudinary para pasarlo como variable.
-        // Ej: 'https://.../upload/v123/sample.jpg' -> 'v123/sample.jpg'
-        const mediaPublicIdWithFormat = mediaUrl ? mediaUrl.split('/upload/')[1] : '';
-
-        // Construimos el objeto de variables que coincide con la plantilla
+        // Las variables solo corresponden al cuerpo del mensaje
         const variables = {
-          '1': contact.name,      // Coincide con {{1}} en el Body
-          '2': message,          // Coincide con {{2}} en el Body
-          '3': mediaPublicIdWithFormat, // Coincide con {{3}} en la Media URL
+          '1': contact.name,
+          '2': message,
         };
 
-        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
+        // La URL del medio se pasa como un argumento separado al proveedor de servicios
+        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables, mediaUrl).then(result => {
           if (result.success) {
             console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
             successfulSends++;
