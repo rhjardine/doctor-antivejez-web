@@ -79,7 +79,6 @@ export async function sendCampaign(
         console.log(`[SMS] Omitiendo a ${contact.name} por falta de teléfono.`);
         return;
       }
-      // Se asegura de que la URL esté completa para mejorar la detección en los clientes de SMS.
       const messageWithMedia = mediaUrl ? `${message}\n\nVer adjunto: ${mediaUrl}` : message;
       const promise = smsProvider.send(contact.phone, messageWithMedia).then(result => {
         if (result.success) {
@@ -109,19 +108,19 @@ export async function sendCampaign(
           return;
         }
         
-        // ===== INICIO DE LA CORRECCIÓN FINAL =====
-        // Se construyen las variables para la plantilla de 3 placeholders,
-        // asegurando que ninguna variable esté vacía para cumplir con las políticas de WhatsApp.
         const variables = {
-          '1': contact.name || 'Estimado Cliente', // Fallback por si el nombre es nulo
-          '2': message || '(Sin contenido)',       // Fallback por si el mensaje es nulo
+          '1': contact.name || 'Estimado Cliente',
+          '2': message || '(Sin contenido)',
           '3': mediaUrl 
                ? `Para ver el archivo adjunto, visite: ${mediaUrl}` 
-               : '(Este mensaje no contiene archivos adjuntos.)', // Texto explícito si no hay adjunto
+               : '(Este mensaje no contiene archivos adjuntos.)',
         };
-        // ===== FIN DE LA CORRECCIÓN FINAL =====
 
+        // ===== INICIO DE LA CORRECCIÓN =====
+        // Se elimina el cuarto argumento 'mediaUrl', ya que la firma del método
+        // en el servicio ahora solo espera 3 argumentos.
         const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
+        // ===== FIN DE LA CORRECCIÓN =====
           if (result.success) {
             console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
             successfulSends++;
