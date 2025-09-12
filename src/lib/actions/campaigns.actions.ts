@@ -116,11 +116,8 @@ export async function sendCampaign(
                : '(Este mensaje no contiene archivos adjuntos.)',
         };
 
-        // ===== INICIO DE LA CORRECCIÓN =====
-        // Se elimina el cuarto argumento 'mediaUrl', ya que la firma del método
-        // en el servicio ahora solo espera 3 argumentos.
+        // La llamada a la función ahora tiene 3 argumentos, coincidiendo con la definición corregida.
         const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
-        // ===== FIN DE LA CORRECCIÓN =====
           if (result.success) {
             console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
             successfulSends++;

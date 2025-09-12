@@ -103,16 +103,23 @@ export function getSmsProvider(): SmsProvider {
 // ==================================================================
 // ===== SECCIÓN DE WHATSAPP =====
 // ==================================================================
+// ===== INICIO DE LA CORRECCIÓN =====
+// La firma del método ahora solo espera 3 argumentos, ya que la URL del medio
+// está contenida dentro del objeto 'variables' de la plantilla de solo texto.
 interface WhatsAppProvider {
-  sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
+// ===== FIN DE LA CORRECCIÓN =====
 
 class TwilioWhatsAppProvider implements WhatsAppProvider {
   private client = process.env.TWILIO_SID && process.env.TWILIO_TOKEN 
     ? twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN) 
     : null;
 
-  async sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  // ===== INICIO DE LA CORRECCIÓN =====
+  // La firma del método se actualiza para coincidir con la interfaz.
+  async sendTemplate(to: string, templateSid: string, variables: { [key:string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  // ===== FIN DE LA CORRECCIÓN =====
     if (!this.client || !process.env.TWILIO_WHATSAPP_NUMBER) {
       console.error('Twilio WhatsApp credentials are not configured.');
       return { success: false, error: 'El servicio de WhatsApp no está configurado.' };
@@ -127,9 +134,7 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
         from: formattedFrom,
         to: formattedTo,
         contentVariables: JSON.stringify(variables),
-        // La URL del medio se pasa como un parámetro de nivel superior.
-        // La API espera un array de strings.
-        mediaUrl: mediaUrl ? [mediaUrl] : undefined,
+        // El parámetro 'mediaUrl' se elimina de la llamada a la API
       });
       return { success: true, messageId: response.sid };
     } catch (error: any) {
