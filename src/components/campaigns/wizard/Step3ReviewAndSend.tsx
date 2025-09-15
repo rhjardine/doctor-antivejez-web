@@ -4,7 +4,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Smartphone, Paperclip } from 'lucide-react';
+import { Mail, Smartphone, Paperclip, MessageSquare } from 'lucide-react';
 import { CampaignConfig, Contact } from '../NewCampaignWizard';
 
 interface Step3ReviewAndSendProps {
@@ -24,7 +24,6 @@ export default function Step3ReviewAndSend({ contacts, config }: Step3ReviewAndS
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* ===== INICIO DE LA CORRECCIÓN DE ESTILOS ===== */}
         <Card className="bg-card text-card-foreground">
           <CardHeader>
             <CardTitle>Resumen de la Campaña</CardTitle>
@@ -43,21 +42,32 @@ export default function Step3ReviewAndSend({ contacts, config }: Step3ReviewAndS
               <div className="flex gap-2">
                 {config.channels.has('EMAIL') && <Badge variant="secondary"><Mail className="w-3 h-3 mr-1"/>Email</Badge>}
                 {config.channels.has('SMS') && <Badge variant="secondary"><Smartphone className="w-3 h-3 mr-1"/>SMS</Badge>}
+                {config.channels.has('WHATSAPP') && <Badge variant="secondary"><MessageSquare className="w-3 h-3 mr-1"/>WhatsApp</Badge>}
               </div>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-300">Total de Mensajes:</span>
               <span className="font-medium">{totalMessages}</span>
             </div>
-            {config.mediaFile && (
-              <div className="flex justify-between items-center pt-2 border-t border-gray-600">
-                <span className="text-gray-300">Adjunto:</span>
-                <div className="flex items-center gap-1 font-medium">
-                  <Paperclip className="w-4 h-4" />
-                  <span>{config.mediaFile.name}</span>
-                </div>
+            
+            {/* ===== INICIO DE LA CORRECCIÓN ===== */}
+            {/* Se actualiza la referencia de 'mediaFile' a 'mediaFiles' y se comprueba la longitud del array. */}
+            {config.mediaFiles && config.mediaFiles.length > 0 && (
+              <div className="pt-2 border-t border-gray-600">
+                <span className="text-gray-300">Adjuntos ({config.mediaFiles.length}):</span>
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  {/* Se mapea el array para mostrar el nombre de cada archivo. */}
+                  {config.mediaFiles.map((file, index) => (
+                    <li key={index} className="flex items-center gap-1 font-medium text-xs truncate">
+                      <Paperclip className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{file.name}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
+            {/* ===== FIN DE LA CORRECCIÓN ===== */}
+
           </CardContent>
         </Card>
 
@@ -71,7 +81,6 @@ export default function Step3ReviewAndSend({ contacts, config }: Step3ReviewAndS
             </div>
           </CardContent>
         </Card>
-        {/* ===== FIN DE LA CORRECCIÓN DE ESTILOS ===== */}
       </div>
     </div>
   );
