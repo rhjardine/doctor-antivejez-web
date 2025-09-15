@@ -27,7 +27,6 @@ export interface CampaignConfig {
   name: string;
   channels: Set<Channel>;
   message: string;
-  // ===== CAMBIO: DE UN SOLO ARCHIVO A UN ARRAY DE ARCHIVOS =====
   mediaFiles: File[];
 }
 
@@ -43,7 +42,6 @@ export default function NewCampaignWizard() {
   const [campaignConfig, setCampaignConfig] = useState<CampaignConfig>({
     channels: new Set<Channel>(['EMAIL']),
     message: '',
-    // ===== CAMBIO: INICIALIZAR COMO ARRAY VACÍO =====
     mediaFiles: [],
     name: `Campaña ${new Date().toLocaleDateString('es-ES')}`,
   });
@@ -75,9 +73,8 @@ export default function NewCampaignWizard() {
 
   const handleCreateCampaign = async () => {
     setIsSending(true);
-    toast.info('Iniciando envío de campaña...');
+    toast.info('Encolando campaña...');
 
-    // ===== CAMBIO: LÓGICA PARA SUBIR MÚLTIPLES ARCHIVOS =====
     let mediaUrls: string[] | null = null;
     
     if (campaignConfig.mediaFiles.length > 0) {
@@ -91,7 +88,6 @@ export default function NewCampaignWizard() {
       try {
         toast.info(`Subiendo ${campaignConfig.mediaFiles.length} archivo(s)...`);
         
-        // Creamos una promesa de subida para cada archivo
         const uploadPromises = campaignConfig.mediaFiles.map(file => {
           const formData = new FormData();
           formData.append('file', file);
@@ -106,9 +102,8 @@ export default function NewCampaignWizard() {
           });
         });
 
-        // Ejecutamos todas las subidas en paralelo
         const uploadResults = await Promise.all(uploadPromises);
-        mediaUrls = uploadResults.map(result => result.secure_url); // Obtenemos un array de URLs
+        mediaUrls = uploadResults.map(result => result.secure_url);
         
         toast.success('Todos los adjuntos subidos exitosamente.');
 
@@ -120,26 +115,36 @@ export default function NewCampaignWizard() {
       }
     }
 
-    const result = await sendCampaign(
-      selectedContacts, 
-      Array.from(campaignConfig.channels), 
-      campaignConfig.message,
-      campaignConfig.name,
-      mediaUrls // Pasamos el array de URLs
-    );
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // La Server Action 'sendCampaign' ahora siempre devuelve un objeto con 'success: true'.
+    // Por lo tanto, eliminamos la rama 'else' que intentaba acceder a 'result.error'.
+    try {
+      const result = await sendCampaign(
+        selectedContacts, 
+        Array.from(campaignConfig.channels), 
+        campaignConfig.message,
+        campaignConfig.name,
+        mediaUrls
+      );
 
-    if (result.success) {
-      toast.success(result.message || 'Campaña enviada exitosamente.');
+      // Mostramos siempre el mensaje de éxito que viene del servidor.
+      toast.success(result.message);
+      
+      // Reseteamos el formulario.
       setCurrentStep(1);
       setSelectedContacts([]);
       setCampaignConfig({
         channels: new Set<Channel>(['EMAIL']), message: '', mediaFiles: [], name: `Campaña ${new Date().toLocaleDateString('es-ES')}`
       });
-    } else {
-      toast.error(result.error || 'Ocurrió un error al enviar la campaña.');
-    }
 
-    setIsSending(false);
+    } catch (error) {
+      // Este bloque 'catch' manejará errores de red o si la Server Action falla catastróficamente.
+      console.error("Error calling sendCampaign action:", error);
+      toast.error("Error de conexión. No se pudo iniciar el envío.");
+    } finally {
+      setIsSending(false);
+    }
+    // ===== FIN DE LA CORRECCIÓN =====
   };
 
   const StepsComponent = () => {
