@@ -36,16 +36,15 @@ export async function getContactsFromDB() {
   }
 }
 
-export async function sendCampaign(
+// ===== NUEVA FUNCIÓN ASÍNCRONA PARA EL PROCESO EN SEGUNDO PLANO =====
+async function processMassiveSend(
   contacts: Contact[], 
   channels: Channel[], 
   message: string, 
   campaignName: string,
-  // ===== CAMBIO: DE UNA SOLA URL A UN ARRAY DE URLS =====
   mediaUrls: string[] | null
 ) {
-  console.log(`[Campaign Action] Iniciando envío de campaña a ${contacts.length} contactos por: ${channels.join(', ')}`);
-
+  console.log(`[Background Process] Iniciando envío masivo para campaña "${campaignName}"...`);
   let successfulSends = 0;
   let failedSends = 0;
   
@@ -56,16 +55,14 @@ export async function sendCampaign(
     const emailProvider = getEmailProvider();
     contacts.forEach(contact => {
       if (!contact.email) {
-        console.log(`[Email] Omitiendo a ${contact.name} por falta de email.`);
         return;
       }
-      // Pasamos el array de URLs al proveedor de email
       const promise = emailProvider.send(contact.email, campaignName, message, mediaUrls).then(result => {
         if (result.success) {
-          console.log(`[Email] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+          console.log(`[Background-Email] Enviado a ${contact.name}.`);
           successfulSends++;
         } else {
-          console.error(`[Email] Falló el envío a ${contact.name}. Error: ${result.error}`);
+          console.error(`[Background-Email] Falló el envío a ${contact.name}. Error: ${result.error}`);
           failedSends++;
         }
       });
@@ -78,22 +75,19 @@ export async function sendCampaign(
     const smsProvider = getSmsProvider();
     contacts.forEach(contact => {
       if (!contact.phone) {
-        console.log(`[SMS] Omitiendo a ${contact.name} por falta de teléfono.`);
         return;
       }
-      // Concatenamos todas las URLs de los adjuntos en el cuerpo del SMS
       let messageWithMedia = message;
       if (mediaUrls && mediaUrls.length > 0) {
         const links = mediaUrls.join('\n');
         messageWithMedia += `\n\nArchivos adjuntos:\n${links}`;
       }
-      
       const promise = smsProvider.send(contact.phone, messageWithMedia).then(result => {
         if (result.success) {
-          console.log(`[SMS] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+          console.log(`[Background-SMS] Enviado a ${contact.name}.`);
           successfulSends++;
         } else {
-          console.error(`[SMS] Falló el envío a ${contact.name}. Error: ${result.error}`);
+          console.error(`[Background-SMS] Falló el envío a ${contact.name}. Error: ${result.error}`);
           failedSends++;
         }
       });
@@ -102,36 +96,33 @@ export async function sendCampaign(
   }
 
   // --- LÓGICA DE ENVÍO DE WHATSAPP ---
-  // Nota: La API de WhatsApp a través de plantillas de Twilio solo soporta UN medio.
-  // Enviaremos el primer adjunto de la lista.
   if (channels.includes('WHATSAPP')) {
     const whatsAppProvider = getWhatsAppProvider();
     const templateSid = process.env.TWILIO_WHATSAPP_TEMPLATE_SID;
 
     if (!templateSid) {
-      console.error('[WhatsApp] Error Crítico: El SID de la plantilla no está configurado.');
+      console.error('[Background-WhatsApp] Error Crítico: El SID de la plantilla no está configurado.');
       failedSends += contacts.filter(c => c.phone).length;
     } else {
       contacts.forEach(contact => {
         if (!contact.phone) {
-          console.log(`[WhatsApp] Omitiendo a ${contact.name} por falta de teléfono.`);
           return;
         }
         
         const firstMediaUrl = (mediaUrls && mediaUrls.length > 0) ? mediaUrls[0] : null;
-        
+
         const variables = {
-          '1': contact.name,
-          '2': message,
+          '1': contact.name || 'Estimado Cliente',
+          '2': message || '(Sin contenido)',
           '3': firstMediaUrl ? `Para ver el archivo adjunto, visite: ${firstMediaUrl}` : '(Este mensaje no contiene archivos adjuntos.)',
         };
 
         const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
           if (result.success) {
-            console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
+            console.log(`[Background-WhatsApp] Enviado a ${contact.name}.`);
             successfulSends++;
           } else {
-            console.error(`[WhatsApp] Falló el envío a ${contact.name}. Error: ${result.error}`);
+            console.error(`[Background-WhatsApp] Falló el envío a ${contact.name}. Error: ${result.error}`);
             failedSends++;
           }
         });
@@ -143,17 +134,31 @@ export async function sendCampaign(
   await Promise.all(sendPromises);
 
   const processedJobs = successfulSends + failedSends;
-  console.log(`[Campaign Action] Envío completado. Total procesados: ${processedJobs}, Exitosos: ${successfulSends}, Fallidos: ${failedSends}`);
+  console.log(`[Background Process] Envío completado. Total procesados: ${processedJobs}, Exitosos: ${successfulSends}, Fallidos: ${failedSends}`);
+  
+  // Futura mejora: Guardar el resultado de la campaña en la base de datos.
+}
 
-  if (failedSends > 0) {
-    return {
-      success: false,
-      error: `Envío completado con ${failedSends} de ${processedJobs} errores. Revise los logs.`,
-    };
-  }
 
+/**
+ * Orquesta el envío de una campaña multicanal.
+ * Responde inmediatamente a la UI y procesa el envío en segundo plano.
+ */
+export async function sendCampaign(
+  contacts: Contact[], 
+  channels: Channel[], 
+  message: string, 
+  campaignName: string,
+  mediaUrls: string[] | null
+) {
+  console.log(`[Campaign Action] Recibida solicitud para campaña "${campaignName}" a ${contacts.length} contactos.`);
+
+  // "Dispara y olvida": no usamos 'await' aquí.
+  processMassiveSend(contacts, channels, message, campaignName, mediaUrls);
+
+  // Devolvemos una respuesta inmediata al frontend.
   return {
     success: true,
-    message: `Campaña enviada exitosamente. ${successfulSends} mensajes procesados.`,
+    message: `Campaña para ${contacts.length} contactos ha sido encolada. El envío se procesará en segundo plano.`,
   };
 }

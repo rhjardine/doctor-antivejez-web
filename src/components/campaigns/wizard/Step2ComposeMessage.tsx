@@ -48,10 +48,8 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
     });
   };
 
-  // ===== CAMBIO: LÓGICA PARA MANEJAR MÚLTIPLES ARCHIVOS =====
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      // Añadimos los nuevos archivos a la lista existente
       setCampaignConfig(prev => ({ ...prev, mediaFiles: [...prev.mediaFiles, ...Array.from(e.target.files!)] }));
     }
   };
@@ -62,7 +60,6 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
       mediaFiles: prev.mediaFiles.filter((_, index) => index !== fileIndex),
     }));
   };
-  // =======================================================
 
   return (
     <div className="space-y-6">
@@ -96,6 +93,7 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
                   <Smartphone className="w-5 h-5 text-gray-600" /> SMS
                 </Label>
               </div>
+              {/* ===== REACTIVACIÓN DE WHATSAPP ===== */}
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="channel-whatsapp" 
@@ -134,7 +132,6 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
           </div>
           <div>
             <Label className="font-semibold">Adjuntos (Opcional)</Label>
-            {/* ===== CAMBIO: MOSTRAR LISTA DE ARCHIVOS ADJUNTOS ===== */}
             {campaignConfig.mediaFiles.length > 0 && (
               <div className="mt-2 space-y-2">
                 {campaignConfig.mediaFiles.map((file, index) => (
@@ -151,7 +148,6 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
               </div>
             )}
             <div className="mt-2">
-              {/* Se añade el atributo 'multiple' al input */}
               <Input id="file-upload" type="file" onChange={handleFileChange} multiple />
             </div>
           </div>
