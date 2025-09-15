@@ -41,7 +41,8 @@ export async function sendCampaign(
   channels: Channel[], 
   message: string, 
   campaignName: string,
-  mediaUrl: string | null
+  // ===== CAMBIO: DE UNA SOLA URL A UN ARRAY DE URLS =====
+  mediaUrls: string[] | null
 ) {
   console.log(`[Campaign Action] Iniciando envío de campaña a ${contacts.length} contactos por: ${channels.join(', ')}`);
 
@@ -58,7 +59,8 @@ export async function sendCampaign(
         console.log(`[Email] Omitiendo a ${contact.name} por falta de email.`);
         return;
       }
-      const promise = emailProvider.send(contact.email, campaignName, message, mediaUrl).then(result => {
+      // Pasamos el array de URLs al proveedor de email
+      const promise = emailProvider.send(contact.email, campaignName, message, mediaUrls).then(result => {
         if (result.success) {
           console.log(`[Email] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
           successfulSends++;
@@ -79,7 +81,13 @@ export async function sendCampaign(
         console.log(`[SMS] Omitiendo a ${contact.name} por falta de teléfono.`);
         return;
       }
-      const messageWithMedia = mediaUrl ? `${message}\n\nVer adjunto: ${mediaUrl}` : message;
+      // Concatenamos todas las URLs de los adjuntos en el cuerpo del SMS
+      let messageWithMedia = message;
+      if (mediaUrls && mediaUrls.length > 0) {
+        const links = mediaUrls.join('\n');
+        messageWithMedia += `\n\nArchivos adjuntos:\n${links}`;
+      }
+      
       const promise = smsProvider.send(contact.phone, messageWithMedia).then(result => {
         if (result.success) {
           console.log(`[SMS] Enviado a ${contact.name}. MessageID: ${result.messageId}`);
@@ -94,12 +102,14 @@ export async function sendCampaign(
   }
 
   // --- LÓGICA DE ENVÍO DE WHATSAPP ---
+  // Nota: La API de WhatsApp a través de plantillas de Twilio solo soporta UN medio.
+  // Enviaremos el primer adjunto de la lista.
   if (channels.includes('WHATSAPP')) {
     const whatsAppProvider = getWhatsAppProvider();
     const templateSid = process.env.TWILIO_WHATSAPP_TEMPLATE_SID;
 
     if (!templateSid) {
-      console.error('[WhatsApp] Error Crítico: El SID de la plantilla no está configurado (TWILIO_WHATSAPP_TEMPLATE_SID).');
+      console.error('[WhatsApp] Error Crítico: El SID de la plantilla no está configurado.');
       failedSends += contacts.filter(c => c.phone).length;
     } else {
       contacts.forEach(contact => {
@@ -108,15 +118,14 @@ export async function sendCampaign(
           return;
         }
         
+        const firstMediaUrl = (mediaUrls && mediaUrls.length > 0) ? mediaUrls[0] : null;
+        
         const variables = {
-          '1': contact.name || 'Estimado Cliente',
-          '2': message || '(Sin contenido)',
-          '3': mediaUrl 
-               ? `Para ver el archivo adjunto, visite: ${mediaUrl}` 
-               : '(Este mensaje no contiene archivos adjuntos.)',
+          '1': contact.name,
+          '2': message,
+          '3': firstMediaUrl ? `Para ver el archivo adjunto, visite: ${firstMediaUrl}` : '(Este mensaje no contiene archivos adjuntos.)',
         };
 
-        // La llamada a la función ahora tiene 3 argumentos, coincidiendo con la definición corregida.
         const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
           if (result.success) {
             console.log(`[WhatsApp] Enviado a ${contact.name}. MessageID: ${result.messageId}`);

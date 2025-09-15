@@ -7,7 +7,8 @@ import axios from 'axios';
 // ===== SECCIÓN DE EMAIL =====
 // ==================================================================
 interface EmailProvider {
-  send(to: string, subject: string, body: string, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  // ===== CAMBIO: ACEPTA UN ARRAY DE URLS =====
+  send(to: string, subject: string, body: string, mediaUrls: string[] | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
 class SendGridProvider implements EmailProvider {
@@ -17,7 +18,7 @@ class SendGridProvider implements EmailProvider {
     }
   }
 
-  async send(to: string, subject: string, body: string, mediaUrl: string | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async send(to: string, subject: string, body: string, mediaUrls: string[] | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!process.env.SENDGRID_API_KEY || !process.env.SENDGRID_FROM_EMAIL) {
       console.error('SendGrid credentials are not configured.');
       return { success: false, error: 'El servicio de Email no está configurado.' };
@@ -31,22 +32,27 @@ class SendGridProvider implements EmailProvider {
       html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
     };
 
-    if (mediaUrl) {
+    // ===== CAMBIO: LÓGICA PARA PROCESAR MÚLTIPLES ADJUNTOS =====
+    if (mediaUrls && mediaUrls.length > 0) {
       try {
-        const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
-        const content = Buffer.from(response.data, 'binary').toString('base64');
-        const filename = mediaUrl.split('/').pop() || 'attachment';
-        const contentType = response.headers['content-type'];
+        console.log(`[SendGrid] Procesando ${mediaUrls.length} adjunto(s)...`);
+        
+        const attachmentPromises = mediaUrls.map(async (url) => {
+          const response = await axios.get(url, { responseType: 'arraybuffer' });
+          return {
+            content: Buffer.from(response.data, 'binary').toString('base64'),
+            filename: url.split('/').pop() || 'attachment',
+            type: response.headers['content-type'],
+            disposition: 'attachment',
+          };
+        });
 
-        msg.attachments = [{
-          content,
-          filename,
-          type: contentType,
-          disposition: 'attachment',
-        }];
+        msg.attachments = await Promise.all(attachmentPromises);
+        console.log(`[SendGrid] Todos los adjuntos procesados exitosamente.`);
+
       } catch (error) {
-        console.error('Failed to fetch attachment for email:', error);
-        return { success: false, error: 'No se pudo adjuntar el archivo al correo.' };
+        console.error('Failed to fetch attachments for email:', error);
+        return { success: false, error: 'No se pudieron adjuntar uno o más archivos al correo.' };
       }
     }
 
@@ -66,7 +72,7 @@ export function getEmailProvider(): EmailProvider {
 }
 
 // ==================================================================
-// ===== SECCIÓN DE SMS =====
+// ===== SECCIÓN DE SMS (SIN CAMBIOS) =====
 // ==================================================================
 interface SmsProvider {
   send(to: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }>;
@@ -101,25 +107,18 @@ export function getSmsProvider(): SmsProvider {
 }
 
 // ==================================================================
-// ===== SECCIÓN DE WHATSAPP =====
+// ===== SECCIÓN DE WHATSAPP (SIN CAMBIOS LÓGICOS) =====
 // ==================================================================
-// ===== INICIO DE LA CORRECCIÓN =====
-// La firma del método ahora solo espera 3 argumentos, ya que la URL del medio
-// está contenida dentro del objeto 'variables' de la plantilla de solo texto.
 interface WhatsAppProvider {
   sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
-// ===== FIN DE LA CORRECCIÓN =====
 
 class TwilioWhatsAppProvider implements WhatsAppProvider {
   private client = process.env.TWILIO_SID && process.env.TWILIO_TOKEN 
     ? twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN) 
     : null;
 
-  // ===== INICIO DE LA CORRECCIÓN =====
-  // La firma del método se actualiza para coincidir con la interfaz.
-  async sendTemplate(to: string, templateSid: string, variables: { [key:string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  // ===== FIN DE LA CORRECCIÓN =====
+  async sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.client || !process.env.TWILIO_WHATSAPP_NUMBER) {
       console.error('Twilio WhatsApp credentials are not configured.');
       return { success: false, error: 'El servicio de WhatsApp no está configurado.' };
@@ -134,7 +133,6 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
         from: formattedFrom,
         to: formattedTo,
         contentVariables: JSON.stringify(variables),
-        // El parámetro 'mediaUrl' se elimina de la llamada a la API
       });
       return { success: true, messageId: response.sid };
     } catch (error: any) {

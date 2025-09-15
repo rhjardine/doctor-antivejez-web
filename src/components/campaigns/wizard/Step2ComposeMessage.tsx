@@ -48,19 +48,21 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
     });
   };
 
+  // ===== CAMBIO: LÓGICA PARA MANEJAR MÚLTIPLES ARCHIVOS =====
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setCampaignConfig(prev => ({ ...prev, mediaFile: e.target.files![0] }));
+    if (e.target.files) {
+      // Añadimos los nuevos archivos a la lista existente
+      setCampaignConfig(prev => ({ ...prev, mediaFiles: [...prev.mediaFiles, ...Array.from(e.target.files!)] }));
     }
   };
 
-  const clearFile = () => {
-    setCampaignConfig(prev => ({ ...prev, mediaFile: null }));
-    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = '';
-    }
+  const handleRemoveFile = (fileIndex: number) => {
+    setCampaignConfig(prev => ({
+      ...prev,
+      mediaFiles: prev.mediaFiles.filter((_, index) => index !== fileIndex),
+    }));
   };
+  // =======================================================
 
   return (
     <div className="space-y-6">
@@ -131,22 +133,27 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
             />
           </div>
           <div>
-            <Label className="font-semibold">Adjunto (Opcional)</Label>
-            {campaignConfig.mediaFile ? (
-              <div className="mt-2 flex items-center justify-between bg-slate-100 p-2 rounded-lg">
-                <div className="flex items-center gap-2 text-sm text-gray-700 truncate">
-                  <Paperclip size={16} />
-                  <span className="truncate">{campaignConfig.mediaFile.name}</span>
-                </div>
-                <Button onClick={clearFile} variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
-                  <X size={16} />
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-2">
-                <Input id="file-upload" type="file" onChange={handleFileChange} />
+            <Label className="font-semibold">Adjuntos (Opcional)</Label>
+            {/* ===== CAMBIO: MOSTRAR LISTA DE ARCHIVOS ADJUNTOS ===== */}
+            {campaignConfig.mediaFiles.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {campaignConfig.mediaFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between bg-slate-100 p-2 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-gray-700 truncate">
+                      <Paperclip size={16} />
+                      <span className="truncate">{file.name}</span>
+                    </div>
+                    <Button onClick={() => handleRemoveFile(index)} variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
+                      <X size={16} />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
+            <div className="mt-2">
+              {/* Se añade el atributo 'multiple' al input */}
+              <Input id="file-upload" type="file" onChange={handleFileChange} multiple />
+            </div>
           </div>
         </div>
       </div>

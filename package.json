@@ -7,7 +7,8 @@
     "build": "npx dotenv-cli -e .env -- prisma generate && npx dotenv-cli -e .env -- prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate:dev": "node scripts/migrate-dev.js"
+    "migrate:dev": "node scripts/migrate-dev.js",
+    "db:import-legacy": "ts-node --project tsconfig.scripts.json prisma/run-import.ts"
   },
   "prisma": {
     "seed": "prisma generate && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -28,6 +29,7 @@
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
+    "csv-parse": "^6.1.0",
     "date-fns": "^2.30.0",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.400.0",
@@ -65,6 +67,7 @@
     "prisma": "^5.16.1",
     "tailwindcss": "^3.4.4",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.3"
   }
 }

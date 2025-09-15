@@ -27,13 +27,14 @@ export interface CampaignConfig {
   name: string;
   channels: Set<Channel>;
   message: string;
-  mediaFile: File | null;
+  // ===== CAMBIO: DE UN SOLO ARCHIVO A UN ARRAY DE ARCHIVOS =====
+  mediaFiles: File[];
 }
 
 const steps = [
-  { id: 1, name: 'Seleccionar Contactos', description: 'Elige los destinatarios para tu campaña.' },
-  { id: 2, name: 'Crear Mensaje', description: 'Redacta el contenido y elige los canales.' },
-  { id: 3, name: 'Revisar y Enviar', description: 'Confirma los detalles antes de lanzar.' },
+  { id: 1, name: 'Seleccionar Contactos' },
+  { id: 2, name: 'Crear Mensaje' },
+  { id: 3, name: 'Revisar y Enviar' },
 ];
 
 export default function NewCampaignWizard() {
@@ -42,7 +43,8 @@ export default function NewCampaignWizard() {
   const [campaignConfig, setCampaignConfig] = useState<CampaignConfig>({
     channels: new Set<Channel>(['EMAIL']),
     message: '',
-    mediaFile: null,
+    // ===== CAMBIO: INICIALIZAR COMO ARRAY VACÍO =====
+    mediaFiles: [],
     name: `Campaña ${new Date().toLocaleDateString('es-ES')}`,
   });
   const [isSending, setIsSending] = useState(false);
@@ -75,39 +77,44 @@ export default function NewCampaignWizard() {
     setIsSending(true);
     toast.info('Iniciando envío de campaña...');
 
-    let mediaUrl: string | null = null;
+    // ===== CAMBIO: LÓGICA PARA SUBIR MÚLTIPLES ARCHIVOS =====
+    let mediaUrls: string[] | null = null;
     
-    if (campaignConfig.mediaFile) {
+    if (campaignConfig.mediaFiles.length > 0) {
       const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
       if (!cloudName) {
-        toast.error('La configuración de Cloudinary no está completa. Contacte al administrador.');
+        toast.error('La configuración de Cloudinary no está completa.');
         setIsSending(false);
         return;
       }
 
       try {
-        toast.info('Subiendo archivo adjunto...');
-        const formData = new FormData();
-        formData.append('file', campaignConfig.mediaFile);
-        formData.append('upload_preset', 'ml_default');
-
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
-          method: 'POST',
-          body: formData,
+        toast.info(`Subiendo ${campaignConfig.mediaFiles.length} archivo(s)...`);
+        
+        // Creamos una promesa de subida para cada archivo
+        const uploadPromises = campaignConfig.mediaFiles.map(file => {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('upload_preset', 'ml_default');
+          
+          return fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+            method: 'POST',
+            body: formData,
+          }).then(response => {
+            if (!response.ok) throw new Error(`Fallo la subida de ${file.name}`);
+            return response.json();
+          });
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error.message || 'Fallo la subida del archivo.');
-        }
+        // Ejecutamos todas las subidas en paralelo
+        const uploadResults = await Promise.all(uploadPromises);
+        mediaUrls = uploadResults.map(result => result.secure_url); // Obtenemos un array de URLs
         
-        const data = await response.json();
-        mediaUrl = data.secure_url;
-        toast.success('Adjunto subido exitosamente.');
+        toast.success('Todos los adjuntos subidos exitosamente.');
 
       } catch (error: any) {
-        console.error("Error uploading attachment to Cloudinary:", error);
-        toast.error(`Error al subir el adjunto: ${error.message}`);
+        console.error("Error uploading attachments to Cloudinary:", error);
+        toast.error(`Error al subir adjuntos: ${error.message}`);
         setIsSending(false);
         return;
       }
@@ -118,7 +125,7 @@ export default function NewCampaignWizard() {
       Array.from(campaignConfig.channels), 
       campaignConfig.message,
       campaignConfig.name,
-      mediaUrl
+      mediaUrls // Pasamos el array de URLs
     );
 
     if (result.success) {
@@ -126,7 +133,7 @@ export default function NewCampaignWizard() {
       setCurrentStep(1);
       setSelectedContacts([]);
       setCampaignConfig({
-        channels: new Set<Channel>(['EMAIL']), message: '', mediaFile: null, name: `Campaña ${new Date().toLocaleDateString('es-ES')}`
+        channels: new Set<Channel>(['EMAIL']), message: '', mediaFiles: [], name: `Campaña ${new Date().toLocaleDateString('es-ES')}`
       });
     } else {
       toast.error(result.error || 'Ocurrió un error al enviar la campaña.');
