@@ -1,12 +1,5 @@
 // src/lib/services/notificationService.ts
-
-// ===== INICIO DE LA CORRECCIÓN =====
-// Se cambia la importación de 'twilio' para usar 'require' en lugar de 'import'.
-// Esto resuelve un problema de resolución de tipos con la librería de Twilio
-// en entornos TypeScript estrictos, evitando el error de 'implicit any'.
 const twilio = require('twilio');
-// ===== FIN DE LA CORRECCIÓN =====
-
 import sgMail from '@sendgrid/mail';
 import axios from 'axios';
 
@@ -149,11 +142,4 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
 
 export function getWhatsAppProvider(): WhatsAppProvider {
   return new TwilioWhatsAppProvider();
-}```
-
-### **Pasos Finales**
-
-1.  **Reemplaza** el contenido de tu archivo `src/lib/services/notificationService.ts` con esta versión final y completa.
-2.  **Haz `commit` y `push`**.
-
-Con este cambio, el error de compilación relacionado con la importación de `twilio` se resolverá, y el build en Render debería ser exitoso.
+}
