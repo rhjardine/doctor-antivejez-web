@@ -1,5 +1,12 @@
 // src/lib/services/notificationService.ts
-import twilio from 'twilio';
+
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se cambia la importación de 'twilio' para usar 'require' en lugar de 'import'.
+// Esto resuelve un problema de resolución de tipos con la librería de Twilio
+// en entornos TypeScript estrictos, evitando el error de 'implicit any'.
+const twilio = require('twilio');
+// ===== FIN DE LA CORRECCIÓN =====
+
 import sgMail from '@sendgrid/mail';
 import axios from 'axios';
 
@@ -7,7 +14,6 @@ import axios from 'axios';
 // ===== SECCIÓN DE EMAIL =====
 // ==================================================================
 interface EmailProvider {
-  // ===== CAMBIO: ACEPTA UN ARRAY DE URLS =====
   send(to: string, subject: string, body: string, mediaUrls: string[] | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
@@ -32,7 +38,6 @@ class SendGridProvider implements EmailProvider {
       html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
     };
 
-    // ===== CAMBIO: LÓGICA PARA PROCESAR MÚLTIPLES ADJUNTOS =====
     if (mediaUrls && mediaUrls.length > 0) {
       try {
         console.log(`[SendGrid] Procesando ${mediaUrls.length} adjunto(s)...`);
@@ -72,7 +77,7 @@ export function getEmailProvider(): EmailProvider {
 }
 
 // ==================================================================
-// ===== SECCIÓN DE SMS (SIN CAMBIOS) =====
+// ===== SECCIÓN DE SMS =====
 // ==================================================================
 interface SmsProvider {
   send(to: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }>;
@@ -107,7 +112,7 @@ export function getSmsProvider(): SmsProvider {
 }
 
 // ==================================================================
-// ===== SECCIÓN DE WHATSAPP (SIN CAMBIOS LÓGICOS) =====
+// ===== SECCIÓN DE WHATSAPP =====
 // ==================================================================
 interface WhatsAppProvider {
   sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }>;
@@ -144,4 +149,11 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
 
 export function getWhatsAppProvider(): WhatsAppProvider {
   return new TwilioWhatsAppProvider();
-}
+}```
+
+### **Pasos Finales**
+
+1.  **Reemplaza** el contenido de tu archivo `src/lib/services/notificationService.ts` con esta versión final y completa.
+2.  **Haz `commit` y `push`**.
+
+Con este cambio, el error de compilación relacionado con la importación de `twilio` se resolverá, y el build en Render debería ser exitoso.
