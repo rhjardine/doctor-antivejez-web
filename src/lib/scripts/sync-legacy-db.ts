@@ -90,7 +90,10 @@ export async function syncLegacyDatabase() {
     let skippedCount = 0;
 
     // 4. Iterar, transformar y hacer "upsert" en PostgreSQL
-    for (const [index, legacyPatient] of legacyPatients.entries()) {
+    for (let i = 0; i < legacyPatients.length; i++) {
+      const legacyPatient = legacyPatients[i];
+      const index = i;
+
       try {
         const identification = legacyPatient.identification_id;
         if (!identification || identification === 'NULL' || String(identification).trim() === '') {
@@ -106,7 +109,7 @@ export async function syncLegacyDatabase() {
 
         const email = isValidEmail(legacyPatient.email) 
           ? legacyPatient.email 
-          : `${identification.trim()}@email-legacy.com`;
+          : `${String(identification).trim()}@email-legacy.com`;
 
         const patientData = {
           firstName: (legacyPatient.names || 'N/A').trim(),
@@ -146,6 +149,7 @@ export async function syncLegacyDatabase() {
         console.error(`❌ Error en registro ${index + 1} (ID: ${legacyPatient.identification_id}):`, recordError.message);
       }
     }
+    // ===== FIN DE LA CORRECCIÓN FINAL =====
     
     console.log(`\n🎉 Sincronización completada:\n✅ Procesados: ${processedCount}\n⚠️ Omitidos: ${skippedCount}\n❌ Errores: ${errorCount}`);
     return { success: true, processed: processedCount, skipped: skippedCount, errors: errorCount };
