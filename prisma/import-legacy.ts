@@ -69,7 +69,7 @@ async function importFromCsv(filePath: string) {
 
     console.log('👤 Buscando usuario administrador...');
     const adminUser = await prisma.user.findFirst({
-      where: { email: 'dr.admin@example.com' }, // Reemplaza con el email real
+      where: { email: 'admin@doctorantivejez.com' }, // Reemplaza con el email real
     });
     if (!adminUser) {
       throw new Error('❌ No se encontró usuario administrador.');
