@@ -6,10 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Mail, Smartphone } from 'lucide-react';
+import { Loader2, Mail, Smartphone, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+// ===== INICIO DE LA INTEGRACIÓN =====
+// Importamos el nuevo componente de detalles
+import CampaignDetails from './CampaignDetails';
+// ===== FIN DE LA INTEGRACIÓN =====
 
-// ===== ANÁLISIS Y CONVERSIÓN =====
-// 1. Se definen tipos claros para los datos que manejará el componente.
 type CampaignStatus = 'QUEUED' | 'SENDING' | 'COMPLETED' | 'CANCELED';
 type Channel = 'EMAIL' | 'SMS';
 
@@ -23,12 +26,10 @@ interface Campaign {
   createdAt: string;
 }
 
-// 2. Se crean datos simulados para desarrollo de la UI.
 const mockCampaigns: Campaign[] = [
-  { id: 'cam_1', name: 'Recordatorio Citas Septiembre', channels: ['EMAIL', 'SMS'], status: 'COMPLETED', totalContacts: 150, sentCount: 150, createdAt: '2025-09-01T10:00:00Z' },
-  { id: 'cam_2', name: 'Promoción Bienestar Otoño', channels: ['EMAIL'], status: 'SENDING', totalContacts: 4200, sentCount: 1250, createdAt: '2025-09-05T11:30:00Z' },
-  { id: 'cam_3', name: 'Resultados de Laboratorio', channels: ['SMS'], status: 'QUEUED', totalContacts: 50, sentCount: 0, createdAt: '2025-09-06T09:00:00Z' },
-  { id: 'cam_4', name: 'Campaña de prueba (Cancelada)', channels: ['EMAIL'], status: 'CANCELED', totalContacts: 10, sentCount: 0, createdAt: '2025-08-28T15:00:00Z' },
+  { id: 'cam_123', name: 'Recordatorio Citas Septiembre', channels: ['EMAIL', 'SMS'], status: 'COMPLETED', totalContacts: 150, sentCount: 148, createdAt: '2025-09-01T10:00:00Z' },
+  { id: 'cam_456', name: 'Promoción Bienestar Otoño', channels: ['EMAIL'], status: 'SENDING', totalContacts: 4200, sentCount: 1250, createdAt: '2025-09-05T11:30:00Z' },
+  { id: 'cam_789', name: 'Resultados de Laboratorio', channels: ['SMS'], status: 'QUEUED', totalContacts: 50, sentCount: 0, createdAt: '2025-09-06T09:00:00Z' },
 ];
 
 const statusConfig: Record<CampaignStatus, { label: string; className: string }> = {
@@ -46,9 +47,12 @@ const channelIcons: Record<Channel, React.ElementType> = {
 export default function CampaignHistory() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  // ===== INICIO DE LA INTEGRACIÓN =====
+  // Nuevo estado para manejar la vista de detalles
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  // ===== FIN DE LA INTEGRACIÓN =====
 
   useEffect(() => {
-    // Simula la carga de datos. Reemplazaremos esto con una Server Action.
     const fetchCampaigns = () => {
       setLoading(true);
       setTimeout(() => {
@@ -59,11 +63,29 @@ export default function CampaignHistory() {
     fetchCampaigns();
   }, []);
 
+  // Si hay una campaña seleccionada, mostramos el componente de detalles
+  if (selectedCampaignId) {
+    return (
+      <div>
+        <Button 
+          variant="outline" 
+          onClick={() => setSelectedCampaignId(null)} 
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver al Historial
+        </Button>
+        <CampaignDetails campaignId={selectedCampaignId} />
+      </div>
+    );
+  }
+
+  // Si no, mostramos la tabla del historial
   return (
     <Card>
       <CardHeader>
         <CardTitle>Historial de Campañas</CardTitle>
-        <CardDescription>Visualiza el estado y las métricas de todas tus campañas pasadas y activas.</CardDescription>
+        <CardDescription>Visualiza el estado y las métricas de tus campañas. Haz clic en una campaña para ver los detalles.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -85,10 +107,17 @@ export default function CampaignHistory() {
                </TableRow>
             ) : campaigns.length > 0 ? (
               campaigns.map(campaign => {
-                const progress = campaign.totalContacts > 0 ? (campaign.sentCount / campaign.totalContacts) * 100 : 0;
+                const progress = campaign.totalContacts > 0 ? ((campaign.sentCount) / campaign.totalContacts) * 100 : 0;
                 const statusInfo = statusConfig[campaign.status];
                 return (
-                  <TableRow key={campaign.id} className="hover:bg-gray-50">
+                  // ===== INICIO DE LA INTEGRACIÓN =====
+                  // Hacemos que toda la fila sea clickeable
+                  <TableRow 
+                    key={campaign.id} 
+                    className="hover:bg-slate-50 cursor-pointer"
+                    onClick={() => setSelectedCampaignId(campaign.id)}
+                  >
+                  {/* ===== FIN DE LA INTEGRACIÓN ===== */}
                     <TableCell className="font-medium">{campaign.name}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
