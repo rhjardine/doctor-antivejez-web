@@ -36,7 +36,6 @@ export async function getContactsFromDB() {
   }
 }
 
-// ===== NUEVA FUNCIÓN ASÍNCRONA PARA EL PROCESO EN SEGUNDO PLANO =====
 async function processMassiveSend(
   contacts: Contact[], 
   channels: Channel[], 
@@ -54,17 +53,9 @@ async function processMassiveSend(
   if (channels.includes('EMAIL')) {
     const emailProvider = getEmailProvider();
     contacts.forEach(contact => {
-      if (!contact.email) {
-        return;
-      }
+      if (!contact.email) return;
       const promise = emailProvider.send(contact.email, campaignName, message, mediaUrls).then(result => {
-        if (result.success) {
-          console.log(`[Background-Email] Enviado a ${contact.name}.`);
-          successfulSends++;
-        } else {
-          console.error(`[Background-Email] Falló el envío a ${contact.name}. Error: ${result.error}`);
-          failedSends++;
-        }
+        if (result.success) successfulSends++; else failedSends++;
       });
       sendPromises.push(promise);
     });
@@ -74,22 +65,14 @@ async function processMassiveSend(
   if (channels.includes('SMS')) {
     const smsProvider = getSmsProvider();
     contacts.forEach(contact => {
-      if (!contact.phone) {
-        return;
-      }
+      if (!contact.phone) return;
       let messageWithMedia = message;
       if (mediaUrls && mediaUrls.length > 0) {
         const links = mediaUrls.join('\n');
         messageWithMedia += `\n\nArchivos adjuntos:\n${links}`;
       }
       const promise = smsProvider.send(contact.phone, messageWithMedia).then(result => {
-        if (result.success) {
-          console.log(`[Background-SMS] Enviado a ${contact.name}.`);
-          successfulSends++;
-        } else {
-          console.error(`[Background-SMS] Falló el envío a ${contact.name}. Error: ${result.error}`);
-          failedSends++;
-        }
+        if (result.success) successfulSends++; else failedSends++;
       });
       sendPromises.push(promise);
     });
@@ -105,9 +88,7 @@ async function processMassiveSend(
       failedSends += contacts.filter(c => c.phone).length;
     } else {
       contacts.forEach(contact => {
-        if (!contact.phone) {
-          return;
-        }
+        if (!contact.phone) return;
         
         const firstMediaUrl = (mediaUrls && mediaUrls.length > 0) ? mediaUrls[0] : null;
 
@@ -118,13 +99,7 @@ async function processMassiveSend(
         };
 
         const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
-          if (result.success) {
-            console.log(`[Background-WhatsApp] Enviado a ${contact.name}.`);
-            successfulSends++;
-          } else {
-            console.error(`[Background-WhatsApp] Falló el envío a ${contact.name}. Error: ${result.error}`);
-            failedSends++;
-          }
+          if (result.success) successfulSends++; else failedSends++;
         });
         sendPromises.push(promise);
       });
@@ -135,15 +110,8 @@ async function processMassiveSend(
 
   const processedJobs = successfulSends + failedSends;
   console.log(`[Background Process] Envío completado. Total procesados: ${processedJobs}, Exitosos: ${successfulSends}, Fallidos: ${failedSends}`);
-  
-  // Futura mejora: Guardar el resultado de la campaña en la base de datos.
 }
 
-
-/**
- * Orquesta el envío de una campaña multicanal.
- * Responde inmediatamente a la UI y procesa el envío en segundo plano.
- */
 export async function sendCampaign(
   contacts: Contact[], 
   channels: Channel[], 
@@ -153,10 +121,8 @@ export async function sendCampaign(
 ) {
   console.log(`[Campaign Action] Recibida solicitud para campaña "${campaignName}" a ${contacts.length} contactos.`);
 
-  // "Dispara y olvida": no usamos 'await' aquí.
   processMassiveSend(contacts, channels, message, campaignName, mediaUrls);
 
-  // Devolvemos una respuesta inmediata al frontend.
   return {
     success: true,
     message: `Campaña para ${contacts.length} contactos ha sido encolada. El envío se procesará en segundo plano.`,

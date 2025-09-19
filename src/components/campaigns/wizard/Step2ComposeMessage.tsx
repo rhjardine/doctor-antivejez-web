@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Mail, Smartphone, Paperclip, X, MessageSquare } from 'lucide-react';
 import { CampaignConfig, Channel } from '../NewCampaignWizard';
+import SmsCounter from '../SmsCounter'; // <-- IMPORTACIÓN DEL NUEVO COMPONENTE
 
 interface Step2ComposeMessageProps {
   campaignConfig: CampaignConfig;
@@ -93,7 +94,6 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
                   <Smartphone className="w-5 h-5 text-gray-600" /> SMS
                 </Label>
               </div>
-              {/* ===== REACTIVACIÓN DE WHATSAPP ===== */}
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="channel-whatsapp" 
@@ -129,6 +129,8 @@ const Step2ComposeMessage = React.memo(function Step2ComposeMessage({ campaignCo
               onBlur={handleMessageBlur}
               className="mt-2"
             />
+            {/* ===== INTEGRACIÓN DEL CONTADOR DE SMS ===== */}
+            {campaignConfig.channels.has('SMS') && <SmsCounter message={localMessage} />}
           </div>
           <div>
             <Label className="font-semibold">Adjuntos (Opcional)</Label>

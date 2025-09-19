@@ -33,8 +33,6 @@ class SendGridProvider implements EmailProvider {
 
     if (mediaUrls && mediaUrls.length > 0) {
       try {
-        console.log(`[SendGrid] Procesando ${mediaUrls.length} adjunto(s)...`);
-        
         const attachmentPromises = mediaUrls.map(async (url) => {
           const response = await axios.get(url, { responseType: 'arraybuffer' });
           return {
@@ -44,10 +42,7 @@ class SendGridProvider implements EmailProvider {
             disposition: 'attachment',
           };
         });
-
         msg.attachments = await Promise.all(attachmentPromises);
-        console.log(`[SendGrid] Todos los adjuntos procesados exitosamente.`);
-
       } catch (error) {
         console.error('Failed to fetch attachments for email:', error);
         return { success: false, error: 'No se pudieron adjuntar uno o más archivos al correo.' };
