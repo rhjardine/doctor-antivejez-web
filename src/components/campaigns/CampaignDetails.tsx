@@ -6,6 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Mail, Smartphone, MessageSquare, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se añade la importación del componente 'Label' que faltaba.
+import { Label } from '@/components/ui/label';
+// ===== FIN DE LA CORRECCIÓN =====
 
 // Tipos de datos basados en nuestro diseño de schema
 type Channel = 'EMAIL' | 'SMS' | 'WHATSAPP';
@@ -46,7 +50,6 @@ const mockCampaignDetails: CampaignDetailsData = {
     { id: 'msg_2', contactName: 'Ana García', channel: 'SMS', status: 'Delivered', sentAt: new Date().toISOString() },
     { id: 'msg_3', contactName: 'Carlos Rodríguez', channel: 'EMAIL', status: 'Failed', error: 'Invalid email address', sentAt: new Date().toISOString() },
     { id: 'msg_4', contactName: 'Carlos Rodríguez', channel: 'SMS', status: 'Delivered', sentAt: new Date().toISOString() },
-    // ... más mensajes
   ],
 };
 
@@ -69,7 +72,6 @@ const statusColors: Record<CampaignMessage['status'], string> = {
 };
 
 export default function CampaignDetails({ campaignId }: { campaignId: string }) {
-  // En el futuro, aquí haremos una llamada a una Server Action para obtener los datos reales
   const campaign = mockCampaignDetails;
   const progress = campaign.totalContacts > 0 ? ((campaign.sentCount + campaign.failedCount) / campaign.totalContacts) * 100 : 0;
 
