@@ -1,8 +1,10 @@
 // prisma/import-legacy.ts
 import { PrismaClient, Gender } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// --- INICIO DEL SCRIPT ---
 
 const prisma = new PrismaClient();
 
@@ -76,10 +78,7 @@ async function importFromCsv(filePath: string) {
 
     let processedCount = 0, errorCount = 0, skippedCount = 0;
 
-    // ===== INICIO DE LA CORRECCIÓN FINAL =====
-    // Se reemplaza el bucle 'for...of .entries()' por un bucle 'for' clásico.
-    // Este formato es 100% compatible con el target de compilación 'es5'
-    // y permite el uso de 'await' en su interior.
+    // Usamos un bucle 'for' clásico para máxima compatibilidad
     for (let i = 0; i < records.length; i++) {
       const record = records[i];
       const index = i;
@@ -88,7 +87,7 @@ async function importFromCsv(filePath: string) {
         const identification = record.identification_id;
         if (!identification || identification === 'NULL' || identification.trim() === '') {
           skippedCount++;
-          continue; // Salta a la siguiente iteración
+          continue;
         }
 
         const phone = formatPhone(record.phone_code, record.phone, record.cellphone_code, record.cellphone);
@@ -135,7 +134,6 @@ async function importFromCsv(filePath: string) {
         console.error(`❌ Error en registro ${index + 1} (ID: ${record.identification_id}):`, recordError.message);
       }
     }
-    // ===== FIN DE LA CORRECCIÓN FINAL =====
 
     console.log(`\n🎉 Importación completada:\n✅ Procesados: ${processedCount}\n⚠️ Omitidos: ${skippedCount}\n❌ Errores: ${errorCount}`);
     return { success: true, processed: processedCount };
@@ -150,7 +148,8 @@ async function importFromCsv(filePath: string) {
 
 // --- Punto de Entrada del Script ---
 async function main() {
-  const filePath = path.join(__dirname, 'data', 'persons.csv');
+  // Construimos la ruta al archivo CSV basándonos en la raíz del proyecto.
+  const filePath = path.join(process.cwd(), 'prisma', 'data', 'persons.csv');
   await importFromCsv(filePath);
 }
 

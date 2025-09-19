@@ -1,22 +1,24 @@
 {
   "compilerOptions": {
-    // Hereda configuraciones base como los alias de 'paths'
-    "extends": "./tsconfig.json", 
-
-    // Sobrescribe las opciones clave para un script de Node.js
+    "target": "ES2020",
     "module": "CommonJS",
     "moduleResolution": "node",
-    "target": "ES2020",
     "outDir": "dist",
     "rootDir": ".",
-    
-    // Opciones para asegurar la compilación
-    "noEmit": false,
-    "isolatedModules": false,
-    "skipLibCheck": true
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
   },
   "include": [
-    "prisma/import-legacy.ts" // Especificamos el único archivo que queremos compilar
+    "prisma/import-legacy.ts"
   ],
   "exclude": [
     "node_modules",
