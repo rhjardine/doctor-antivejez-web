@@ -1,4 +1,3 @@
-// components/campaigns/CampaignDetails.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,11 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Mail, Smartphone, MessageSquare, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-// ===== INICIO DE LA INTEGRACIÓN =====
 import { getCampaignDetails } from '@/lib/actions/campaigns.actions';
 import { toast } from 'sonner';
-import { Campaign, CampaignMessage } from '@prisma/client'; // Importamos los tipos
-// ===== FIN DE LA INTEGRACIÓN =====
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se importan los tipos con sus nombres correctos en inglés, tal como los genera Prisma.
+import { Campaign, CampaignMessage } from '@prisma/client';
+// ===== FIN DE LA CORRECCIÓN =====
 
 // Combinamos los tipos para incluir los mensajes anidados
 type CampaignWithMessages = Campaign & { messages: CampaignMessage[] };
