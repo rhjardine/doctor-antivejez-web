@@ -1,19 +1,16 @@
-// components/campaigns/wizard/Step1SelectContacts.tsx
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Contact, Channel } from '../NewCampaignWizard';
-// ===== INICIO DE LA CONEXIÓN AL BACKEND =====
 import { getContactsFromDB } from '@/lib/actions/campaigns.actions';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-// ===== FIN DE LA CONEXIÓN AL BACKEND =====
+import { Loader2, Upload } from 'lucide-react';
+import { parse } from 'csv-parse/sync'; // Necesitaremos esta librería en el frontend
 
 interface Step1SelectContactsProps {
   selectedContacts: Contact[];
@@ -21,93 +18,127 @@ interface Step1SelectContactsProps {
 }
 
 export default function Step1SelectContacts({ selectedContacts, setSelectedContacts }: Step1SelectContactsProps) {
-  const [allContacts, setAllContacts] = useState<Contact[]>([]);
+  const [dbContacts, setDbContacts] = useState<Contact[]>([]);
+  const [csvContacts, setCsvContacts] = useState<Contact[]>([]);
+  const [contactSource, setContactSource] = useState<'db' | 'csv'>('db');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [originFilter, setOriginFilter] = useState<'ALL' | 'RENDER PG' | 'GODADDY MYSQL'>('ALL');
-  const [consentFilter, setConsentFilter] = useState<'ALL' | Channel>('ALL');
 
+  // Cargar contactos de la base de datos al montar el componente
   useEffect(() => {
-    const loadContacts = async () => {
+    const loadDbContacts = async () => {
       setLoading(true);
       const result = await getContactsFromDB();
       if (result.success && result.data) {
-        setAllContacts(result.data);
+        setDbContacts(result.data);
       } else {
-        toast.error(result.error || 'Error al cargar contactos.');
+        toast.error(result.error || 'Error al cargar contactos de la base de datos.');
       }
       setLoading(false);
     };
-    loadContacts();
+    loadDbContacts();
   }, []);
 
-  const filteredContacts = useMemo(() => {
-    return allContacts.filter(contact => {
-      const searchMatch = searchTerm === '' || 
-        contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.email?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const originMatch = originFilter === 'ALL' || contact.origin === originFilter;
-      
-      const consentMatch = consentFilter === 'ALL' || contact.consent.includes(consentFilter);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      return searchMatch && originMatch && consentMatch;
-    });
-  }, [searchTerm, originFilter, consentFilter, allContacts]);
+    if (file.type !== 'text/csv') {
+      toast.error('Por favor, seleccione un archivo con formato CSV.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const fileContent = await file.text();
+      const records: any[] = parse(fileContent, {
+        columns: header => header.map((h: string) => h.toLowerCase().trim()),
+        skip_empty_lines: true,
+      });
+
+      const importedContacts: Contact[] = records.map((record, index) => {
+        const phone = (record.phone_code && record.phone) 
+          ? `+58${record.phone_code}${record.phone}` 
+          : ((record.cellphone_code && record.cellphone) 
+              ? `+58${record.cellphone_code}${record.cellphone}` 
+              : null);
+
+        return {
+          id: `csv-${record.identification_id || index}`, // ID temporal para el estado
+          name: `${record.names || ''} ${record.surnames || ''}`.trim(),
+          email: record.email && record.email !== 'NULL' ? record.email : null,
+          phone: phone,
+          origin: 'GODADDY MYSQL',
+          consent: ['WHATSAPP'], // Asumimos consentimiento para WhatsApp
+        };
+      }).filter(c => c.phone); // Filtramos solo los que tienen teléfono
+
+      setCsvContacts(importedContacts);
+      setContactSource('csv');
+      setSelectedContacts([]); // Reseteamos la selección
+      toast.success(`${importedContacts.length} contactos cargados desde CSV.`);
+    } catch (error: any) {
+      toast.error('Error al procesar el archivo CSV', { description: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const allContacts = contactSource === 'db' ? dbContacts : csvContacts;
+
+  const filteredContacts = useMemo(() => {
+    return allContacts.filter(contact => 
+      contact.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [searchTerm, allContacts]);
   
   const selectedIds = useMemo(() => new Set(selectedContacts.map(c => c.id)), [selectedContacts]);
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedContacts(filteredContacts);
-    } else {
-      setSelectedContacts([]);
-    }
+    setSelectedContacts(checked ? filteredContacts : []);
   };
 
   const handleSelectRow = (contact: Contact, checked: boolean) => {
-    if (checked) {
-      setSelectedContacts(prev => [...prev, contact]);
-    } else {
-      setSelectedContacts(prev => prev.filter(c => c.id !== contact.id));
-    }
+    setSelectedContacts(prev => 
+      checked ? [...prev, contact] : prev.filter(c => c.id !== contact.id)
+    );
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-800">Paso 1: Seleccionar Contactos</h2>
-        <p className="text-gray-500 mt-1">Elige los destinatarios para tu campaña. Puedes buscar y filtrar para acotar tu selección.</p>
+        <p className="text-gray-500 mt-1">Elige los destinatarios para tu campaña.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Input 
-          placeholder="Buscar por nombre o email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <Select value={originFilter} onValueChange={(value) => setOriginFilter(value as any)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Todos los orígenes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todos los orígenes</SelectItem>
-            <SelectItem value="RENDER PG">Render PG</SelectItem>
-            <SelectItem value="GODADDY MYSQL" disabled>GoDaddy MySQL (Próximamente)</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={consentFilter} onValueChange={(value) => setConsentFilter(value as any)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Cualquier consentimiento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Cualquier consentimiento</SelectItem>
-            <SelectItem value="EMAIL">Email Opt-In</SelectItem>
-            <SelectItem value="SMS">SMS/WA Opt-In</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Selector de Fuente de Datos */}
+      <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border">
+        <div className="flex-1">
+          <h3 className="font-semibold">Fuente de Contactos</h3>
+          <div className="flex gap-2 mt-2">
+            <Button variant={contactSource === 'db' ? 'default' : 'outline'} onClick={() => { setContactSource('db'); setSelectedContacts([]); }}>
+              Pacientes (Render PG)
+            </Button>
+            <Button variant={contactSource === 'csv' ? 'default' : 'outline'} onClick={() => { setContactSource('csv'); setSelectedContacts([]); }}>
+              Desde Archivo (MySQL Legado)
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1">
+          <Label htmlFor="csv-upload" className="font-semibold">Cargar Archivo Legado</Label>
+          <div className="relative mt-2">
+            <Input id="csv-upload" type="file" accept=".csv" onChange={handleFileChange} className="pr-12" />
+            <Upload className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          </div>
+        </div>
       </div>
 
+      {/* Filtros y Tabla */}
+      <Input 
+        placeholder="Buscar por nombre..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50">
@@ -127,47 +158,27 @@ export default function Step1SelectContacts({ selectedContacts, setSelectedConta
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-48 text-center">
-                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                  <p className="mt-2 text-gray-500">Cargando contactos...</p>
-                </TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={5} className="h-48 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></TableCell></TableRow>
             ) : filteredContacts.length > 0 ? (
               filteredContacts.map(contact => (
                 <TableRow key={contact.id}>
-                  <TableCell>
-                    <Checkbox 
-                      checked={selectedIds.has(contact.id)}
-                      onCheckedChange={(checked) => handleSelectRow(contact, !!checked)}
-                    />
-                  </TableCell>
+                  <TableCell><Checkbox checked={selectedIds.has(contact.id)} onCheckedChange={(checked) => handleSelectRow(contact, !!checked)} /></TableCell>
                   <TableCell className="font-medium">{contact.name}</TableCell>
                   <TableCell>{contact.email || 'N/A'}</TableCell>
                   <TableCell>{contact.phone || 'N/A'}</TableCell>
-                  <TableCell>
-                    <Badge variant={contact.origin === 'RENDER PG' ? 'default' : 'secondary'}
-                      className={contact.origin === 'RENDER PG' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}
-                    >
-                      {contact.origin}
-                    </Badge>
-                  </TableCell>
+                  <TableCell><Badge variant={contact.origin === 'RENDER PG' ? 'default' : 'secondary'}>{contact.origin}</Badge></TableCell>
                 </TableRow>
               ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="h-48 text-center text-gray-500">
-                  No se encontraron contactos con los filtros aplicados.
-                </TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={5} className="h-48 text-center text-gray-500">No se encontraron contactos.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
+        
       </div>
       
       <div className="flex justify-between items-center text-sm text-gray-600">
         <p>{selectedContacts.length} de {filteredContacts.length} contactos seleccionados.</p>
-        {/* Paginación futura */}
       </div>
     </div>
   );

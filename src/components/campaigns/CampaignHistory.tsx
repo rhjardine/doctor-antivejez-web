@@ -1,3 +1,4 @@
+// components/campaigns/CampaignHistory.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -5,64 +6,52 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Mail, Smartphone, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Smartphone, ArrowLeft, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-// ===== INICIO DE LA INTEGRACIÓN =====
-// Importamos el nuevo componente de detalles
 import CampaignDetails from './CampaignDetails';
+// ===== INICIO DE LA INTEGRACIÓN =====
+import { getCampaignHistory } from '@/lib/actions/campaigns.actions';
+import { toast } from 'sonner';
+import { Campaign } from '@prisma/client'; // Importamos el tipo generado por Prisma
 // ===== FIN DE LA INTEGRACIÓN =====
 
-type CampaignStatus = 'QUEUED' | 'SENDING' | 'COMPLETED' | 'CANCELED';
-type Channel = 'EMAIL' | 'SMS';
+type Channel = 'EMAIL' | 'SMS' | 'WHATSAPP';
 
-interface Campaign {
-  id: string;
-  name: string;
-  channels: Channel[];
-  status: CampaignStatus;
-  totalContacts: number;
-  sentCount: number;
-  createdAt: string;
-}
-
-const mockCampaigns: Campaign[] = [
-  { id: 'cam_123', name: 'Recordatorio Citas Septiembre', channels: ['EMAIL', 'SMS'], status: 'COMPLETED', totalContacts: 150, sentCount: 148, createdAt: '2025-09-01T10:00:00Z' },
-  { id: 'cam_456', name: 'Promoción Bienestar Otoño', channels: ['EMAIL'], status: 'SENDING', totalContacts: 4200, sentCount: 1250, createdAt: '2025-09-05T11:30:00Z' },
-  { id: 'cam_789', name: 'Resultados de Laboratorio', channels: ['SMS'], status: 'QUEUED', totalContacts: 50, sentCount: 0, createdAt: '2025-09-06T09:00:00Z' },
-];
-
-const statusConfig: Record<CampaignStatus, { label: string; className: string }> = {
-  QUEUED: { label: 'En Cola', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-  SENDING: { label: 'Enviando', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+const statusConfig: Record<string, { label: string; className: string }> = {
+  IN_PROGRESS: { label: 'En Progreso', className: 'bg-blue-100 text-blue-800 border-blue-200' },
   COMPLETED: { label: 'Completada', className: 'bg-green-100 text-green-800 border-green-200' },
-  CANCELED: { label: 'Cancelada', className: 'bg-red-100 text-red-800 border-red-200' },
+  COMPLETED_WITH_ERRORS: { label: 'Completada con Errores', className: 'bg-orange-100 text-orange-800 border-orange-200' },
+  FAILED: { label: 'Fallida', className: 'bg-red-100 text-red-800 border-red-200' },
 };
 
-const channelIcons: Record<Channel, React.ElementType> = {
+const channelIcons: Record<string, React.ElementType> = {
   EMAIL: Mail,
   SMS: Smartphone,
+  WHATSAPP: MessageSquare,
 };
 
 export default function CampaignHistory() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  // ===== INICIO DE LA INTEGRACIÓN =====
-  // Nuevo estado para manejar la vista de detalles
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  // ===== FIN DE LA INTEGRACIÓN =====
 
   useEffect(() => {
-    const fetchCampaigns = () => {
-      setLoading(true);
-      setTimeout(() => {
-        setCampaigns(mockCampaigns);
+    // Solo cargamos el historial si no estamos viendo los detalles de una campaña
+    if (!selectedCampaignId) {
+      const fetchCampaigns = async () => {
+        setLoading(true);
+        const result = await getCampaignHistory();
+        if (result.success && result.data) {
+          setCampaigns(result.data);
+        } else {
+          toast.error(result.error || 'No se pudo cargar el historial.');
+        }
         setLoading(false);
-      }, 1000);
-    };
-    fetchCampaigns();
-  }, []);
+      };
+      fetchCampaigns();
+    }
+  }, [selectedCampaignId]); // Se vuelve a ejecutar cuando volvemos de la vista de detalles
 
-  // Si hay una campaña seleccionada, mostramos el componente de detalles
   if (selectedCampaignId) {
     return (
       <div>
@@ -79,7 +68,6 @@ export default function CampaignHistory() {
     );
   }
 
-  // Si no, mostramos la tabla del historial
   return (
     <Card>
       <CardHeader>
@@ -106,23 +94,21 @@ export default function CampaignHistory() {
                </TableRow>
             ) : campaigns.length > 0 ? (
               campaigns.map(campaign => {
-                const progress = campaign.totalContacts > 0 ? ((campaign.sentCount) / campaign.totalContacts) * 100 : 0;
-                const statusInfo = statusConfig[campaign.status];
+                const totalProcessed = campaign.sentCount + campaign.failedCount;
+                const progress = campaign.totalContacts > 0 ? (totalProcessed / campaign.totalContacts) * 100 : 0;
+                const statusInfo = statusConfig[campaign.status] || { label: campaign.status, className: 'bg-gray-100 text-gray-800' };
                 return (
-                  // ===== INICIO DE LA INTEGRACIÓN =====
-                  // Hacemos que toda la fila sea clickeable
                   <TableRow 
                     key={campaign.id} 
                     className="hover:bg-slate-50 cursor-pointer"
                     onClick={() => setSelectedCampaignId(campaign.id)}
                   >
-                  {/* ===== FIN DE LA INTEGRACIÓN ===== */}
                     <TableCell className="font-medium">{campaign.name}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         {campaign.channels.map(channel => {
                            const Icon = channelIcons[channel];
-                           return <Icon key={channel} className="w-5 h-5 text-gray-500" title={channel} />
+                           return Icon ? <Icon key={channel} className="w-5 h-5 text-gray-500" title={channel} /> : null;
                         })}
                       </div>
                     </TableCell>
@@ -135,7 +121,7 @@ export default function CampaignHistory() {
                          <span className="text-xs text-gray-600">{Math.round(progress)}%</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        {campaign.sentCount} / {campaign.totalContacts} enviados
+                        {totalProcessed} / {campaign.totalContacts} procesados
                       </p>
                     </TableCell>
                     <TableCell className="text-right">{new Date(campaign.createdAt).toLocaleDateString()}</TableCell>

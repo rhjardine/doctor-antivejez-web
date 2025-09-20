@@ -1,9 +1,9 @@
-// src/lib/actions/campaigns.actions.ts
 'use server';
 
 import { prisma } from '@/lib/db';
 import { Contact, Channel } from '@/components/campaigns/NewCampaignWizard';
 import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/services/notificationService';
+import { revalidatePath } from 'next/cache';
 
 export async function getContactsFromDB() {
   try {
@@ -36,80 +36,107 @@ export async function getContactsFromDB() {
   }
 }
 
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se añade el parámetro 'campaignName' a la firma de la función.
 async function processMassiveSend(
+  campaignId: string,
   contacts: Contact[], 
   channels: Channel[], 
   message: string, 
-  campaignName: string,
+  campaignName: string, // <-- PARÁMETRO AÑADIDO
   mediaUrls: string[] | null
 ) {
-  console.log(`[Background Process] Iniciando envío masivo para campaña "${campaignName}"...`);
-  let successfulSends = 0;
-  let failedSends = 0;
+// ===== FIN DE LA CORRECCIÓN =====
+  console.log(`[Background Process] Iniciando envío masivo para Campaign ID: ${campaignId}...`);
   
-  const sendPromises: Promise<void>[] = [];
+  const messagesToCreate: any[] = [];
 
-  // --- LÓGICA DE ENVÍO DE EMAIL ---
-  if (channels.includes('EMAIL')) {
-    const emailProvider = getEmailProvider();
-    contacts.forEach(contact => {
-      if (!contact.email) return;
-      const promise = emailProvider.send(contact.email, campaignName, message, mediaUrls).then(result => {
-        if (result.success) successfulSends++; else failedSends++;
-      });
-      sendPromises.push(promise);
-    });
-  }
+  const sendPromises = channels.flatMap(channel => 
+    contacts.map(async (contact) => {
+      let result: { success: boolean; messageId?: string; error?: string } | null = null;
+      let contactInfo = '';
 
-  // --- LÓGICA DE ENVÍO DE SMS ---
-  if (channels.includes('SMS')) {
-    const smsProvider = getSmsProvider();
-    contacts.forEach(contact => {
-      if (!contact.phone) return;
-      let messageWithMedia = message;
-      if (mediaUrls && mediaUrls.length > 0) {
-        const links = mediaUrls.join('\n');
-        messageWithMedia += `\n\nArchivos adjuntos:\n${links}`;
-      }
-      const promise = smsProvider.send(contact.phone, messageWithMedia).then(result => {
-        if (result.success) successfulSends++; else failedSends++;
-      });
-      sendPromises.push(promise);
-    });
-  }
+      try {
+        switch (channel) {
+          case 'EMAIL':
+            if (!contact.email) return;
+            contactInfo = contact.email;
+            const emailProvider = getEmailProvider();
+            // Ahora 'campaignName' está disponible y la llamada es correcta.
+            result = await emailProvider.send(contact.email, campaignName, message, mediaUrls);
+            break;
+          case 'SMS':
+            if (!contact.phone) return;
+            contactInfo = contact.phone;
+            let messageWithMedia = message;
+            if (mediaUrls && mediaUrls.length > 0) {
+              messageWithMedia += `\n\nArchivos: ${mediaUrls.join('\n')}`;
+            }
+            const smsProvider = getSmsProvider();
+            result = await smsProvider.send(contact.phone, messageWithMedia);
+            break;
+          case 'WHATSAPP':
+            if (!contact.phone) return;
+            contactInfo = contact.phone;
+            const whatsAppProvider = getWhatsAppProvider();
+            const templateSid = process.env.TWILIO_WHATSAPP_TEMPLATE_SID;
+            if (!templateSid) throw new Error('WhatsApp Template SID no configurado.');
+            
+            const firstMediaUrl = (mediaUrls && mediaUrls.length > 0) ? mediaUrls[0] : null;
+            const variables = {
+              '1': contact.name || 'Estimado Cliente',
+              '2': message || '(Sin contenido)',
+              '3': firstMediaUrl ? `Para ver el archivo adjunto, visite: ${firstMediaUrl}` : '(Este mensaje no contiene archivos adjuntos.)',
+            };
+            result = await whatsAppProvider.sendTemplate(contact.phone, templateSid, variables);
+            break;
+        }
 
-  // --- LÓGICA DE ENVÍO DE WHATSAPP ---
-  if (channels.includes('WHATSAPP')) {
-    const whatsAppProvider = getWhatsAppProvider();
-    const templateSid = process.env.TWILIO_WHATSAPP_TEMPLATE_SID;
-
-    if (!templateSid) {
-      console.error('[Background-WhatsApp] Error Crítico: El SID de la plantilla no está configurado.');
-      failedSends += contacts.filter(c => c.phone).length;
-    } else {
-      contacts.forEach(contact => {
-        if (!contact.phone) return;
-        
-        const firstMediaUrl = (mediaUrls && mediaUrls.length > 0) ? mediaUrls[0] : null;
-
-        const variables = {
-          '1': contact.name || 'Estimado Cliente',
-          '2': message || '(Sin contenido)',
-          '3': firstMediaUrl ? `Para ver el archivo adjunto, visite: ${firstMediaUrl}` : '(Este mensaje no contiene archivos adjuntos.)',
-        };
-
-        const promise = whatsAppProvider.sendTemplate(contact.phone, templateSid, variables).then(result => {
-          if (result.success) successfulSends++; else failedSends++;
+        if (result) {
+          messagesToCreate.push({
+            campaignId,
+            contactId: contact.id,
+            contactName: contact.name,
+            contactInfo,
+            channel,
+            status: result.success ? 'Sent' : 'Failed',
+            providerId: result.messageId,
+            error: result.error,
+          });
+        }
+      } catch (error: any) {
+        messagesToCreate.push({
+          campaignId,
+          contactId: contact.id,
+          contactName: contact.name,
+          contactInfo,
+          channel,
+          status: 'Failed',
+          error: error.message,
         });
-        sendPromises.push(promise);
-      });
-    }
-  }
+      }
+    })
+  );
 
   await Promise.all(sendPromises);
 
-  const processedJobs = successfulSends + failedSends;
-  console.log(`[Background Process] Envío completado. Total procesados: ${processedJobs}, Exitosos: ${successfulSends}, Fallidos: ${failedSends}`);
+  if (messagesToCreate.length > 0) {
+    await prisma.campaignMessage.createMany({ data: messagesToCreate });
+  }
+  
+  const sentCount = messagesToCreate.filter(m => m.status === 'Sent').length;
+  const failedCount = messagesToCreate.length - sentCount;
+
+  await prisma.campaign.update({
+    where: { id: campaignId },
+    data: {
+      status: failedCount > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED',
+      sentCount,
+      failedCount,
+    },
+  });
+  
+  console.log(`[Background Process] Envío completado para Campaign ID: ${campaignId}. Exitosos: ${sentCount}, Fallidos: ${failedCount}`);
 }
 
 export async function sendCampaign(
@@ -119,12 +146,65 @@ export async function sendCampaign(
   campaignName: string,
   mediaUrls: string[] | null
 ) {
-  console.log(`[Campaign Action] Recibida solicitud para campaña "${campaignName}" a ${contacts.length} contactos.`);
+  try {
+    const newCampaign = await prisma.campaign.create({
+      data: {
+        name: campaignName,
+        messageBody: message,
+        status: 'IN_PROGRESS',
+        channels: channels as string[],
+        totalContacts: contacts.length,
+      },
+    });
 
-  processMassiveSend(contacts, channels, message, campaignName, mediaUrls);
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // Se pasa 'campaignName' a la función de proceso en segundo plano.
+    processMassiveSend(newCampaign.id, contacts, channels, message, campaignName, mediaUrls);
+    // ===== FIN DE LA CORRECCIÓN =====
 
-  return {
-    success: true,
-    message: `Campaña para ${contacts.length} contactos ha sido encolada. El envío se procesará en segundo plano.`,
-  };
+    revalidatePath('/dashboard/campaigns');
+
+    return {
+      success: true,
+      message: `Campaña "${campaignName}" encolada para ${contacts.length} contactos.`,
+    };
+  } catch (error: any) {
+    console.error("Error creating campaign record:", error);
+    return { success: false, error: "No se pudo crear el registro de la campaña en la base de datos." };
+  }
+}
+
+// ===== NUEVAS SERVER ACTIONS PARA LEER EL HISTORIAL =====
+
+export async function getCampaignHistory() {
+  try {
+    const campaigns = await prisma.campaign.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return { success: true, data: campaigns };
+  } catch (error) {
+    console.error("Error fetching campaign history:", error);
+    return { success: false, error: "No se pudo cargar el historial de campañas." };
+  }
+}
+
+export async function getCampaignDetails(campaignId: string) {
+  try {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: {
+        messages: {
+          orderBy: { sentAt: 'asc' },
+        },
+      },
+    });
+    if (!campaign) {
+      return { success: false, error: "Campaña no encontrada." };
+    }
+    return { success: true, data: campaign };
+  } catch (error) {
+    console.error(`Error fetching details for campaign ${campaignId}:`, error);
+    return { success: false, error: "No se pudieron cargar los detalles de la campaña." };
+  }
 }

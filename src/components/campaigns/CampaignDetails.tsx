@@ -1,79 +1,70 @@
+// components/campaigns/CampaignDetails.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { Mail, Smartphone, MessageSquare, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-// ===== INICIO DE LA CORRECCIÓN =====
-// Se añade la importación del componente 'Label' que faltaba.
+import { Mail, Smartphone, MessageSquare, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-// ===== FIN DE LA CORRECCIÓN =====
+// ===== INICIO DE LA INTEGRACIÓN =====
+import { getCampaignDetails } from '@/lib/actions/campaigns.actions';
+import { toast } from 'sonner';
+import { Campaign, CampaignMessage } from '@prisma/client'; // Importamos los tipos
+// ===== FIN DE LA INTEGRACIÓN =====
 
-// Tipos de datos basados en nuestro diseño de schema
-type Channel = 'EMAIL' | 'SMS' | 'WHATSAPP';
-interface CampaignMessage {
-  id: string;
-  contactName: string;
-  channel: Channel;
-  status: 'Sent' | 'Failed' | 'Delivered';
-  error?: string;
-  sentAt: string;
-}
-interface CampaignDetailsData {
-  id: string;
-  name: string;
-  messageBody: string;
-  status: 'COMPLETED' | 'IN_PROGRESS' | 'FAILED';
-  channels: Channel[];
-  totalContacts: number;
-  sentCount: number;
-  failedCount: number;
-  createdAt: string;
-  messages: CampaignMessage[];
-}
+// Combinamos los tipos para incluir los mensajes anidados
+type CampaignWithMessages = Campaign & { messages: CampaignMessage[] };
 
-// Datos simulados para construir la UI
-const mockCampaignDetails: CampaignDetailsData = {
-  id: 'cam_123',
-  name: 'Promoción Bienestar Septiembre',
-  messageBody: 'Hola {{1}},\n\nTe recordamos nuestra promoción especial de bienestar para el mes de septiembre. Agenda tu evaluación de vitalidad y recibe un 20% de descuento.',
-  status: 'COMPLETED',
-  channels: ['EMAIL', 'SMS'],
-  totalContacts: 150,
-  sentCount: 148,
-  failedCount: 2,
-  createdAt: new Date().toISOString(),
-  messages: [
-    { id: 'msg_1', contactName: 'Ana García', channel: 'EMAIL', status: 'Delivered', sentAt: new Date().toISOString() },
-    { id: 'msg_2', contactName: 'Ana García', channel: 'SMS', status: 'Delivered', sentAt: new Date().toISOString() },
-    { id: 'msg_3', contactName: 'Carlos Rodríguez', channel: 'EMAIL', status: 'Failed', error: 'Invalid email address', sentAt: new Date().toISOString() },
-    { id: 'msg_4', contactName: 'Carlos Rodríguez', channel: 'SMS', status: 'Delivered', sentAt: new Date().toISOString() },
-  ],
-};
-
-const channelIcons: Record<Channel, React.ElementType> = {
+const channelIcons: Record<string, React.ElementType> = {
   EMAIL: Mail,
   SMS: Smartphone,
   WHATSAPP: MessageSquare,
 };
 
-const statusIcons: Record<CampaignMessage['status'], React.ElementType> = {
-  Delivered: CheckCircle,
+const statusIcons: Record<string, React.ElementType> = {
   Sent: CheckCircle,
   Failed: XCircle,
 };
 
-const statusColors: Record<CampaignMessage['status'], string> = {
-  Delivered: 'text-green-600',
-  Sent: 'text-blue-600',
+const statusColors: Record<string, string> = {
+  Sent: 'text-green-600',
   Failed: 'text-red-600',
 };
 
 export default function CampaignDetails({ campaignId }: { campaignId: string }) {
-  const campaign = mockCampaignDetails;
-  const progress = campaign.totalContacts > 0 ? ((campaign.sentCount + campaign.failedCount) / campaign.totalContacts) * 100 : 0;
+  const [campaign, setCampaign] = useState<CampaignWithMessages | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      setLoading(true);
+      const result = await getCampaignDetails(campaignId);
+      if (result.success && result.data) {
+        setCampaign(result.data as CampaignWithMessages);
+      } else {
+        toast.error(result.error || 'No se pudieron cargar los detalles.');
+      }
+      setLoading(false);
+    };
+    fetchDetails();
+  }, [campaignId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!campaign) {
+    return <p className="text-center text-red-500">No se encontraron datos para esta campaña.</p>;
+  }
+
+  const totalProcessed = campaign.sentCount + campaign.failedCount;
+  const progress = campaign.totalContacts > 0 ? (totalProcessed / campaign.totalContacts) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -139,16 +130,16 @@ export default function CampaignDetails({ campaignId }: { campaignId: string }) 
                   <TableRow key={msg.id}>
                     <TableCell className="font-medium">{msg.contactName}</TableCell>
                     <TableCell>
-                      <ChannelIcon className="w-5 h-5 text-gray-500" />
+                      {ChannelIcon && <ChannelIcon className="w-5 h-5 text-gray-500" />}
                     </TableCell>
                     <TableCell>
                       <div className={`flex items-center gap-2 ${color}`}>
-                        <Icon className="w-4 h-4" />
+                        {Icon && <Icon className="w-4 h-4" />}
                         <span>{msg.status}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-gray-500">
-                      {msg.status === 'Failed' ? msg.error : `Enviado a las ${new Date(msg.sentAt).toLocaleTimeString()}`}
+                      {msg.status === 'Failed' ? (msg.error || 'Error desconocido') : `ID: ${msg.providerId || 'N/A'}`}
                     </TableCell>
                   </TableRow>
                 );
