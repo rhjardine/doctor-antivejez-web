@@ -9,10 +9,9 @@ import { Mail, Smartphone, MessageSquare, CheckCircle, XCircle, Loader2 } from '
 import { Label } from '@/components/ui/label';
 import { getCampaignDetails } from '@/lib/actions/campaigns.actions';
 import { toast } from 'sonner';
-// ===== INICIO DE LA CORRECCIÓN =====
-// Se importan los tipos con sus nombres correctos en inglés, tal como los genera Prisma.
+// ===== CÓDIGO CORRECTO (EN INGLÉS) =====
 import { Campaign, CampaignMessage } from '@prisma/client';
-// ===== FIN DE LA CORRECCIÓN =====
+// =======================================
 
 // Combinamos los tipos para incluir los mensajes anidados
 type CampaignWithMessages = Campaign & { messages: CampaignMessage[] };
@@ -150,4 +149,3 @@ export default function CampaignDetails({ campaignId }: { campaignId: string }) 
       </Card>
     </div>
   );
-}
