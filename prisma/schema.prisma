@@ -416,19 +416,13 @@ model GuideItem {
 }
 
 model PatientGuide {
-  id         String                  @id @default(cuid())
-  patientId  String
-  guideDate  DateTime
-  createdAt  DateTime                @default(now())
-  
-  // ===== CORRECCIÓN FINAL =====
-  // Se añade el campo 'observations' como un String opcional para que coincida
-  // con la lógica de la Server Action 'savePatientGuide'.
-  // Esto resolverá el error de compilación final.
+  id           String                  @id @default(cuid())
+  patientId    String
+  guideDate    DateTime
+  createdAt    DateTime                @default(now())
   observations String?
-
-  patient    Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  selections PatientGuideSelection[]
+  patient      Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  selections   PatientGuideSelection[]
 
   @@map("patient_guides")
 }
@@ -498,3 +492,41 @@ model WellnessKey {
   createdAt   DateTime @default(now())
   @@map("wellness_keys")
 }
+
+// =================================================================
+// ===== INICIO: Modelos para el Historial de Campañas =====
+// =================================================================
+
+model Campaign {
+  id            String    @id @default(cuid())
+  name          String
+  messageBody   String    @db.Text
+  status        String    // Ej: "COMPLETED", "IN_PROGRESS", "FAILED"
+  channels      String[]  // Ej: ["EMAIL", "SMS"]
+  totalContacts Int
+  sentCount     Int       @default(0)
+  failedCount   Int       @default(0)
+  createdAt     DateTime  @default(now())
+  
+  messages      CampaignMessage[]
+
+  @@map("campaigns")
+}
+
+model CampaignMessage {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  contactId   String
+  contactName String
+  contactInfo String   // El email o teléfono al que se envió
+  channel     String   // "EMAIL", "SMS", "WHATSAPP"
+  status      String   // "Sent", "Failed", "Delivered"
+  providerId  String?  // El MessageID de Twilio/SendGrid para depuración
+  error       String?  @db.Text
+  sentAt      DateTime @default(now())
+
+  @@map("campaign_messages")
+}
+// ===== FIN: Modelos para el Historial de Campañas =====
