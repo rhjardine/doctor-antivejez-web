@@ -25,7 +25,6 @@ export async function getContactsFromDB() {
       name: `${p.firstName} ${p.lastName}`,
       email: p.email,
       phone: p.phone,
-      origin: 'RENDER PG',
       consent: ['EMAIL', 'SMS', 'WHATSAPP'],
     }));
 

@@ -19,7 +19,6 @@ export interface Contact {
   name: string;
   email: string | null;
   phone: string | null;
-  origin: 'RENDER PG' | 'GODADDY MYSQL';
   consent: Channel[];
 }
 
