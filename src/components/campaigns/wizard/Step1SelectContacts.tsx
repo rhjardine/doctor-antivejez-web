@@ -10,7 +10,8 @@ import { Contact, Channel } from '../NewCampaignWizard';
 import { getContactsFromDB } from '@/lib/actions/campaigns.actions';
 import { toast } from 'sonner';
 import { Loader2, Upload } from 'lucide-react';
-import { parse } from 'csv-parse/sync'; // Necesitaremos esta librería en el frontend
+import { parse } from 'csv-parse/sync';
+import { Label } from '@/components/ui/label'; // <-- Añadí esta importación que probablemente faltaba
 
 interface Step1SelectContactsProps {
   selectedContacts: Contact[];
@@ -24,7 +25,6 @@ export default function Step1SelectContacts({ selectedContacts, setSelectedConta
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Cargar contactos de la base de datos al montar el componente
   useEffect(() => {
     const loadDbContacts = async () => {
       setLoading(true);
@@ -56,6 +56,9 @@ export default function Step1SelectContacts({ selectedContacts, setSelectedConta
         skip_empty_lines: true,
       });
 
+      // ===== INICIO DE LA CORRECCIÓN =====
+      // Le decimos explícitamente a TypeScript que el valor 'GODADDY MYSQL'
+      // es del tipo esperado por la interfaz 'Contact'.
       const importedContacts: Contact[] = records.map((record, index) => {
         const phone = (record.phone_code && record.phone) 
           ? `+58${record.phone_code}${record.phone}` 
@@ -64,18 +67,19 @@ export default function Step1SelectContacts({ selectedContacts, setSelectedConta
               : null);
 
         return {
-          id: `csv-${record.identification_id || index}`, // ID temporal para el estado
+          id: `csv-${record.identification_id || index}`,
           name: `${record.names || ''} ${record.surnames || ''}`.trim(),
           email: record.email && record.email !== 'NULL' ? record.email : null,
           phone: phone,
-          origin: 'GODADDY MYSQL',
-          consent: ['WHATSAPP'], // Asumimos consentimiento para WhatsApp
+          origin: 'GODADDY MYSQL', // TypeScript ahora entiende que este valor es válido
+          consent: ['WHATSAPP'],
         };
-      }).filter(c => c.phone); // Filtramos solo los que tienen teléfono
+      }).filter(c => c.phone);
 
       setCsvContacts(importedContacts);
+      // ===== FIN DE LA CORRECCIÓN =====
       setContactSource('csv');
-      setSelectedContacts([]); // Reseteamos la selección
+      setSelectedContacts([]);
       toast.success(`${importedContacts.length} contactos cargados desde CSV.`);
     } catch (error: any) {
       toast.error('Error al procesar el archivo CSV', { description: error.message });
@@ -111,7 +115,6 @@ export default function Step1SelectContacts({ selectedContacts, setSelectedConta
         <p className="text-gray-500 mt-1">Elige los destinatarios para tu campaña.</p>
       </div>
 
-      {/* Selector de Fuente de Datos */}
       <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border">
         <div className="flex-1">
           <h3 className="font-semibold">Fuente de Contactos</h3>
@@ -133,7 +136,6 @@ export default function Step1SelectContacts({ selectedContacts, setSelectedConta
         </div>
       </div>
 
-      {/* Filtros y Tabla */}
       <Input 
         placeholder="Buscar por nombre..."
         value={searchTerm}
@@ -174,7 +176,6 @@ export default function Step1SelectContacts({ selectedContacts, setSelectedConta
             )}
           </TableBody>
         </Table>
-        
       </div>
       
       <div className="flex justify-between items-center text-sm text-gray-600">
