@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "migrate:dev": "node scripts/migrate-dev.js",
-    "db:import-legacy": "tsc --project tsconfig.scripts.json && node dist/prisma/import-legacy.js"
+    "db:import-legacy": "npx dotenv-cli -e .env -- tsx prisma/import-legacy.ts",
+    "db:fix-ages": "tsx prisma/fix-ages.ts"
   },
   "prisma": {
     "seed": "prisma generate && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -60,6 +61,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
+    "dotenv": "^17.2.2",
     "dotenv-cli": "^7.4.2",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.4",
@@ -68,6 +70,7 @@
     "tailwindcss": "^3.4.4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }
 }
