@@ -508,6 +508,8 @@ model Campaign {
   failedCount   Int       @default(0)
   createdAt     DateTime  @default(now())
   
+  attachmentUrls String[]  @default([]) // Para almacenar las URLs de Cloudinary
+  
   messages      CampaignMessage[]
 
   @@map("campaigns")
