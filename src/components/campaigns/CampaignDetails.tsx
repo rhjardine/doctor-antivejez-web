@@ -1,6 +1,6 @@
-// src/components/campaigns/CampaignDetails.tsx
+// START OF FILE: src/components/campaigns/CampaignDetails.tsx
 
-import { getCampaignDetails } from '@/lib/actions/campaign.actions';
+import { getCampaignDetails } from '@/lib/actions/campaigns.actions';
 import {
   Dialog,
   DialogContent,
@@ -10,11 +10,11 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { Mail, Smartphone, MessageSquare, CheckCircle, XCircle, Eye, AlertTriangle } from 'lucide-react';
+import { Mail, Smartphone, MessageSquare, CheckCircle, XCircle, Eye, AlertTriangle, FileText } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -35,7 +35,6 @@ const statusColors: Record<string, string> = {
 };
 
 export default async function CampaignDetails({ campaignId }: { campaignId: string }) {
-  // Obtenemos los datos directamente en el servidor.
   const campaign = await getCampaignDetails(campaignId);
 
   if (!campaign) {
@@ -101,6 +100,27 @@ export default async function CampaignDetails({ campaignId }: { campaignId: stri
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{campaign.messageBody}</p>
                   </div>
                 </div>
+                {campaign.attachmentUrls && campaign.attachmentUrls.length > 0 && (
+                  <div>
+                    <Label>Archivos Adjuntos</Label>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {campaign.attachmentUrls.map((url, index) => (
+                        <a
+                          key={index}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm"
+                        >
+                          <Badge variant="secondary" className="cursor-pointer hover:bg-slate-200">
+                            <FileText className="h-3 w-3 mr-1" />
+                            Adjunto {index + 1}
+                          </Badge>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -152,82 +172,6 @@ export default async function CampaignDetails({ campaignId }: { campaignId: stri
       </DialogContent>
     </Dialog>
   );
-}```
-
-#### **Paso 4: Actualizar la Página Principal `campaigns/page.tsx`**
-
-Tu archivo de página ya es casi perfecto. Lo único que haremos es convertirlo en un Server Component (eliminando `'use client'`) y envolver el `CampaignHistory` en `<Suspense>` para una carga no bloqueante.
-
-**Archivo:** `src/app/(dashboard)/campaigns/page.tsx` (Código Completo y Refactorizado)
-
-```typescript
-// src/app/(dashboard)/campaigns/page.tsx
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Send, History, Loader2 } from 'lucide-react';
-import NewCampaignWizard from '@/components/campaigns/NewCampaignWizard';
-import CampaignHistory from '@/components/campaigns/CampaignHistory';
-import { Suspense } from 'react';
-
-// Componente de esqueleto para una mejor UX mientras carga el historial
-function CampaignHistorySkeleton() {
-  return (
-    <div className="border rounded-lg p-6 animate-pulse">
-      <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-      <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
-      <div className="space-y-4">
-        <div className="h-28 bg-gray-100 rounded"></div>
-        <div className="h-28 bg-gray-100 rounded"></div>
-        <div className="h-28 bg-gray-100 rounded"></div>
-      </div>
-    </div>
-  );
 }
 
-export default function CampaignsPage() {
-  return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-800">
-            Gestión de Campañas
-          </h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Crea, gestiona y analiza tus campañas de comunicación multicanal.
-          </p>
-        </header>
-
-        <Tabs defaultValue="new-campaign" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6 bg-slate-100 p-1 rounded-lg">
-            <TabsTrigger 
-              value="new-campaign"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-md"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Nueva Campaña
-            </TabsTrigger>
-            <TabsTrigger 
-              value="history"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-md"
-            >
-              <History className="w-4 h-4 mr-2" />
-              Historial
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="new-campaign">
-            {/* NewCampaignWizard debe ser un Client Component ('use client') */}
-            <NewCampaignWizard />
-          </TabsContent>
-
-          <TabsContent value="history">
-            <Suspense fallback={<CampaignHistorySkeleton />}>
-              {/* CampaignHistory ahora es un Server Component que obtiene datos */}
-              <CampaignHistory />
-            </Suspense>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-}
+// END OF FILE: src/components/campaigns/CampaignDetails.tsx

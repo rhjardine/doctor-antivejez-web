@@ -1,18 +1,16 @@
-// src/lib/actions/campaign.actions.ts
+// START OF FILE: src/lib/actions/campaigns.actions.ts
 
 'use server';
 
-import { prisma } from '@/lib/db'; // Asumo que tienes un alias para @/lib/prisma
+import { prisma } from '@/lib/db';
 import { Contact, Channel } from '@/components/campaigns/NewCampaignWizard';
 import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/services/notificationService';
 import { revalidatePath } from 'next/cache';
 import { Campaign, CampaignMessage } from '@prisma/client';
 
-// ANÁLISIS SENIOR: Se define un tipo explícito para la respuesta de la función de detalles.
-// Esto mejora la seguridad de tipos en los componentes que la consumen.
 export type CampaignWithMessages = Campaign & { messages: CampaignMessage[] };
 
-// --- FUNCIONALIDAD EXISTENTE (INTACTA) ---
+// --- FUNCIONALIDAD EXISTENTE DE LECTURA DE CONTACTOS ---
 
 export async function getContactsFromDB() {
   try {
@@ -43,6 +41,8 @@ export async function getContactsFromDB() {
     return { success: false, error: 'No se pudieron cargar los contactos.' };
   }
 }
+
+// --- FUNCIONALIDAD EXISTENTE DE ENVÍO DE CAMPAÑAS (INTACTA) ---
 
 async function processMassiveSend(
   campaignId: string,
@@ -103,7 +103,7 @@ async function processMassiveSend(
             contactName: contact.name,
             contactInfo,
             channel,
-            status: result.success ? 'SUCCESS' : 'FAILED', // ANÁLISIS SENIOR: Estandarizar estados.
+            status: result.success ? 'SUCCESS' : 'FAILED',
             providerId: result.messageId,
             error: result.error,
           });
@@ -159,7 +159,7 @@ export async function sendCampaign(
         status: 'IN_PROGRESS',
         channels: channels as string[],
         totalContacts: contacts.length,
-        attachmentUrls: mediaUrls || [], // ANÁLISIS SENIOR: Asegurarse de guardar las URLs
+        attachmentUrls: mediaUrls || [],
       },
     });
 
@@ -177,15 +177,8 @@ export async function sendCampaign(
   }
 }
 
-// --- FUNCIONALIDAD DE LECTURA (REFACTORIZADA) ---
+// --- FUNCIONALIDAD DE LECTURA DE HISTORIAL (REFACTORIZADA PARA SERVER COMPONENTS) ---
 
-/**
- * ANÁLISIS SENIOR: 
- * - Convertida a una función asíncrona estándar que devuelve los datos o un array vacío.
- * - Se elimina la envoltura { success, data } para simplificar su uso en Server Components.
- * - Se añade JSON.parse(JSON.stringify(...)) como una medida de seguridad para asegurar que los
- *   objetos de fecha sean serializables y no causen errores en el límite Servidor-Cliente.
- */
 export async function getCampaignHistory(): Promise<Campaign[]> {
   try {
     const campaigns = await prisma.campaign.findMany({
@@ -199,11 +192,6 @@ export async function getCampaignHistory(): Promise<Campaign[]> {
   }
 }
 
-/**
- * ANÁLISIS SENIOR:
- * - Similar a la anterior, devuelve el objeto directamente o null.
- * - El tipo de retorno explícito `Promise<CampaignWithMessages | null>` mejora la inferencia de tipos.
- */
 export async function getCampaignDetails(campaignId: string): Promise<CampaignWithMessages | null> {
   try {
     const campaign = await prisma.campaign.findUnique({
@@ -223,3 +211,5 @@ export async function getCampaignDetails(campaignId: string): Promise<CampaignWi
     return null;
   }
 }
+
+// END OF FILE: src/lib/actions/campaigns.actions.ts

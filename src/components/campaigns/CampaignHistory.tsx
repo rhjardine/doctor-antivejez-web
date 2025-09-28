@@ -1,38 +1,28 @@
-// src/components/campaigns/CampaignHistory.tsx
+// START OF FILE: src/components/campaigns/CampaignHistory.tsx
 
-import { getCampaigns } from '@/lib/actions/campaign.actions';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { getCampaignHistory } from '@/lib/actions/campaigns.actions';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { List, Clock, CheckCircle, XCircle, Send, Eye } from 'lucide-react';
-import CampaignDetails from './CampaignDetails'; // Importamos el nuevo Server Component
+import { Progress } from '@/components/ui/progress';
+import { Mail, Smartphone, MessageSquare, List } from 'lucide-react';
+import CampaignDetails from './CampaignDetails';
 
-// Helper para formatear fechas
-const formatDate = (date: Date) => {
-  return new Date(date).toLocaleString('es-ES', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const statusConfig: Record<string, { label: string; className: string }> = {
+  IN_PROGRESS: { label: 'En Progreso', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+  COMPLETED: { label: 'Completada', className: 'bg-green-100 text-green-800 border-green-200' },
+  COMPLETED_WITH_ERRORS: { label: 'Con Errores', className: 'bg-orange-100 text-orange-800 border-orange-200' },
+  FAILED: { label: 'Fallida', className: 'bg-red-100 text-red-800 border-red-200' },
 };
 
-// Helper para el estilo del badge de estado
-const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-  if (status.toLowerCase().includes('completed')) return 'default';
-  if (status.toLowerCase().includes('progress')) return 'secondary';
-  if (status.toLowerCase().includes('failed')) return 'destructive';
-  return 'outline';
+const channelIcons: Record<string, React.ElementType> = {
+  EMAIL: Mail,
+  SMS: Smartphone,
+  WHATSAPP: MessageSquare,
 };
 
-const CampaignHistory = async () => {
-  const campaigns = await getCampaigns();
+export default async function CampaignHistory() {
+  const campaigns = await getCampaignHistory();
 
   if (!campaigns || campaigns.length === 0) {
     return (
@@ -57,53 +47,60 @@ const CampaignHistory = async () => {
     <Card>
       <CardHeader>
         <CardTitle>Historial de Campañas</CardTitle>
-        <CardDescription>
-          Un registro de todas las campañas enviadas y su estado.
-        </CardDescription>
+        <CardDescription>Visualiza el estado y las métricas de tus campañas. Haz clic en "Ver Detalles" para más información.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {campaigns.map((campaign) => (
-            <div
-              key={campaign.id}
-              className="border rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex-grow">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="font-semibold text-lg text-gray-800">{campaign.name}</h3>
-                  <Badge variant={getStatusVariant(campaign.status)}>
-                    {campaign.status}
-                  </Badge>
-                </div>
-                <div className="text-sm text-gray-500 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 flex-shrink-0" />
-                    <span>{formatDate(campaign.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Send className="h-4 w-4 flex-shrink-0" />
-                    <span>{campaign.totalContacts} Contactos</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    <span>{campaign.sentCount} Éxitos</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                    <span>{campaign.failedCount} Fallos</span>
-                  </div>
-                </div>
-              </div>
-              <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
-                {/* El Dialog ahora contiene el componente de detalles, que cargará los datos específicos */}
-                <CampaignDetails campaignId={campaign.id} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Canales</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Progreso</TableHead>
+              <TableHead className="text-right">Fecha</TableHead>
+              <TableHead className="text-center">Acción</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {campaigns.map(campaign => {
+              const totalProcessed = campaign.sentCount + campaign.failedCount;
+              const progress = campaign.totalContacts > 0 ? (totalProcessed / campaign.totalContacts) * 100 : 0;
+              const statusInfo = statusConfig[campaign.status] || { label: campaign.status, className: 'bg-gray-100 text-gray-800' };
+              return (
+                <TableRow key={campaign.id} className="hover:bg-slate-50">
+                  <TableCell className="font-medium">{campaign.name}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {campaign.channels.map(channel => {
+                         const Icon = channelIcons[channel];
+                         return Icon ? <Icon key={channel} className="w-5 h-5 text-gray-500" title={channel} /> : null;
+                      })}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={statusInfo.className}>{statusInfo.label}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                       <Progress value={progress} className="w-[60%]" />
+                       <span className="text-xs text-gray-600">{Math.round(progress)}%</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {totalProcessed} / {campaign.totalContacts} procesados
+                    </p>
+                  </TableCell>
+                  <TableCell className="text-right">{new Date(campaign.createdAt).toLocaleDateString('es-ES')}</TableCell>
+                  <TableCell className="text-center">
+                    <CampaignDetails campaignId={campaign.id} />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
-};
+}
 
-export default CampaignHistory;
+// END OF FILE: src/components/campaigns/CampaignHistory.tsx
