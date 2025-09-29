@@ -14,12 +14,6 @@ export type CampaignWithMessages = Campaign & { messages: CampaignMessage[] };
 
 export async function getContactsFromDB() {
   try {
-  // ===== INICIO DE LA CORRECCIÓN =====
-    // Forzamos la revalidación de la ruta de campañas cada vez que se piden los contactos.
-    // Esto asegura que cualquier caché de datos asociada a esta página se invalide.
-    revalidatePath('/dashboard/campaigns');
-    // ===== FIN DE LA CORRECCIÓN =====
-    
     const patients = await prisma.patient.findMany({
       select: {
         id: true,
