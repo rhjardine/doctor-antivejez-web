@@ -10,7 +10,8 @@
     "migrate:dev": "node scripts/migrate-dev.js",
     "db:import-legacy": "npx tsx prisma/import-legacy.ts",
     "db:fix-ages": "npx tsx prisma/fix-ages.ts",
-    "db:fix-contacts": "npx tsx prisma/fix-contacts.ts"
+    "db:fix-contacts": "npx tsx prisma/fix-contacts.ts",
+    "db:fix-contacts-v2": "npx tsx prisma/fix-contacts-v2.ts"
   },
   "prisma": {
     "seed": "prisma generate && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

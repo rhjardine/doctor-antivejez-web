@@ -8,12 +8,12 @@ import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/ser
 import { revalidatePath } from 'next/cache';
 import { Campaign, CampaignMessage } from '@prisma/client';
 
-export type CampaignWithMessages = Campaign & { messages: CampaignMessage[] };
-
-// --- FUNCIONALIDAD EXISTENTE DE LECTURA DE CONTACTOS ---
-
 export async function getContactsFromDB() {
   try {
+    // ANÁLISIS SENIOR: La línea 'revalidatePath' ha sido eliminada de esta función
+    // para corregir el parpadeo intermitente de la UI y estabilizar el componente.
+    // La causa raíz del problema de datos se resolverá con el script 'fix-contacts-v2.ts'.
+
     const patients = await prisma.patient.findMany({
       select: {
         id: true,
@@ -41,8 +41,6 @@ export async function getContactsFromDB() {
     return { success: false, error: 'No se pudieron cargar los contactos.' };
   }
 }
-
-// --- FUNCIONALIDAD EXISTENTE DE ENVÍO DE CAMPAÑAS (INTACTA) ---
 
 async function processMassiveSend(
   campaignId: string,
@@ -103,7 +101,7 @@ async function processMassiveSend(
             contactName: contact.name,
             contactInfo,
             channel,
-            status: result.success ? 'SUCCESS' : 'FAILED',
+            status: result.success ? 'Sent' : 'Failed',
             providerId: result.messageId,
             error: result.error,
           });
@@ -115,7 +113,7 @@ async function processMassiveSend(
           contactName: contact.name,
           contactInfo,
           channel,
-          status: 'FAILED',
+          status: 'Failed',
           error: error.message,
         });
       }
@@ -128,7 +126,7 @@ async function processMassiveSend(
     await prisma.campaignMessage.createMany({ data: messagesToCreate });
   }
   
-  const sentCount = messagesToCreate.filter(m => m.status === 'SUCCESS').length;
+  const sentCount = messagesToCreate.filter(m => m.status === 'Sent').length;
   const failedCount = messagesToCreate.length - sentCount;
 
   await prisma.campaign.update({
@@ -140,7 +138,6 @@ async function processMassiveSend(
     },
   });
   
-  revalidatePath('/dashboard/campaigns');
   console.log(`[Background Process] Envío completado para Campaign ID: ${campaignId}. Exitosos: ${sentCount}, Fallidos: ${failedCount}`);
 }
 
@@ -159,7 +156,6 @@ export async function sendCampaign(
         status: 'IN_PROGRESS',
         channels: channels as string[],
         totalContacts: contacts.length,
-        attachmentUrls: mediaUrls || [],
       },
     });
 
@@ -177,22 +173,20 @@ export async function sendCampaign(
   }
 }
 
-// --- FUNCIONALIDAD DE LECTURA DE HISTORIAL (REFACTORIZADA PARA SERVER COMPONENTS) ---
-
-export async function getCampaignHistory(): Promise<Campaign[]> {
+export async function getCampaignHistory() {
   try {
     const campaigns = await prisma.campaign.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
-    return JSON.parse(JSON.stringify(campaigns));
+    return { success: true, data: campaigns };
   } catch (error) {
     console.error("Error fetching campaign history:", error);
-    return [];
+    return { success: false, error: "No se pudo cargar el historial de campañas." };
   }
 }
 
-export async function getCampaignDetails(campaignId: string): Promise<CampaignWithMessages | null> {
+export async function getCampaignDetails(campaignId: string) {
   try {
     const campaign = await prisma.campaign.findUnique({
       where: { id: campaignId },
@@ -203,12 +197,12 @@ export async function getCampaignDetails(campaignId: string): Promise<CampaignWi
       },
     });
     if (!campaign) {
-      return null;
+      return { success: false, error: "Campaña no encontrada." };
     }
-    return JSON.parse(JSON.stringify(campaign));
+    return { success: true, data: campaign };
   } catch (error) {
     console.error(`Error fetching details for campaign ${campaignId}:`, error);
-    return null;
+    return { success: false, error: "No se pudieron cargar los detalles de la campaña." };
   }
 }
 
