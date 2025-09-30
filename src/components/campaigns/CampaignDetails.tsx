@@ -25,19 +25,22 @@ const channelIcons: Record<string, React.ElementType> = {
 };
 
 const statusIcons: Record<string, React.ElementType> = {
-  SUCCESS: CheckCircle,
-  FAILED: XCircle,
+  Sent: CheckCircle, // Corresponde al estado 'Sent' de tu lógica de envío
+  Failed: XCircle,
 };
 
 const statusColors: Record<string, string> = {
-  SUCCESS: 'text-green-600',
-  FAILED: 'text-red-600',
+  Sent: 'text-green-600',
+  Failed: 'text-red-600',
 };
 
 export default async function CampaignDetails({ campaignId }: { campaignId: string }) {
-  const campaign = await getCampaignDetails(campaignId);
+  // Obtenemos el objeto de respuesta completo
+  const response = await getCampaignDetails(campaignId);
 
-  if (!campaign) {
+  // ===== INICIO DE LA CORRECCIÓN DE TIPOS =====
+  // Verificamos si la operación fue exitosa y si existen datos.
+  if (!response.success || !response.data) {
     return (
       <Button variant="outline" disabled>
         <XCircle className="w-4 h-4 mr-2" />
@@ -45,6 +48,9 @@ export default async function CampaignDetails({ campaignId }: { campaignId: stri
       </Button>
     );
   }
+  // A partir de aquí, TypeScript sabe que 'response.data' existe y tiene el tipo correcto.
+  const campaign = response.data;
+  // ===== FIN DE LA CORRECCIÓN DE TIPOS =====
 
   const totalProcessed = campaign.sentCount + campaign.failedCount;
   const progress = campaign.totalContacts > 0 ? (totalProcessed / campaign.totalContacts) * 100 : 0;
@@ -100,27 +106,6 @@ export default async function CampaignDetails({ campaignId }: { campaignId: stri
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{campaign.messageBody}</p>
                   </div>
                 </div>
-                {campaign.attachmentUrls && campaign.attachmentUrls.length > 0 && (
-                  <div>
-                    <Label>Archivos Adjuntos</Label>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {campaign.attachmentUrls.map((url, index) => (
-                        <a
-                          key={index}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm"
-                        >
-                          <Badge variant="secondary" className="cursor-pointer hover:bg-slate-200">
-                            <FileText className="h-3 w-3 mr-1" />
-                            Adjunto {index + 1}
-                          </Badge>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -152,11 +137,11 @@ export default async function CampaignDetails({ campaignId }: { campaignId: stri
                           <TableCell>
                             <div className={`flex items-center gap-2 ${color}`}>
                               {Icon && <Icon className="w-4 h-4" />}
-                              <span>{msg.status === 'SUCCESS' ? 'Enviado' : 'Fallido'}</span>
+                              <span>{msg.status}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-xs text-gray-500">
-                            {msg.status === 'FAILED' 
+                            {msg.status === 'Failed' 
                               ? <span className='flex items-center'><AlertTriangle className='w-3 h-3 mr-1 text-orange-500'/> {msg.error || 'Error desconocido'}</span>
                               : `ID: ${msg.providerId || 'N/A'}`}
                           </TableCell>

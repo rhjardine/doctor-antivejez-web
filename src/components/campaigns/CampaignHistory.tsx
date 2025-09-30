@@ -22,9 +22,13 @@ const channelIcons: Record<string, React.ElementType> = {
 };
 
 export default async function CampaignHistory() {
-  const campaigns = await getCampaignHistory();
+  // Obtenemos el objeto de respuesta completo
+  const response = await getCampaignHistory();
 
-  if (!campaigns || campaigns.length === 0) {
+  // ===== INICIO DE LA CORRECCIÓN DE TIPOS =====
+  // Verificamos si la operación fue exitosa y si existen datos.
+  // Si no, mostramos el estado vacío.
+  if (!response.success || !response.data || response.data.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -42,6 +46,9 @@ export default async function CampaignHistory() {
       </Card>
     );
   }
+  // A partir de aquí, TypeScript sabe que 'response.data' es un array de campañas.
+  const campaigns = response.data;
+  // ===== FIN DE LA CORRECCIÓN DE TIPOS =====
 
   return (
     <Card>
