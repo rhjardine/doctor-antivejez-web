@@ -8,7 +8,12 @@ import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/ser
 import { revalidatePath } from 'next/cache';
 import { Campaign, CampaignMessage } from '@prisma/client';
 
+import { unstable_noStore as noStore } from 'next/cache';
+
 export async function getContactsFromDB() {
+  
+  noStore();
+
   try {
     // ANÁLISIS SENIOR: La línea 'revalidatePath' ha sido eliminada de esta función
     // para corregir el parpadeo intermitente de la UI y estabilizar el componente.
