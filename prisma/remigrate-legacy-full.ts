@@ -1,6 +1,6 @@
 // prisma/remigrate-legacy-full.ts
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Gender } from '@prisma/client';
 import { parse } from 'csv-parse/sync';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -109,7 +109,7 @@ async function main() {
     const email = emailMap.get(userId) || `${identification}@email-legacy.com`;
     const phone = normalizePhoneNumber(person.phone);
     
-    let gender: 'FEMALE' | 'MALE' | 'OTHER' = 'OTHER';
+    let gender: Gender = 'OTHER';
     if (person.gender === '1' || person.gender === '2') gender = 'FEMALE';
     if (person.gender === '3' || person.gender === '4') gender = 'MALE';
 
