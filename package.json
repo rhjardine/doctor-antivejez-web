@@ -12,7 +12,6 @@
     "db:fix-ages": "npx tsx prisma/fix-ages.ts",
     "db:fix-contacts": "npx tsx prisma/fix-contacts.ts",
     "db:fix-contacts-v2": "npx tsx prisma/fix-contacts-v2.ts",
-    "db:remigrate-legacy": "npx tsx prisma/remigrate-legacy.ts",
     "db:remigrate-legacy-full": "npx tsx prisma/remigrate-legacy-full.ts"
   },
   "prisma": {
