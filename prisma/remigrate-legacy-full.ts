@@ -110,9 +110,12 @@ async function main() {
         const email = emailMap.get(userId) || `${identification}@email-legacy.com`;
         const phone = normalizePhoneNumber(person.phone);
 
-        let gender: Gender = Gender.OTHER;
-        if (person.gender === '1' || person.gender === '2') gender = Gender.FEMALE;
-        if (person.gender === '3' || person.gender === '4') gender = Gender.MALE;
+        let gender: Gender = Gender.FEMENINO; // Usamos un valor por defecto válido
+        if (person.gender === '1' || person.gender === '2') {
+            gender = Gender.FEMENINO;
+        } else if (person.gender === '3' || person.gender === '4') {
+            gender = Gender.MASCULINO;
+        }
 
         try {
             await prisma.patient.create({
