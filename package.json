@@ -12,7 +12,8 @@
     "db:fix-ages": "npx tsx prisma/fix-ages.ts",
     "db:fix-contacts": "npx tsx prisma/fix-contacts.ts",
     "db:fix-contacts-v2": "npx tsx prisma/fix-contacts-v2.ts",
-    "db:remigrate-legacy-full": "npx tsx prisma/remigrate-legacy-full.ts"
+    "db:remigrate-legacy-full": "npx tsx prisma/remigrate-legacy-full.ts",
+     "test:deploy": "node test-deploy.js"
   },
   "prisma": {
     "seed": "prisma generate && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
