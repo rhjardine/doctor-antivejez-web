@@ -207,12 +207,10 @@
     @apply transform -translate-y-0.5 shadow-lg;
   }
 
-  /* ===== INICIO DE LA CORRECCIÓN DE EMERGENCIA ===== */
-  /* Se renombra la clase '.input' a '.form-input-custom' para evitar conflictos con shadcn/ui. */
   .form-input-custom {
     @apply w-full px-4 py-3 border border-gray-300 rounded-lg transition-all duration-200;
-    background-color: white !important; /* Forzar fondo blanco */
-    color: #111827; /* Usamos un color de texto oscuro explícito (gray-900) */
+    background-color: white !important;
+    color: #111827;
   }
 
   .form-input-custom:focus {
@@ -227,7 +225,6 @@
   .form-input-custom::placeholder {
     @apply text-gray-400;
   }
-  /* ===== FIN DE LA CORRECCIÓN DE EMERGENCIA ===== */
 
   /* Labels */
   .label {
@@ -305,8 +302,6 @@
     animation: bounceGentle 2s infinite;
   }
 
-  /* ===== INICIO DE LA CORRECCIÓN DE EMERGENCIA ===== */
-  /* Se actualiza el selector para que apunte a la nueva clase renombrada. */
   .biophysics-form .form-input-custom {
     @apply bg-white border-2 border-gray-200;
     transition: all 0.3s ease;
@@ -320,7 +315,6 @@
   .biophysics-form .form-input-custom:hover {
     @apply border-gray-300;
   }
-  /* ===== FIN DE LA CORRECCIÓN DE EMERGENCIA ===== */
 
   /* Resultados del test */
   .results-card {
@@ -492,13 +486,51 @@
   ring-color: hsl(var(--primary));
 }
 
-/* Print styles */
+/* ===== INICIO DE LA CORRECCIÓN FINAL ===== */
+/* Se reemplaza el bloque de impresión antiguo por la versión nueva y completa. */
 @media print {
+  /* Configuración de la página de impresión */
+  @page {
+    size: A4;
+    margin: 20mm;
+  }
+
+  /* Oculta todos los elementos por defecto cuando el body tiene la clase 'printing' */
+  body.printing > *:not(#printable-content-wrapper) {
+    display: none !important;
+  }
+
+  /* Asegura que el contenedor de impresión y todo su contenido sean visibles */
+  body.printing #printable-content-wrapper,
+  body.printing #printable-content-wrapper * {
+    visibility: visible !important;
+  }
+
+  /* Posiciona el contenedor de impresión para que ocupe toda la página, eliminando el layout del modal */
+  #printable-content-wrapper {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Elimina estilos innecesarios del contenido imprimible en sí */
+  #printable-content {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Clase de utilidad para ocultar elementos específicos como botones */
   .no-print {
     display: none !important;
   }
 
+  /* Estilo genérico para las tarjetas en modo impresión */
   .card {
-    @apply shadow-none border border-gray-300;
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important;
   }
 }
