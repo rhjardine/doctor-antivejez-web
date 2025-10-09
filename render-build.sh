@@ -1,28 +1,27 @@
 #!/usr/bin/env bash
-# Exit on error
-set -o errexit
+    # exit on error
+    set -o errexit
 
-echo "🔄 Iniciando build para Render..."
+    echo "🔄 Iniciando build para Render..."
 
-# 1. Instalar dependencias
-# Usamos 'npm install' en lugar de 'npm ci' para mayor flexibilidad
-# con las versiones de los paquetes en el lockfile.
-echo "📦 Instalando dependencias..."
-npm install
+    # 1. Instalar dependencias
+    echo "📦 Instalando dependencias..."
+    npm install
 
-# 2. Generar cliente de Prisma
-# Esencial para que tu aplicación pueda interactuar con la base de datos.
-echo "🗄️ Generando cliente Prisma..."
-npx prisma generate
+    # 2. Generar cliente Prisma
+    # No es estrictamente necesario aquí, ya que 'migrate deploy' lo hace,
+    # pero es una buena práctica ser explícito.
+    echo "🗄️ Generando cliente Prisma..."
+    npx prisma generate
 
-# 3. Ejecutar migraciones de la base de datos
-# Asegura que el esquema de la base de datos esté actualizado.
-echo "🔄 Aplicando migraciones de la base de datos..."
-npx prisma migrate deploy
+    # 3. Aplicar migraciones de la base de datos
+    # Este es el comando seguro para producción.
+    echo "🔄 Aplicando migraciones de la base de datos..."
+    npx prisma migrate deploy
 
-# 4. Construir la aplicación de Next.js
-# Crea la versión optimizada para producción.
-echo "🏗️ Ejecutando build de Next.js..."
-npm run build
+    # 4. Construir la aplicación de Next.js
+    # Llama al script 'build' del package.json, que ahora solo ejecuta 'next build'.
+    echo "🏗️ Ejecutando build de Next.js..."
+    npm run build
 
-echo "✅ Build completado exitosamente"
+    echo "✅ Build completado exitosamente"
