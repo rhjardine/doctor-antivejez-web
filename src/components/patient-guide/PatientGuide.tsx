@@ -305,7 +305,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const [activeMetabolicTab, setActiveMetabolicTab] = useState<'homeopatia' | 'bach'>('homeopatia');
   const [isSaving, setIsSaving] = useState(false);
   const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
-  //const [newlyAddedItems, setNewlyAddedItems] = useState<{ tempId: string; name: string; categoryId: string }[]>([]);
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
@@ -357,11 +356,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     return cat;
     }));
     
-    setNewlyAddedItems(prev => [...prev, { tempId, name: newItem.name, categoryId }]);
-    setNewItemInputs(prev => ({ ...prev, [categoryId]: '' }));
-  };
-
-  const handleDeleteItem = (categoryId: string, itemId: string) => {
+   const handleDeleteItem = (categoryId: string, itemId: string) => {
     setGuideData(prevData => prevData.map(cat => {
     if (cat.id === categoryId) {
     const newItems = (cat.items as (StandardGuideItem | RemocionItem)[]).filter(item => item.id !== itemId);
@@ -374,9 +369,6 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
     delete newSelections[itemId];
     return newSelections;
     });
-    setNewlyAddedItems(prev => prev.filter(item => item.tempId !== itemId));
-  };
-
   const handleSaveAndSend = async () => {
     setIsSaving(true);
     try {
