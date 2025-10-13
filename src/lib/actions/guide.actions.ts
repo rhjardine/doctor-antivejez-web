@@ -1,9 +1,8 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { GuideFormValues, GuideCategory } from '@/types/guide';
+import { GuideFormValues } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
-// Importamos nuestro servicio de email estandarizado
 import { getEmailProvider } from '@/lib/services/notificationService';
 
 /**
@@ -39,23 +38,19 @@ export async function savePatientGuide(
   try {
     const { selections, observaciones } = formData;
 
-    // 1. Verificar que el paciente existe
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
     if (!patient) {
       throw new Error('Paciente no encontrado');
     }
 
-    // 2. Crear el nuevo registro de la guía, guardando las selecciones como JSON
     const newGuide = await prisma.patientGuide.create({
       data: {
         patientId: patientId,
         observations: observaciones,
-        // Prisma maneja la serialización a JSON automáticamente
         selections: selections as any, 
       },
     });
 
-    // 3. Revalidar la caché para que el historial se actualice
     revalidatePath(`/historias/${patientId}`);
 
     return {
@@ -72,11 +67,9 @@ export async function savePatientGuide(
 
 /**
  * Envía la guía del paciente por correo electrónico.
- * (Esta es una implementación básica. La generación de PDF se puede añadir después).
  */
 export async function sendGuideByEmail(patientId: string, guideId: string) {
   try {
-    // 1. Obtener los datos necesarios
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
     const guide = await prisma.patientGuide.findUnique({ where: { id: guideId } });
 
@@ -87,15 +80,11 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
       return { success: false, error: 'El paciente no tiene un correo electrónico registrado.' };
     }
 
-    // 2. Construir el cuerpo del email (versión simple en texto)
     const subject = `Tu Guía de Tratamiento Personalizada - Dr. AntiVejez`;
     let body = `Hola ${patient.firstName},\n\nAquí tienes un resumen de tu guía de tratamiento:\n\n`;
-    
-    // (Aquí se podría añadir una lógica para formatear el JSON de 'selections' a un texto legible)
     body += `Observaciones: ${guide.observations || 'Ninguna'}\n\n`;
     body += `Por favor, accede al portal para ver tu guía completa.\n\nSaludos,\nEl equipo de Doctor AntiVejez`;
 
-    // 3. Usar nuestro servicio de email para enviar
     const emailProvider = getEmailProvider();
     const result = await emailProvider.send(patient.email, subject, body, null);
 
@@ -109,5 +98,61 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
     console.error('Error sending guide by email:', error);
     const errorMessage = error instanceof Error ? error.message : 'Ocurrió un error en el servidor al enviar el correo.';
     return { success: false, error: errorMessage };
+  }
+}
+
+// ===== INICIO DE LA NUEVA FUNCIONALIDAD DE HISTORIAL =====
+/**
+ * Obtiene el historial de guías guardadas para un paciente específico.
+ * @param patientId El ID del paciente.
+ * @returns Un array con el ID, fecha de creación y observaciones de cada guía.
+ */
+export async function getPatientGuideHistory(patientId: string) {
+  try {
+    if (!patientId) {
+      return { success: false, error: 'Se requiere el ID del paciente.' };
+    }
+    const guides = await prisma.patientGuide.findMany({
+      where: { patientId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        createdAt: true,
+        observations: true,
+      },
+    });
+    return { success: true, data: guides };
+  } catch (error) {
+    console.error(`Error fetching guide history for patient ${patientId}:`, error);
+    return { success: false, error: 'No se pudo cargar el historial de guías.' };
+  }
+}
+
+/**
+ * Obtiene los detalles completos de una guía específica por su ID.
+ * @param guideId El ID de la guía.
+ * @returns El registro completo de la guía, incluyendo el JSON de selecciones.
+ */
+export async function getPatientGuideDetails(guideId: string) {
+  try {
+    if (!guideId) {
+      return { success: false, error: 'Se requiere el ID de la guía.' };
+    }
+    const guide = await prisma.patientGuide.findUnique({
+      where: { id: guideId },
+    });
+    if (!guide) {
+      return { success: false, error: 'No se encontró la guía.' };
+    }
+    // Convertimos el campo 'selections' a un objeto JSON antes de devolverlo
+    // ya que Prisma puede devolverlo en un formato no estándar.
+    const serializableGuide = {
+      ...guide,
+      selections: JSON.parse(JSON.stringify(guide.selections)),
+    };
+    return { success: true, data: serializableGuide };
+  } catch (error) {
+    console.error(`Error fetching guide details for guide ${guideId}:`, error);
+    return { success: false, error: 'No se pudieron cargar los detalles de la guía.' };
   }
 }

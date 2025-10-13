@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getPatientDetails } from '@/lib/actions/patients.actions';
+import { getPatientGuideDetails } from '@/lib/actions/guide.actions'; // <-- Nueva importación
 import { toast } from 'sonner';
 import { 
   FaUser, 
@@ -14,14 +15,14 @@ import {
   FaChartLine,
   FaFileMedicalAlt,
   FaHistory,
-  FaEdit,
-  FaAtom
+  FaEdit
 } from 'react-icons/fa';
 import EdadBiologicaMain from '@/components/biophysics/edad-biologica-main';
 import EdadBiofisicaTestView from '@/components/biophysics/edad-biofisica-test-view';
 import BiophysicsHistoryView from '@/components/biophysics/biophysics-history-view';
 import PatientEditForm from '@/components/patients/PatientEditForm';
 import PatientGuide from '@/components/patient-guide/PatientGuide';
+import GuideHistoryView from '@/components/patient-guide/GuideHistoryView'; // <-- Nueva importación
 import ClinicalSummary from '@/components/patients/ClinicalSummary';
 import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
 import BiochemistryHistoryView from '@/components/biochemistry/BiochemistryHistoryView';
@@ -30,11 +31,12 @@ import OrthomolecularTestView from '@/components/orthomolecular/OrthomolecularTe
 import NutrigenomicGuide from '@/components/nutrition/NutrigenomicGuide';
 import { telotestReportData } from '@/lib/mock-data';
 import type { PatientWithDetails } from '@/types';
+import { Button } from '@/components/ui/button'; // <-- Nueva importación
 
-// Se elimina la declaración 'type Patient = PatientWithDetails;' para evitar confusión
-// y se usa 'PatientWithDetails' directamente.
 type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
 type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'orthomolecular' | 'biofisica_history' | 'bioquimica_history' | 'genetica';
+// ===== NUEVO TIPO DE ESTADO =====
+type GuideView = 'form' | 'history';
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -48,12 +50,16 @@ export default function PatientDetailPage() {
   const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
   const [isEditing, setIsEditing] = useState(false);
 
+  // ===== INICIO DE LA NUEVA LÓGICA PARA GUÍAS =====
+  const [guideView, setGuideView] = useState<GuideView>('form');
+  const [guideToLoad, setGuideToLoad] = useState<string | null>(null);
+  // ===============================================
+
   const refreshPatientData = useCallback(async () => {
     if (!patientId) return;
     try {
       const result = await getPatientDetails(patientId);
       if (result.success && result.patient) {
-        // ===== SOLUCIÓN 1: Usar el tipo correcto 'PatientWithDetails' =====
         setPatient(result.patient as PatientWithDetails);
       } else {
         toast.error('No se pudo refrescar la información del paciente.');
@@ -69,7 +75,6 @@ export default function PatientDetailPage() {
     try {
       const result = await getPatientDetails(patientId);
       if (result.success && result.patient) {
-        // ===== SOLUCIÓN 2: Usar el tipo correcto 'PatientWithDetails' =====
         setPatient(result.patient as PatientWithDetails);
       } else {
         toast.error('Paciente no encontrado');
@@ -104,6 +109,13 @@ export default function PatientDetailPage() {
     refreshPatientData();
   };
 
+  // ===== NUEVA FUNCIÓN PARA CARGAR UNA GUÍA DEL HISTORIAL =====
+  const handleViewGuide = (guideId: string) => {
+    setGuideToLoad(guideId);
+    setGuideView('form');
+  };
+  // =======================================================
+
   if (loading) {
     return <div className="flex items-center justify-center h-96"><div className="loader"></div></div>;
   }
@@ -125,6 +137,8 @@ export default function PatientDetailPage() {
   const handleTabClick = (tabId: TabId) => {
     setActiveTab(tabId);
     setActiveTestView('main');
+    setGuideView('form');
+    setGuideToLoad(null);
     router.push(`/historias/${patientId}?tab=${tabId}`, { scroll: false });
   }
 
@@ -270,9 +284,27 @@ export default function PatientDetailPage() {
         
         {activeTab === 'biofisica' && renderBiofisicaContent()}
 
+        {/* ===== INICIO DE LA MODIFICACIÓN ===== */}
         {activeTab === 'guia' && (
-          <PatientGuide patient={patient} />
+          <div className="space-y-4">
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg w-fit">
+              <Button size="sm" variant={guideView === 'form' ? 'default' : 'ghost'} onClick={() => { setGuideView('form'); setGuideToLoad(null); }}>
+                <FaFileMedicalAlt className="mr-2" /> {guideToLoad ? 'Viendo Guía' : 'Nueva Guía'}
+              </Button>
+              <Button size="sm" variant={guideView === 'history' ? 'default' : 'ghost'} onClick={() => setGuideView('history')}>
+                <FaHistory className="mr-2" /> Historial
+              </Button>
+            </div>
+
+            {guideView === 'form' && (
+              <PatientGuide key={guideToLoad || 'new'} patient={patient} guideIdToLoad={guideToLoad} />
+            )}
+            {guideView === 'history' && (
+              <GuideHistoryView patientId={patient.id} onViewGuide={handleViewGuide} onBack={() => setGuideView('form')} />
+            )}
+          </div>
         )}
+        {/* ===== FIN DE LA MODIFICACIÓN ===== */}
 
         {activeTab === 'alimentacion' && <NutrigenomicGuide patient={patient} />}
         
