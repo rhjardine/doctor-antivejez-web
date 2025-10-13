@@ -19,7 +19,7 @@ import {
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt, FaPrint, FaUserMd } from 'react-icons/fa';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
-import { savePatientGuide } from '@/lib/actions/guide.actions';
+import { savePatientGuide, sendGuideByEmail } from '@/lib/actions/guide.actions';
 
 // --- Estructura de Datos para el Activador Metabólico Jerárquico ---
 export const homeopathicStructure = {
@@ -305,7 +305,7 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const [activeMetabolicTab, setActiveMetabolicTab] = useState<'homeopatia' | 'bach'>('homeopatia');
   const [isSaving, setIsSaving] = useState(false);
   const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newlyAddedItems, setNewlyAddedItems] = useState<{ tempId: string; name: string; categoryId: string }[]>([]);
+  //const [newlyAddedItems, setNewlyAddedItems] = useState<{ tempId: string; name: string; categoryId: string }[]>([]);
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
@@ -380,36 +380,49 @@ export default function PatientGuide({ patient }: { patient: PatientWithDetails 
   const handleSaveAndSend = async () => {
     setIsSaving(true);
     try {
-    const result = await savePatientGuide(patient.id, {
-    guideDate,
-    selections,
-    observaciones,
-    }, newlyAddedItems);
+      // Se llama a la nueva versión de savePatientGuide con solo 2 argumentos.
+      const result = await savePatientGuide(patient.id, {
+        selections,
+        observaciones,
+        guideDate, // Se pasa la fecha aquí
+      });
 
-    if (result.success) {
-    toast.success(result.message);
-    setNewlyAddedItems([]); // Limpiar los items nuevos después de guardar
-    setIsSendModalOpen(true);
-    } else {
-    toast.error(result.error || 'No se pudo guardar la guía.');
-    }
+      if (result.success && result.guideId) {
+        toast.success(result.message);
+        // Guardamos el ID de la guía recién creada para poder enviarla por email.
+        sessionStorage.setItem('lastGuideId', result.guideId);
+        setIsSendModalOpen(true);
+      } else {
+        toast.error(result.error || 'No se pudo guardar la guía.');
+      }
     } catch (error) {
-    toast.error('Error de conexión al guardar la guía.');
+      toast.error('Error de conexión al guardar la guía.');
     } finally {
-    setIsSaving(false);
+      setIsSaving(false);
     }
   };
 
-  const handleSendAction = (action: 'email' | 'whatsapp') => {
+  const handleSendAction = async (action: 'email' | 'whatsapp') => {
+    const lastGuideId = sessionStorage.getItem('lastGuideId');
+    if (!lastGuideId) {
+      toast.error("No se encontró la guía recién guardada para enviar.");
+      return;
+    }
+
     if (action === 'email') {
-    const subject = encodeURIComponent('Guía de Tratamiento - Doctor AntiVejez');
-    const body = encodeURIComponent(`Estimado/a ${patient.firstName},\n\nSu guía de tratamiento personalizada ha sido generada. Puede consultarla en el portal o en el archivo adjunto (si aplica).\n\nSaludos cordiales,\nDoctor AntiVejez`);
-    window.location.href = `mailto:${patient.email}?subject=${subject}&body=${body}`;
+      toast.info("Enviando correo...");
+      const emailResult = await sendGuideByEmail(patient.id, lastGuideId);
+      if (emailResult.success) {
+        toast.success(emailResult.message);
+      } else {
+        toast.error(emailResult.error || "No se pudo enviar el correo.");
+      }
     } else if (action === 'whatsapp') {
-    const message = encodeURIComponent(`Hola ${patient.firstName}, su guía de tratamiento personalizada ha sido generada. Por favor, revise su correo electrónico o el portal de pacientes para verla.`);
-    window.open(`https://wa.me/${patient.phone}?text=${message}`, '_blank');
+      const message = encodeURIComponent(`Hola ${patient.firstName}, su guía de tratamiento personalizada ha sido generada. Por favor, revise su correo electrónico o el portal de pacientes para verla.`);
+      window.open(`https://wa.me/${patient.phone}?text=${message}`, '_blank');
     }
     setIsSendModalOpen(false);
+    sessionStorage.removeItem('lastGuideId');
   };
 
   const nutraFrequencyOptions = [
