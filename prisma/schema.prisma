@@ -63,6 +63,11 @@ enum DietType {
   RENAL
 }
 
+enum BoardType {
+  FORM_BIOPHYSICS
+  FORM_BIOCHEMISTRY
+}
+
 // =================================================================
 // Modelos de Autenticación y Usuarios (NextAuth.js)
 // =================================================================
@@ -123,7 +128,6 @@ model VerificationToken {
 // =================================================================
 // Modelos de la Aplicación
 // =================================================================
-
 model Patient {
   id                  String               @id @default(cuid())
   controlNumber       Int                  @default(autoincrement())
@@ -356,12 +360,6 @@ model OrthomolecularTest {
 // =================================================================
 // Modelos para Baremos y Rangos
 // =================================================================
-
-enum BoardType {
-  FORM_BIOPHYSICS
-  FORM_BIOCHEMISTRY
-}
-
 model Range {
   id     Int     @id
   minAge Float
@@ -388,9 +386,8 @@ model Board {
 }
 
 // =================================================================
-// Modelos para la Guía del Paciente
+// Modelos para la Guía del Paciente (CORREGIDOS)
 // =================================================================
-
 model GuideCategory {
   id    String      @id @default(cuid())
   title String
@@ -409,45 +406,31 @@ model GuideItem {
   isDefault  Boolean  @default(true)
   createdAt  DateTime @default(now())
 
-  category   GuideCategory           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  selections PatientGuideSelection[]
+  category   GuideCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  // La relación inversa a 'PatientGuideSelection' ha sido eliminada.
 
   @@map("guide_items")
 }
 
 model PatientGuide {
-  id           String                  @id @default(cuid())
+  id           String    @id @default(cuid())
   patientId    String
-  guideDate    DateTime
-  createdAt    DateTime                @default(now())
+  patient      Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  selections   Json      // Se usa Json para almacenar el formulario.
   observations String?
-  patient      Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  selections   PatientGuideSelection[]
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("patient_guides")
 }
 
-model PatientGuideSelection {
-  id             String       @id @default(cuid())
-  patientGuideId String
-  guideItemId    String
-  qty            String?
-  freq           String?
-  custom         String?
-  complejoB_cc   String?
-  bioquel_cc     String?
-  frequency      String?
-
-  patientGuide PatientGuide @relation(fields: [patientGuideId], references: [id], onDelete: Cascade)
-  guideItem    GuideItem    @relation(fields: [guideItemId], references: [id], onDelete: Cascade)
-
-  @@map("patient_guide_selections")
-}
+// El modelo 'PatientGuideSelection' ha sido eliminado por completo.
 
 // =================================================================
 // Modelos para la Guía de Alimentación
 // =================================================================
-
 model FoodItem {
   id             String         @id @default(cuid())
   name           String
@@ -481,6 +464,7 @@ model GeneralGuideItem {
   type      GeneralGuideType
   isDefault Boolean          @default(true)
   createdAt DateTime         @default(now())
+
   @@map("general_guide_items")
 }
 
@@ -490,24 +474,24 @@ model WellnessKey {
   description String
   isDefault   Boolean  @default(true)
   createdAt   DateTime @default(now())
+
   @@map("wellness_keys")
 }
 
 // =================================================================
-// ===== INICIO: Modelos para el Historial de Campañas =====
+// Modelos para el Historial de Campañas
 // =================================================================
-
 model Campaign {
   id            String    @id @default(cuid())
   name          String
   messageBody   String    @db.Text
-  status        String    // Ej: "COMPLETED", "IN_PROGRESS", "FAILED"
-  channels      String[]  // Ej: ["EMAIL", "SMS"]
+  status        String
+  channels      String[]
   totalContacts Int
   sentCount     Int       @default(0)
   failedCount   Int       @default(0)
   createdAt     DateTime  @default(now())
-  
+
   messages      CampaignMessage[]
 
   @@map("campaigns")
@@ -517,16 +501,14 @@ model CampaignMessage {
   id          String   @id @default(cuid())
   campaignId  String
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  
   contactId   String
   contactName String
-  contactInfo String   // El email o teléfono al que se envió
-  channel     String   // "EMAIL", "SMS", "WHATSAPP"
-  status      String   // "Sent", "Failed", "Delivered"
-  providerId  String?  // El MessageID de Twilio/SendGrid para depuración
+  contactInfo String
+  channel     String
+  status      String
+  providerId  String?
   error       String?  @db.Text
   sentAt      DateTime @default(now())
 
   @@map("campaign_messages")
 }
-// ===== FIN: Modelos para el Historial de Campañas =====
