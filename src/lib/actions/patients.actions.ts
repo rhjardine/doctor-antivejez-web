@@ -1,4 +1,4 @@
-'use server';
+use server';
 
 import { prisma } from '@/lib/db';
 import { Prisma, Patient } from '@prisma/client';
@@ -7,10 +7,8 @@ import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
-  // ===== INICIO DE LA MODIFICACIÓN: Diagnóstico =====
-  // Imprimimos la variable de entorno en los logs de Render para verificarla.
+  // Se mantiene el logging de diagnóstico, es útil.
   console.log("Intentando conectar con DATABASE_URL:", process.env.DATABASE_URL ? "Variable encontrada" : "¡¡¡Variable NO encontrada!!!");
-  // =================================================
 
   try {
     const validatedData = patientSchema.parse(formData);
@@ -26,7 +24,13 @@ export async function createPatient(formData: PatientFormData & { userId: string
       },
     });
 
+    // ===== INICIO DE LA CORRECCIÓN =====
+    // Se añade la revalidación para la ruta del dashboard.
+    // La revalidación de '/historias' ya estaba presente y es correcta.
     revalidatePath('/historias');
+    revalidatePath('/dashboard');
+    // ===== FIN DE LA CORRECCIÓN =====
+
     return { success: true, patient };
   } catch (error) {
     console.error('Error creando paciente:', error);
@@ -85,6 +89,10 @@ export async function getPatientDetails(id: string) {
           orderBy: { testDate: 'desc' },
         },
         biochemistryTests: {
+          orderBy: { testDate: 'desc' },
+        },
+        // Se añade la inclusión del historial de tests ortomoleculares que faltaba
+        orthomolecularTests: {
           orderBy: { testDate: 'desc' },
         },
         user: {

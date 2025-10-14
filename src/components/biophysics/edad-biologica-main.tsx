@@ -1,36 +1,50 @@
+Entendido. Tienes toda la razón. La precisión es fundamental en un componente tan crítico.
+
+He tomado el archivo `edad-biologica-main.tsx` original de 214 líneas que me proporcionaste y he aplicado cuidadosamente la corrección para el cálculo del diferencial, sin eliminar ni alterar ninguna otra funcionalidad.
+
+A continuación, te proporciono el archivo completo y verificado.
+
+---
+
+### **Archivo Completo y Corregido: `src/components/biophysics/edad-biologica-main.tsx`**
+
+```typescript
 'use client';
 
 import { PatientWithDetails } from '@/types';
 import { FaHeartbeat, FaFlask, FaDna, FaAtom, FaHistory } from 'react-icons/fa';
 
-// ===== MODIFICADO: Se añade la prop `onOrthomolecularTestClick` a la interfaz =====
 interface EdadBiologicaMainProps {
   patient: PatientWithDetails;
   onTestClick: () => void;
   onBiochemistryTestClick: () => void;
-  onOrthomolecularTestClick: () => void; // <-- Nueva prop
+  onOrthomolecularTestClick: () => void;
   onHistoryClick: () => void;
   onBiochemistryHistoryClick: () => void;
   onGeneticTestClick: () => void;
 }
-// =================================================================================
 
 export default function EdadBiologicaMain({
   patient,
   onTestClick,
   onBiochemistryTestClick,
-  onOrthomolecularTestClick, // <-- Se recibe la nueva prop
+  onOrthomolecularTestClick,
   onHistoryClick,
   onBiochemistryHistoryClick,
   onGeneticTestClick,
 }: EdadBiologicaMainProps) {
-  // Se mantiene la lógica para los tests existentes
   const lastBiophysicsTest = patient.biophysicsTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
   const lastBiochemistryTest = patient.biochemistryTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
-
-  // ===== NUEVO: Se añade la lógica para obtener el último test ortomolecular =====
   const lastOrthomolecularTest = patient.orthomolecularTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
-  // ============================================================================
+
+  // ===== INICIO DE LA CORRECCIÓN DEL DIFERENCIAL =====
+  // Se recalcula el diferencial en tiempo real para cada tipo de test,
+  // usando siempre la 'patient.chronologicalAge' más actualizada que viene por props.
+  // Esto asegura que si la edad cronológica cambia, el diferencial se refleja inmediatamente.
+  const biophysicsDifference = lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge - patient.chronologicalAge) : undefined;
+  const biochemistryDifference = lastBiochemistryTest?.biochemicalAge ? Math.round(lastBiochemistryTest.biochemicalAge - patient.chronologicalAge) : undefined;
+  const orthomolecularDifference = lastOrthomolecularTest?.orthomolecularAge ? Math.round(lastOrthomolecularTest.orthomolecularAge - patient.chronologicalAge) : undefined;
+  // ===== FIN DE LA CORRECCIÓN DEL DIFERENCIAL =====
 
   const testCards = [
     {
@@ -38,7 +52,7 @@ export default function EdadBiologicaMain({
       title: 'EDAD BIOFÍSICA',
       icon: FaHeartbeat,
       value: lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge) : '--',
-      difference: lastBiophysicsTest?.differentialAge,
+      difference: biophysicsDifference, // Se usa el valor recalculado
       isClickable: true,
       onClick: onTestClick,
       color: 'bg-primary',
@@ -50,27 +64,25 @@ export default function EdadBiologicaMain({
       title: 'EDAD BIOQUÍMICA',
       icon: FaFlask,
       value: lastBiochemistryTest?.biochemicalAge ? Math.round(lastBiochemistryTest.biochemicalAge) : '--',
-      difference: lastBiochemistryTest?.differentialAge,
+      difference: biochemistryDifference, // Se usa el valor recalculado
       isClickable: true,
       onClick: onBiochemistryTestClick,
       color: 'bg-primary',
       hasHistory: patient.biochemistryTests && patient.biochemistryTests.length > 0,
       onHistoryClick: onBiochemistryHistoryClick,
     },
-    // ===== MODIFICADO: La tarjeta Ortomolecular ahora es dinámica =====
     {
       id: 'orthomolecular',
       title: 'EDAD ORTHOMOLECULAR',
       icon: FaAtom,
       value: lastOrthomolecularTest?.orthomolecularAge ? Math.round(lastOrthomolecularTest.orthomolecularAge) : '--',
-      difference: lastOrthomolecularTest?.differentialAge,
-      isClickable: true, // Se habilita el clic
-      onClick: onOrthomolecularTestClick, // Se conecta la función
-      color: 'bg-primary', // Se cambia el color a azul primario
-      hasHistory: false, // La funcionalidad de historial se puede añadir en el futuro
+      difference: orthomolecularDifference, // Se usa el valor recalculado
+      isClickable: true,
+      onClick: onOrthomolecularTestClick,
+      color: 'bg-primary',
+      hasHistory: false,
       onHistoryClick: undefined,
     },
-    // =================================================================
     {
       id: 'genetica',
       title: 'EDAD GENÉTICA',
@@ -140,13 +152,11 @@ export default function EdadBiologicaMain({
                   <p className="text-3xl font-bold">
                     {card.value !== '--' && card.value !== 'Ver' ? `${card.value} años` : card.value}
                   </p>
-                  {/* ===== MODIFICADO: Se añade la lógica para mostrar la diferencia del test ortomolecular ===== */}
                   {card.difference !== undefined && card.difference !== null && (
                     <p className="text-sm mt-2 opacity-80">
-                      Diferencia: {card.difference > 0 ? '+' : ''}{Math.round(card.difference)} años
+                      Diferencia: {card.difference > 0 ? '+' : ''}{card.difference} años
                     </p>
                   )}
-                  {/* ======================================================================================== */}
                 </div>
                 {card.hasHistory && card.onHistoryClick && (
                   <button
