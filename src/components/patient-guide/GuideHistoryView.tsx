@@ -3,17 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import { getPatientGuideHistory } from '@/lib/actions/guide.actions';
 import { toast } from 'sonner';
-import { Loader2, FaHistory, FaEye } from 'react-icons/fa';
+// ===== INICIO DE LA CORRECCIÓN =====
+import { FaHistory, FaEye } from 'react-icons/fa';
+import { Loader2 } from 'lucide-react'; // Se importa Loader2 desde lucide-react
+// ===== FIN DE LA CORRECCIÓN =====
 import { Button } from '@/components/ui/button';
 import type { PatientGuide } from '@prisma/client';
 
-// Definimos un tipo más simple para la lista, ya que no necesitamos todos los campos.
 type GuideHistoryItem = Pick<PatientGuide, 'id' | 'createdAt' | 'observations'>;
 
 interface GuideHistoryViewProps {
   patientId: string;
-  onViewGuide: (guideId: string) => void; // Función para notificar al padre qué guía ver
-  onBack: () => void; // Función para volver a la vista del formulario
+  onViewGuide: (guideId: string) => void;
+  onBack: () => void;
 }
 
 export default function GuideHistoryView({ patientId, onViewGuide, onBack }: GuideHistoryViewProps) {
@@ -25,7 +27,6 @@ export default function GuideHistoryView({ patientId, onViewGuide, onBack }: Gui
       setLoading(true);
       const result = await getPatientGuideHistory(patientId);
       if (result.success && result.data) {
-        // Hacemos un type assertion seguro aquí
         setHistory(result.data as GuideHistoryItem[]);
       } else {
         toast.error(result.error || 'No se pudo cargar el historial.');
