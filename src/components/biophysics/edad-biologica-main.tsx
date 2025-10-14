@@ -1,14 +1,3 @@
-Entendido. Tienes toda la razón. La precisión es fundamental en un componente tan crítico.
-
-He tomado el archivo `edad-biologica-main.tsx` original de 214 líneas que me proporcionaste y he aplicado cuidadosamente la corrección para el cálculo del diferencial, sin eliminar ni alterar ninguna otra funcionalidad.
-
-A continuación, te proporciono el archivo completo y verificado.
-
----
-
-### **Archivo Completo y Corregido: `src/components/biophysics/edad-biologica-main.tsx`**
-
-```typescript
 'use client';
 
 import { PatientWithDetails } from '@/types';
