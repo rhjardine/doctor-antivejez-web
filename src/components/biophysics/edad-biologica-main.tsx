@@ -26,14 +26,9 @@ export default function EdadBiologicaMain({
   const lastBiochemistryTest = patient.biochemistryTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
   const lastOrthomolecularTest = patient.orthomolecularTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
 
-  // ===== INICIO DE LA CORRECCIÓN DEL DIFERENCIAL =====
-  // Se recalcula el diferencial en tiempo real para cada tipo de test,
-  // usando siempre la 'patient.chronologicalAge' más actualizada que viene por props.
-  // Esto asegura que si la edad cronológica cambia, el diferencial se refleja inmediatamente.
   const biophysicsDifference = lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge - patient.chronologicalAge) : undefined;
   const biochemistryDifference = lastBiochemistryTest?.biochemicalAge ? Math.round(lastBiochemistryTest.biochemicalAge - patient.chronologicalAge) : undefined;
   const orthomolecularDifference = lastOrthomolecularTest?.orthomolecularAge ? Math.round(lastOrthomolecularTest.orthomolecularAge - patient.chronologicalAge) : undefined;
-  // ===== FIN DE LA CORRECCIÓN DEL DIFERENCIAL =====
 
   const testCards = [
     {
@@ -41,7 +36,7 @@ export default function EdadBiologicaMain({
       title: 'EDAD BIOFÍSICA',
       icon: FaHeartbeat,
       value: lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge) : '--',
-      difference: biophysicsDifference, // Se usa el valor recalculado
+      difference: biophysicsDifference,
       isClickable: true,
       onClick: onTestClick,
       color: 'bg-primary',
@@ -53,7 +48,7 @@ export default function EdadBiologicaMain({
       title: 'EDAD BIOQUÍMICA',
       icon: FaFlask,
       value: lastBiochemistryTest?.biochemicalAge ? Math.round(lastBiochemistryTest.biochemicalAge) : '--',
-      difference: biochemistryDifference, // Se usa el valor recalculado
+      difference: biochemistryDifference,
       isClickable: true,
       onClick: onBiochemistryTestClick,
       color: 'bg-primary',
@@ -65,7 +60,7 @@ export default function EdadBiologicaMain({
       title: 'EDAD ORTHOMOLECULAR',
       icon: FaAtom,
       value: lastOrthomolecularTest?.orthomolecularAge ? Math.round(lastOrthomolecularTest.orthomolecularAge) : '--',
-      difference: orthomolecularDifference, // Se usa el valor recalculado
+      difference: orthomolecularDifference,
       isClickable: true,
       onClick: onOrthomolecularTestClick,
       color: 'bg-primary',
@@ -124,7 +119,6 @@ export default function EdadBiologicaMain({
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Edad Cronológica Vs Edad Biológica</h2>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {testCards.map((card) => {
             const Icon = card.icon;
@@ -164,7 +158,6 @@ export default function EdadBiologicaMain({
           })}
         </div>
       </div>
-
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Perfil Multidimensional de Envejecimiento</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -200,7 +193,6 @@ export default function EdadBiologicaMain({
           })}
         </div>
       </div>
-
       {!lastBiophysicsTest && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
           <p className="text-blue-700">

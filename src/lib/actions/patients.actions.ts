@@ -1,13 +1,12 @@
-use server';
+'use server';
 
 import { prisma } from '@/lib/db';
-import { Prisma, Patient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PatientFormData, patientSchema } from '@/utils/validation';
 import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
-  // Se mantiene el logging de diagnóstico, es útil.
   console.log("Intentando conectar con DATABASE_URL:", process.env.DATABASE_URL ? "Variable encontrada" : "¡¡¡Variable NO encontrada!!!");
 
   try {
@@ -24,12 +23,8 @@ export async function createPatient(formData: PatientFormData & { userId: string
       },
     });
 
-    // ===== INICIO DE LA CORRECCIÓN =====
-    // Se añade la revalidación para la ruta del dashboard.
-    // La revalidación de '/historias' ya estaba presente y es correcta.
     revalidatePath('/historias');
     revalidatePath('/dashboard');
-    // ===== FIN DE LA CORRECCIÓN =====
 
     return { success: true, patient };
   } catch (error) {
@@ -91,7 +86,6 @@ export async function getPatientDetails(id: string) {
         biochemistryTests: {
           orderBy: { testDate: 'desc' },
         },
-        // Se añade la inclusión del historial de tests ortomoleculares que faltaba
         orthomolecularTests: {
           orderBy: { testDate: 'desc' },
         },
@@ -117,7 +111,6 @@ export async function getPatientDetails(id: string) {
     return { success: false, error: 'Error al obtener el paciente' };
   }
 }
-
 
 export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { page?: number; limit?: number; userId?: string } = {}) {
   try {
