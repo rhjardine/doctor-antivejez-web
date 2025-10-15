@@ -10,8 +10,10 @@
 @layer base {
   :root {
     /* --- Colores Base --- */
-    --background: 240 5% 96%; /* #f4f4f5 - Un gris muy claro para el fondo */
-    --foreground: 224 71% 4%; /* #0a0a10 - Texto principal oscuro */
+    --background: 240 5% 96%;
+    /* #f4f4f5 - Un gris muy claro para el fondo */
+    --foreground: 224 71% 4%;
+    /* #0a0a10 - Texto principal oscuro */
 
     /* --- Color Primario (Azul Cielo Corporativo) --- */
     /* HSL para rgb(35, 188, 239) o #23bcef */
@@ -36,14 +38,18 @@
     /* --- Colores de Estado --- */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --status-green: 145 80% 35%; /* HSL para rgb(22, 163, 74) */
-    --status-yellow: 45 93% 47%; /* HSL para rgb(234, 179, 8) */
-    --status-red: 0 72% 51%;     /* HSL para rgb(220, 38, 38) */
+    --status-green: 145 80% 35%;
+    /* HSL para rgb(22, 163, 74) */
+    --status-yellow: 45 93% 47%;
+    /* HSL para rgb(234, 179, 8) */
+    --status-red: 0 72% 51%;
+    /* HSL para rgb(220, 38, 38) */
 
     /* --- Bordes, Inputs y Anillos --- */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 195.5 85.3% 53.3%; /* Usamos el color primario para el anillo de foco */
+    --ring: 195.5 85.3% 53.3%;
+    /* Usamos el color primario para el anillo de foco */
 
     /* --- Popover (usando colores base) --- */
     --popover: 0 0% 100%;
@@ -93,11 +99,13 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
   }
+
   html {
     scroll-behavior: smooth;
   }
@@ -110,23 +118,31 @@
 /* Estilos para la barra de desplazamiento horizontal personalizada */
 @layer utilities {
   .custom-scrollbar-tabs::-webkit-scrollbar {
-    height: 6px; /* Grosor de la barra */
+    height: 6px;
+    /* Grosor de la barra */
   }
+
   .custom-scrollbar-tabs::-webkit-scrollbar-track {
-    background-color: #e2f5fd; /* Color de fondo de la pista (azul muy claro) */
+    background-color: #e2f5fd;
+    /* Color de fondo de la pista (azul muy claro) */
     border-radius: 10px;
   }
+
   .custom-scrollbar-tabs::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--primary)); /* Color azul para la barra */
+    background-color: hsl(var(--primary));
+    /* Color azul para la barra */
     border-radius: 10px;
   }
+
   .custom-scrollbar-tabs::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--primary) / 0.8); /* Color azul oscuro al pasar el ratón */
+    background-color: hsl(var(--primary) / 0.8);
+    /* Color azul oscuro al pasar el ratón */
   }
 }
 
 /* Componentes reutilizables */
 @layer components {
+
   /* Header con el nuevo color */
   .header {
     background-color: hsl(var(--primary));
@@ -253,11 +269,13 @@
   /* Tablas */
   .table-header {
     @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer;
-    background-color: #F9FAFB; /* gray-50 */
+    background-color: #F9FAFB;
+    /* gray-50 */
   }
 
   .table-header:hover {
-    background-color: #F3F4F6; /* gray-100 */
+    background-color: #F3F4F6;
+    /* gray-100 */
   }
 
   .table-row {
@@ -389,12 +407,29 @@
   }
 
   /* Clases de utilidad para los colores de estado */
-  .text-status-green { color: hsl(var(--status-green)); }
-  .text-status-yellow { color: hsl(var(--status-yellow)); }
-  .text-status-red { color: hsl(var(--status-red)); }
-  .bg-status-green { background-color: hsl(var(--status-green)); }
-  .bg-status-yellow { background-color: hsl(var(--status-yellow)); }
-  .bg-status-red { background-color: hsl(var(--status-red)); }
+  .text-status-green {
+    color: hsl(var(--status-green));
+  }
+
+  .text-status-yellow {
+    color: hsl(var(--status-yellow));
+  }
+
+  .text-status-red {
+    color: hsl(var(--status-red));
+  }
+
+  .bg-status-green {
+    background-color: hsl(var(--status-green));
+  }
+
+  .bg-status-yellow {
+    background-color: hsl(var(--status-yellow));
+  }
+
+  .bg-status-red {
+    background-color: hsl(var(--status-red));
+  }
 }
 
 /* Keyframes para animaciones */
@@ -403,6 +438,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -414,6 +450,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -421,12 +458,19 @@
 }
 
 @keyframes bounceGentle {
-  0%, 20%, 50%, 80%, 100% {
+
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
     transform: translateY(0);
   }
+
   40% {
     transform: translateY(-5px);
   }
+
   60% {
     transform: translateY(-3px);
   }
@@ -468,16 +512,19 @@
 }
 
 ::-webkit-scrollbar-track {
-  background-color: #F3F4F6; /* gray-100 */
+  background-color: #F3F4F6;
+  /* gray-100 */
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #9CA3AF; /* gray-400 */
+  background-color: #9CA3AF;
+  /* gray-400 */
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #6B7280; /* gray-500 */
+  background-color: #6B7280;
+  /* gray-500 */
 }
 
 /* Focus visible para accesibilidad */
@@ -489,14 +536,15 @@
 /* ===== INICIO DE LA CORRECCIÓN FINAL ===== */
 /* Se reemplaza el bloque de impresión antiguo por la versión nueva y completa. */
 @media print {
+
   /* Configuración de la página de impresión */
   @page {
     size: A4;
-    margin: 20mm;
+    margin: 15mm;
   }
 
   /* Oculta todos los elementos por defecto cuando el body tiene la clase 'printing' */
-  body.printing > *:not(#printable-content-wrapper) {
+  body.printing>*:not(#printable-content-wrapper) {
     display: none !important;
   }
 
@@ -521,6 +569,16 @@
   #printable-content {
     box-shadow: none !important;
     border: none !important;
+    /* ===== CORRECCIÓN DE SANGRÍA: Resetea el padding principal ===== */
+    padding: 0 !important;
+  }
+
+  /* ===== CORRECCIÓN DE SANGRÍA: Resetea los márgenes de las listas y párrafos dentro del contenido imprimible ===== */
+  #printable-content ul,
+  #printable-content p,
+  #printable-content h3 {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
   }
 
   /* Clase de utilidad para ocultar elementos específicos como botones */
