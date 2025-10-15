@@ -14,9 +14,10 @@ import {
   Hr,
 } from '@react-email/components';
 
-// Importamos el componente que ya sabe cómo renderizar la guía
-// NOTA: La ruta puede necesitar ajuste. Asumo que está en 'components/guides'
-import PrintableGuideContent from '../guides/PrintableGuideContent';
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se corrige la ruta de importación para que apunte a la carpeta correcta 'patient-guide'.
+import PrintableGuideContent from '../patient-guide/PrintableGuideContent';
+// ===== FIN DE LA CORRECCIÓN =====
 
 interface GuideEmailTemplateProps {
   patient: PatientWithDetails;
@@ -36,7 +37,6 @@ export const GuideEmailTemplate = ({
     <Preview>Tu Guía de Tratamiento Personalizada de Doctor AntiVejez</Preview>
     <Body style={main}>
       <Container style={container}>
-        {/* Usamos el componente que ya tenemos para renderizar el contenido */}
         <PrintableGuideContent
           patient={patient}
           guideData={guideData}
