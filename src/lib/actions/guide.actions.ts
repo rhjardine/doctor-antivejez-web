@@ -4,6 +4,9 @@ import { prisma } from '@/lib/db';
 import { GuideFormValues } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
 import { getEmailProvider } from '@/lib/services/notificationService';
+import { render } from '@react-email/render';
+import { GuideEmailTemplate } from '@/components/emails/GuideEmailTemplate';
+import { getGuideTemplate } from './guide.actions'; // Reutilizamos la función para obtener los datos
 
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
@@ -29,14 +32,13 @@ export async function getGuideTemplate() {
 
 /**
  * Guarda la guía personalizada de un paciente en la base de datos.
- * Esta versión simplificada guarda todo el formulario en un campo JSON.
  */
 export async function savePatientGuide(
   patientId: string,
   formData: GuideFormValues
 ) {
   try {
-    const { selections, observaciones } = formData;
+    const { selections, observaciones, guideDate } = formData;
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
     if (!patient) {
@@ -47,7 +49,8 @@ export async function savePatientGuide(
       data: {
         patientId: patientId,
         observations: observaciones,
-        selections: selections as any, 
+        selections: selections as any,
+        createdAt: new Date(guideDate), // Usamos la fecha del formulario
       },
     });
 
@@ -66,11 +69,23 @@ export async function savePatientGuide(
 }
 
 /**
- * Envía la guía del paciente por correo electrónico.
+ * Envía la guía del paciente por correo electrónico en formato HTML.
  */
 export async function sendGuideByEmail(patientId: string, guideId: string) {
   try {
-    const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: {
+        // Incluimos los datos necesarios para el tipo PatientWithDetails
+        biophysicsTests: true,
+        biochemistryTests: true,
+        orthomolecularTests: true,
+        appointments: true,
+        guides: true,
+        foodPlans: true,
+        user: true,
+      }
+    });
     const guide = await prisma.patientGuide.findUnique({ where: { id: guideId } });
 
     if (!patient || !guide) {
@@ -80,13 +95,35 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
       return { success: false, error: 'El paciente no tiene un correo electrónico registrado.' };
     }
 
-    const subject = `Tu Guía de Tratamiento Personalizada - Dr. AntiVejez`;
-    let body = `Hola ${patient.firstName},\n\nAquí tienes un resumen de tu guía de tratamiento:\n\n`;
-    body += `Observaciones: ${guide.observations || 'Ninguna'}\n\n`;
-    body += `Por favor, accede al portal para ver tu guía completa.\n\nSaludos,\nEl equipo de Doctor AntiVejez`;
+    // 1. Obtenemos la estructura de la guía para poder renderizarla
+    const guideTemplateResult = await getGuideTemplate();
+    if (!guideTemplateResult.success || !guideTemplateResult.data) {
+        throw new Error("No se pudo cargar la estructura de la guía para el email.");
+    }
+    const guideData: GuideCategory[] = guideTemplateResult.data;
 
+    // 2. Construimos el objeto formValues a partir de los datos guardados
+    const formValues: GuideFormValues = {
+      guideDate: guide.createdAt.toISOString(),
+      selections: guide.selections as any,
+      observaciones: guide.observations || '',
+    };
+
+    // 3. Renderizamos el componente de React a una cadena de HTML
+    const emailHtml = render(
+      <GuideEmailTemplate
+        patient={patient}
+        guideData={guideData}
+        formValues={formValues}
+      />
+    );
+
+    const subject = `Tu Guía de Tratamiento Personalizada - Dr. AntiVejez`;
+    const textBody = `Hola ${patient.firstName}, tu guía de tratamiento personalizada ha sido generada. Por favor, visualízala en un cliente de correo que soporte HTML.`;
+
+    // 4. Usamos nuestro servicio de email para enviar el HTML
     const emailProvider = getEmailProvider();
-    const result = await emailProvider.send(patient.email, subject, body, null);
+    const result = await emailProvider.send(patient.email, subject, textBody, null, emailHtml);
 
     if (result.success) {
       return { success: true, message: 'Guía enviada por correo exitosamente.' };

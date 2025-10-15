@@ -4,11 +4,15 @@ import sgMail from '@sendgrid/mail';
 import axios from 'axios';
 
 // ==================================================================
-// ===== SECCIÓN DE EMAIL =====
+// ===== SECCIÓN DE EMAIL (ACTUALIZADA) =====
 // ==================================================================
+
+// ===== INICIO DE LA CORRECCIÓN =====
+// 1. Se añade el parámetro opcional 'html' a la interfaz.
 interface EmailProvider {
-  send(to: string, subject: string, body: string, mediaUrls: string[] | null): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  send(to: string, subject: string, text: string, mediaUrls: string[] | null, html?: string): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
+// ===== FIN DE LA CORRECCIÓN =====
 
 class SendGridProvider implements EmailProvider {
   constructor() {
@@ -17,7 +21,10 @@ class SendGridProvider implements EmailProvider {
     }
   }
 
-  async send(to: string, subject: string, body: string, mediaUrls: string[] | null): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  // ===== INICIO DE LA CORRECCIÓN =====
+  // 2. Se actualiza la firma del método para aceptar 'html'.
+  async send(to: string, subject: string, text: string, mediaUrls: string[] | null, html?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  // ===== FIN DE LA CORRECCIÓN =====
     if (!process.env.SENDGRID_API_KEY || !process.env.SENDGRID_FROM_EMAIL) {
       console.error('SendGrid credentials are not configured.');
       return { success: false, error: 'El servicio de Email no está configurado.' };
@@ -27,8 +34,11 @@ class SendGridProvider implements EmailProvider {
       to: to,
       from: process.env.SENDGRID_FROM_EMAIL,
       subject: subject,
-      text: body,
-      html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+      text: text, // Versión en texto plano como fallback
+      // ===== INICIO DE LA CORRECCIÓN =====
+      // 3. Se usa el contenido HTML si está disponible.
+      html: html || text,
+      // ===== FIN DE LA CORRECCIÓN =====
     };
 
     if (mediaUrls && mediaUrls.length > 0) {
@@ -65,7 +75,7 @@ export function getEmailProvider(): EmailProvider {
 }
 
 // ==================================================================
-// ===== SECCIÓN DE SMS =====
+// ===== SECCIÓN DE SMS (SIN CAMBIOS) =====
 // ==================================================================
 interface SmsProvider {
   send(to: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }>;
@@ -100,7 +110,7 @@ export function getSmsProvider(): SmsProvider {
 }
 
 // ==================================================================
-// ===== SECCIÓN DE WHATSAPP =====
+// ===== SECCIÓN DE WHATSAPP (SIN CAMBIOS) =====
 // ==================================================================
 interface WhatsAppProvider {
   sendTemplate(to: string, templateSid: string, variables: { [key: string]: string }): Promise<{ success: boolean; messageId?: string; error?: string }>;
