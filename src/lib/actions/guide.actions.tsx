@@ -1,11 +1,16 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { GuideFormValues } from '@/types/guide';
+import { GuideFormValues, GuideCategory } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
 import { getEmailProvider } from '@/lib/services/notificationService';
 import { render } from '@react-email/render';
 import { GuideEmailTemplate } from '@/components/emails/GuideEmailTemplate';
+
+// ===== INICIO DE LA CORRECCIÓN =====
+// Se elimina la línea que importa 'getGuideTemplate' desde sí mismo.
+// import { getGuideTemplate } from './guide.actions'; 
+// ===== FIN DE LA CORRECCIÓN =====
 
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
@@ -49,7 +54,7 @@ export async function savePatientGuide(
         patientId: patientId,
         observations: observaciones,
         selections: selections as any,
-        createdAt: new Date(guideDate), // Usamos la fecha del formulario
+        createdAt: new Date(guideDate),
       },
     });
 
@@ -75,7 +80,6 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: {
-        // Incluimos los datos necesarios para el tipo PatientWithDetails
         biophysicsTests: true,
         biochemistryTests: true,
         orthomolecularTests: true,
@@ -94,21 +98,19 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
       return { success: false, error: 'El paciente no tiene un correo electrónico registrado.' };
     }
 
-    // 1. Obtenemos la estructura de la guía para poder renderizarla
+    // Se llama a la función 'getGuideTemplate' directamente, ya que está en el mismo archivo.
     const guideTemplateResult = await getGuideTemplate();
     if (!guideTemplateResult.success || !guideTemplateResult.data) {
         throw new Error("No se pudo cargar la estructura de la guía para el email.");
     }
     const guideData: GuideCategory[] = guideTemplateResult.data;
 
-    // 2. Construimos el objeto formValues a partir de los datos guardados
     const formValues: GuideFormValues = {
       guideDate: guide.createdAt.toISOString(),
       selections: guide.selections as any,
       observaciones: guide.observations || '',
     };
 
-    // 3. Renderizamos el componente de React a una cadena de HTML
     const emailHtml = render(
       <GuideEmailTemplate
         patient={patient}
@@ -118,9 +120,8 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
     );
 
     const subject = `Tu Guía de Tratamiento Personalizada - Dr. AntiVejez`;
-    const textBody = `Hola ${patient.firstName}, tu guía de tratamiento personalizada ha sido generada. Por favor, visualízala en un cliente de correo que soporte HTML.`;
+    const textBody = `Hola ${patient.firstName}, tu guía de tratamiento ha sido generada. Por favor, visualízala en un cliente de correo que soporte HTML.`;
 
-    // 4. Usamos nuestro servicio de email para enviar el HTML
     const emailProvider = getEmailProvider();
     const result = await emailProvider.send(patient.email, subject, textBody, null, emailHtml);
 
@@ -137,12 +138,7 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
   }
 }
 
-// ===== INICIO DE LA NUEVA FUNCIONALIDAD DE HISTORIAL =====
-/**
- * Obtiene el historial de guías guardadas para un paciente específico.
- * @param patientId El ID del paciente.
- * @returns Un array con el ID, fecha de creación y observaciones de cada guía.
- */
+// ===== FUNCIONES DE HISTORIAL (SIN CAMBIOS) =====
 export async function getPatientGuideHistory(patientId: string) {
   try {
     if (!patientId) {
@@ -164,11 +160,6 @@ export async function getPatientGuideHistory(patientId: string) {
   }
 }
 
-/**
- * Obtiene los detalles completos de una guía específica por su ID.
- * @param guideId El ID de la guía.
- * @returns El registro completo de la guía, incluyendo el JSON de selecciones.
- */
 export async function getPatientGuideDetails(guideId: string) {
   try {
     if (!guideId) {
@@ -180,8 +171,6 @@ export async function getPatientGuideDetails(guideId: string) {
     if (!guide) {
       return { success: false, error: 'No se encontró la guía.' };
     }
-    // Convertimos el campo 'selections' a un objeto JSON antes de devolverlo
-    // ya que Prisma puede devolverlo en un formato no estándar.
     const serializableGuide = {
       ...guide,
       selections: JSON.parse(JSON.stringify(guide.selections)),
