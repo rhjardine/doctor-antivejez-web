@@ -6,7 +6,6 @@ import { revalidatePath } from 'next/cache';
 import { getEmailProvider } from '@/lib/services/notificationService';
 import { render } from '@react-email/render';
 import { GuideEmailTemplate } from '@/components/emails/GuideEmailTemplate';
-import { getGuideTemplate } from './guide.actions'; // Reutilizamos la función para obtener los datos
 
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
