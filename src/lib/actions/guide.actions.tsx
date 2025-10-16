@@ -117,9 +117,10 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
       observaciones: guide.observations || '',
     };
 
-    const emailHtml = render(
+    // resuelva la promesa y devuelva la cadena de HTML.
+    const emailHtml = await render(
       <GuideEmailTemplate
-        patient={patient}
+        patient={patient as any}
         guideData={guideData}
         formValues={formValues}
       />
