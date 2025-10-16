@@ -20,7 +20,7 @@ import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperP
 import { Loader2 } from 'lucide-react';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
-import { savePatientGuide, sendGuideByEmail, getPatientGuideDetails } from '@/lib/actions/guide.actions.tsx';
+import { savePatientGuide, sendGuideByEmail, getPatientGuideDetails } from '@/lib/actions/guide.actions';
 
 // --- Estructura de Datos para el Activador Metabólico Jerárquico ---
 export const homeopathicStructure = {
