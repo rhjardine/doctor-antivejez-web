@@ -77,17 +77,23 @@ export async function savePatientGuide(
  */
 export async function sendGuideByEmail(patientId: string, guideId: string) {
   try {
+    // Se expande la consulta de Prisma para que incluya todas las relaciones
+    // anidadas que requiere el tipo 'PatientWithDetails'.
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: {
+        user: true,
         biophysicsTests: true,
         biochemistryTests: true,
         orthomolecularTests: true,
         appointments: true,
         guides: true,
-        foodPlans: true,
-        user: true,
-      }
+        foodPlans: {
+          include: {
+            items: true, // <-- Se incluye explícitamente la relación 'items'
+          },
+        },
+      },
     });
     const guide = await prisma.patientGuide.findUnique({ where: { id: guideId } });
 
@@ -101,7 +107,7 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
     // Se llama a la función 'getGuideTemplate' directamente, ya que está en el mismo archivo.
     const guideTemplateResult = await getGuideTemplate();
     if (!guideTemplateResult.success || !guideTemplateResult.data) {
-        throw new Error("No se pudo cargar la estructura de la guía para el email.");
+      throw new Error("No se pudo cargar la estructura de la guía para el email.");
     }
     const guideData: GuideCategory[] = guideTemplateResult.data;
 
