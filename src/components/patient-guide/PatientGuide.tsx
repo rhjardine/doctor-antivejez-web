@@ -63,13 +63,11 @@ const BachFlowerSelector = ({ selections, handleSelectionChange }: { selections:
   return ( <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"> {bachFlowersList.map(item => ( <label key={item.id} className="flex items-center gap-2 text-sm p-3 bg-gray-50 rounded-lg border cursor-pointer hover:border-primary"> <input type="checkbox" id={item.id} checked={selections[item.id]?.selected || false} onChange={(e) => handleSelectionChange(item.id, 'selected', e.target.checked)} className="w-4 h-4 accent-primary" /> <span>{item.name}</span> </label> ))} </div> );
 };
 
-// ===== INICIO DE LA CORRECCIÓN =====
-// 1. Se actualiza la interfaz de props para aceptar 'guideIdToLoad'.
+// --- Props del Componente Principal ---
 interface PatientGuideProps {
   patient: PatientWithDetails;
   guideIdToLoad?: string | null;
 }
-// ===== FIN DE LA CORRECCIÓN =====
 
 // --- Componente Principal ---
 export default function PatientGuide({ patient, guideIdToLoad }: PatientGuideProps) {
@@ -85,9 +83,7 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
   const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
   const [isLoadingGuide, setIsLoadingGuide] = useState(false);
 
-  // ===== INICIO DE LA CORRECCIÓN =====
-  // 2. Se añade el hook useEffect para cargar los datos de una guía existente
-  //    cuando se proporciona la prop 'guideIdToLoad'.
+  // useEffect para cargar los datos de una guía existente si se proporciona un ID
   useEffect(() => {
     if (guideIdToLoad) {
       const loadGuide = async () => {
@@ -95,9 +91,7 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
         toast.info("Cargando guía del historial...");
         const result = await getPatientGuideDetails(guideIdToLoad);
         if (result.success && result.data) {
-          // El campo 'selections' viene como JSON, lo usamos directamente
           const loadedSelections = result.data.selections as Selections;
-          
           setSelections(loadedSelections);
           setObservaciones(result.data.observations || '');
           setGuideDate(new Date(result.data.createdAt).toISOString().split('T')[0]);
@@ -110,7 +104,6 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
       loadGuide();
     }
   }, [guideIdToLoad]);
-  // ===== FIN DE LA CORRECCIÓN =====
 
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
