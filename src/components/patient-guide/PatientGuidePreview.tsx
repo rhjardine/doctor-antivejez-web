@@ -6,7 +6,7 @@ import { PatientWithDetails } from '@/types';
 import { GuideCategory, GuideFormValues } from '@/types/guide';
 import { FaPrint, FaTimes } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
-import PrintableGuideContent from './PrintableGuideContent'; // <-- Se importa el contenido
+import PrintableGuideContent from './PrintableGuideContent';
 
 interface Props {
   patient: PatientWithDetails;
