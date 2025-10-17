@@ -1,4 +1,5 @@
 // src/lib/actions/guide.actions.ts
+
 'use server';
 
 import { prisma } from '@/lib/db';
@@ -6,9 +7,6 @@ import { GuideFormValues, GuideCategory } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
 import { getEmailProvider } from '@/lib/services/notificationService';
 import { render } from '@react-email/render';
-
-// ✅ CORRECCIÓN: Importar el componente usando la sintaxis de importación por defecto (sin llaves).
-// Esto se alinea con el cambio en `GuideEmailTemplate.tsx`.
 import GuideEmailTemplate from '@/components/emails/GuideEmailTemplate';
 import { PatientWithDetails } from '@/types';
 
@@ -114,13 +112,10 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
       observaciones: guide.observations || '',
     };
 
-    // ✅ CORRECCIÓN: La función `render` de react-email es síncrona, no devuelve una promesa.
-    // Se elimina el `await` que era innecesario.
-    // 
-    // RIESGO TÉCNICO: El uso de `patient as any` bypassa la seguridad de tipos.
-    // A largo plazo, se debe asegurar que el tipo devuelto por la consulta de Prisma
-    // sea compatible con el tipo `PatientWithDetails` esperado por el componente.
-    const emailHtml = render(
+    // ✅ CORRECCIÓN: La función `render` es asíncrona y devuelve una Promesa.
+    // Se debe usar `await` para resolver la promesa y obtener la cadena de HTML
+    // antes de pasarla como argumento a la siguiente función.
+    const emailHtml = await render(
       <GuideEmailTemplate
         patient={patient as PatientWithDetails}
         guideData={guideData}
@@ -180,8 +175,6 @@ export async function getPatientGuideDetails(guideId: string) {
     if (!guide) {
       return { success: false, error: 'No se encontró la guía.' };
     }
-    // La serialización aquí es correcta para asegurar que el objeto JSON
-    // pueda ser pasado a componentes de cliente sin problemas.
     const serializableGuide = {
       ...guide,
       selections: JSON.parse(JSON.stringify(guide.selections)),
