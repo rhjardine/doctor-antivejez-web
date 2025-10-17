@@ -1,4 +1,5 @@
-import React from 'react';
+// src/components/emails/GuideEmailTemplate.tsx
+
 import { PatientWithDetails } from '@/types';
 import { GuideCategory, GuideFormValues } from '@/types/guide';
 import {
@@ -19,39 +20,42 @@ interface GuideEmailTemplateProps {
   formValues: GuideFormValues;
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-export const GuideEmailTemplate = ({
+// ✅ CORRECCIÓN: Cambiado a una función con exportación por defecto.
+// Esto crea un punto de entrada único y claro para este módulo,
+// eliminando la causa raíz del error de renderizado en el servidor.
+export default function GuideEmailTemplate({
   patient,
   guideData,
   formValues,
-}: GuideEmailTemplateProps) => (
-  <Html>
-    <Head />
-    <Preview>Tu Guía de Tratamiento Personalizada de Doctor AntiVejez</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        {/* ===== INICIO DE LA CORRECCIÓN ===== */}
-        {/* Se añade la prop 'showIcons={false}' para indicarle al componente
-            que no debe renderizar los iconos de React, evitando así el error
-            de renderizado en el servidor. */}
-        <PrintableGuideContent
-          patient={patient}
-          guideData={guideData}
-          formValues={formValues}
-          showIcons={false}
-        />
-        {/* ===== FIN DE LA CORRECCIÓN ===== */}
-        <Hr style={hr} />
-        <Text style={footer}>
-          Centro Médico Doctor AntiVejez, Calle Choroní, Quinta San Onofre, Chuao, Miranda.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-);
+}: GuideEmailTemplateProps) {
+  return (
+    <Html>
+      <Head />
+      <Preview>Tu Guía de Tratamiento Personalizada de Doctor AntiVejez</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          {/* 
+            Se mantiene tu corrección de 'showIcons'. Es una excelente medida defensiva,
+            ya que las librerías de iconos a menudo son la causa de estos problemas
+            de renderizado en el servidor.
+          */}
+          <PrintableGuideContent
+            patient={patient}
+            guideData={guideData}
+            formValues={formValues}
+            showIcons={false} 
+          />
+          <Hr style={hr} />
+          <Text style={footer}>
+            Centro Médico Doctor AntiVejez, Calle Choroní, Quinta San Onofre, Chuao, Miranda.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  );
+}
 
-// Estilos para el correo
+// Estilos para el correo (sin cambios)
 const main = {
   backgroundColor: '#f6f9fc',
   fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',

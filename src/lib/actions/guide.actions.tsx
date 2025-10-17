@@ -1,3 +1,4 @@
+// src/lib/actions/guide.actions.ts
 'use server';
 
 import { prisma } from '@/lib/db';
@@ -5,12 +6,11 @@ import { GuideFormValues, GuideCategory } from '@/types/guide';
 import { revalidatePath } from 'next/cache';
 import { getEmailProvider } from '@/lib/services/notificationService';
 import { render } from '@react-email/render';
-import { GuideEmailTemplate } from '@/components/emails/GuideEmailTemplate';
 
-// ===== INICIO DE LA CORRECCIÓN =====
-// Se elimina la línea que importa 'getGuideTemplate' desde sí mismo.
-// import { getGuideTemplate } from './guide.actions'; 
-// ===== FIN DE LA CORRECCIÓN =====
+// ✅ CORRECCIÓN: Importar el componente usando la sintaxis de importación por defecto (sin llaves).
+// Esto se alinea con el cambio en `GuideEmailTemplate.tsx`.
+import GuideEmailTemplate from '@/components/emails/GuideEmailTemplate';
+import { PatientWithDetails } from '@/types';
 
 /**
  * Obtiene la estructura completa de la guía (categorías e ítems)
@@ -53,7 +53,7 @@ export async function savePatientGuide(
       data: {
         patientId: patientId,
         observations: observaciones,
-        selections: selections as any,
+        selections: selections as any, // Prisma.JsonValue
         createdAt: new Date(guideDate),
       },
     });
@@ -77,8 +77,6 @@ export async function savePatientGuide(
  */
 export async function sendGuideByEmail(patientId: string, guideId: string) {
   try {
-    // Se expande la consulta de Prisma para que incluya todas las relaciones
-    // anidadas que requiere el tipo 'PatientWithDetails'.
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: {
@@ -90,7 +88,7 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
         guides: true,
         foodPlans: {
           include: {
-            items: true, // <-- Se incluye explícitamente la relación 'items'
+            items: true,
           },
         },
       },
@@ -104,7 +102,6 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
       return { success: false, error: 'El paciente no tiene un correo electrónico registrado.' };
     }
 
-    // Se llama a la función 'getGuideTemplate' directamente, ya que está en el mismo archivo.
     const guideTemplateResult = await getGuideTemplate();
     if (!guideTemplateResult.success || !guideTemplateResult.data) {
       throw new Error("No se pudo cargar la estructura de la guía para el email.");
@@ -117,10 +114,15 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
       observaciones: guide.observations || '',
     };
 
-    // resuelva la promesa y devuelva la cadena de HTML.
-    const emailHtml = await render(
+    // ✅ CORRECCIÓN: La función `render` de react-email es síncrona, no devuelve una promesa.
+    // Se elimina el `await` que era innecesario.
+    // 
+    // RIESGO TÉCNICO: El uso de `patient as any` bypassa la seguridad de tipos.
+    // A largo plazo, se debe asegurar que el tipo devuelto por la consulta de Prisma
+    // sea compatible con el tipo `PatientWithDetails` esperado por el componente.
+    const emailHtml = render(
       <GuideEmailTemplate
-        patient={patient as any}
+        patient={patient as PatientWithDetails}
         guideData={guideData}
         formValues={formValues}
       />
@@ -178,6 +180,8 @@ export async function getPatientGuideDetails(guideId: string) {
     if (!guide) {
       return { success: false, error: 'No se encontró la guía.' };
     }
+    // La serialización aquí es correcta para asegurar que el objeto JSON
+    // pueda ser pasado a componentes de cliente sin problemas.
     const serializableGuide = {
       ...guide,
       selections: JSON.parse(JSON.stringify(guide.selections)),
