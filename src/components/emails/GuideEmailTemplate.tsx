@@ -7,17 +7,11 @@ import {
   Preview,
   Body,
   Container,
-  Section,
-  Img,
-  Heading,
   Text,
   Hr,
 } from '@react-email/components';
 
-// ===== INICIO DE LA CORRECCIÓN =====
-// Se corrige la ruta de importación para que apunte a la carpeta correcta 'patient-guide'.
 import PrintableGuideContent from '../patient-guide/PrintableGuideContent';
-// ===== FIN DE LA CORRECCIÓN =====
 
 interface GuideEmailTemplateProps {
   patient: PatientWithDetails;
@@ -37,11 +31,17 @@ export const GuideEmailTemplate = ({
     <Preview>Tu Guía de Tratamiento Personalizada de Doctor AntiVejez</Preview>
     <Body style={main}>
       <Container style={container}>
+        {/* ===== INICIO DE LA CORRECCIÓN ===== */}
+        {/* Se añade la prop 'showIcons={false}' para indicarle al componente
+            que no debe renderizar los iconos de React, evitando así el error
+            de renderizado en el servidor. */}
         <PrintableGuideContent
           patient={patient}
           guideData={guideData}
           formValues={formValues}
+          showIcons={false}
         />
+        {/* ===== FIN DE LA CORRECCIÓN ===== */}
         <Hr style={hr} />
         <Text style={footer}>
           Centro Médico Doctor AntiVejez, Calle Choroní, Quinta San Onofre, Chuao, Miranda.
