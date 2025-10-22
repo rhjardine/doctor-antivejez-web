@@ -1,9 +1,8 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-// ✅ CORRECCIÓN FINAL: Se cambia la importación de geminiModel para que sea una
-// importación por defecto (sin llaves), que es como se exporta en gemini.ts.
-import geminiModel from '@/lib/gemini';
+// ✅ CORRECCIÓN FINAL: Importamos la FUNCIÓN 'getGenerativeModel' que es lo que tu archivo gemini.ts realmente exporta.
+import { getGenerativeModel } from '@/lib/gemini';
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
 
@@ -67,7 +66,10 @@ export async function generateClinicalSummary(patientId: string) {
     const anonymizedData = anonymizePatientData(fullPatientDetails);
     const prompt = buildClinicalPrompt(anonymizedData);
     
-    const result = await geminiModel.generateContent(prompt);
+    // ✅ CORRECCIÓN FINAL: Primero llamamos a la función para obtener el modelo.
+    const model = getGenerativeModel();
+    // ✅ CORRECCIÓN FINAL: Luego usamos la instancia del modelo para generar el contenido.
+    const result = await model.generateContent(prompt);
     const response = result.response;
     const summary = response.text();
     
