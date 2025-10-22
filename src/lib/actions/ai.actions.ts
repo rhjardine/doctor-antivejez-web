@@ -106,3 +106,7 @@ export async function generateClinicalSummary(patientId: string) {
     };
   }
 }
+
+// Necesitamos asegurarnos de que la importación de gemini sea correcta.
+// Basado en tu último archivo, esta es la forma correcta.
+import { getGenerativeModel } from '@/lib/gemini';
