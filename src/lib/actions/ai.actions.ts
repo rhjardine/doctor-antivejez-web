@@ -1,7 +1,9 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import geminiModel from '@/lib/gemini'; // Mantenemos la importación por defecto que corregimos antes
+// ✅ CORRECCIÓN DEFINITIVA 1/2: Importamos la FUNCIÓN 'getGenerativeModel'
+// que es exactamente lo que tu archivo `gemini.ts` exporta.
+import { getGenerativeModel } from '@/lib/gemini';
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
 
@@ -44,15 +46,14 @@ export async function generateClinicalSummary(patientId: string) {
         biophysicsTests: { orderBy: { testDate: 'desc' }, take: 1 },
         biochemistryTests: { orderBy: { testDate: 'desc' }, take: 1 },
         orthomolecularTests: { orderBy: { testDate: 'desc' }, take: 1 },
-        // ✅ CORRECCIÓN FINAL: Eliminamos la cláusula `select` de la relación 'guides'.
-        // Ahora Prisma obtendrá todos los campos del modelo PatientGuide,
-        // cumpliendo así con el contrato del tipo `PatientWithDetails`.
+        // ✅ CORRECCIÓN DE TIPO: Se obtienen todos los campos de 'guides' para cumplir
+        // con el tipo PatientWithDetails, eliminando el error de compilación anterior.
         guides: { 
           orderBy: { createdAt: 'desc' }, 
           take: 3 
         },
-        // Incluimos las demás relaciones para satisfacer completamente el tipo.
-        appointments: { take: 0 }, // No necesitamos los datos, pero sí la propiedad.
+        // Se incluyen las demás relaciones para que el objeto sea totalmente compatible.
+        appointments: { take: 0 },
         foodPlans: { take: 0 },
         aiAnalyses: { take: 0 },
       },
@@ -62,15 +63,17 @@ export async function generateClinicalSummary(patientId: string) {
       return { success: false, error: 'Paciente no encontrado.' };
     }
 
-    // Ahora que la consulta devuelve un objeto que SÍ es compatible,
-    // la aserción de tipo es segura y correcta.
+    // La aserción de tipo ahora es segura porque la consulta es correcta.
     const patientDetails = patient as PatientWithDetails;
 
     const anonymizedData = anonymizePatientData(patientDetails);
     const prompt = buildClinicalPrompt(anonymizedData);
     
-    const model = getGenerativeModel(); // Asumiendo que gemini.ts exporta esta función
+    // ✅ CORRECCIÓN DEFINITIVA 2/2: Primero llamamos a la función importada para
+    // obtener la instancia del modelo.
+    const model = getGenerativeModel();
     const result = await model.generateContent(prompt);
+    
     const response = result.response;
     const summary = response.text();
     
@@ -106,7 +109,3 @@ export async function generateClinicalSummary(patientId: string) {
     };
   }
 }
-
-// Necesitamos asegurarnos de que la importación de gemini sea correcta.
-// Basado en tu último archivo, esta es la forma correcta.
-import { getGenerativeModel } from '@/lib/gemini';
