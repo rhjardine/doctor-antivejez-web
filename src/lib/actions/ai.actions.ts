@@ -1,105 +1,107 @@
 // src/lib/actions/ai.actions.ts
+
 'use server';
 
-import { prisma } from '@/lib/db';
-import { getGenerativeModel } from '@/lib/gemini';
-import { revalidatePath } from 'next/cache';
+import prisma from '@/lib/db'; // Asumiendo que tu cliente prisma está en /lib/db
+import geminiModel from '@/lib/gemini';
+import { PatientWithDetails } from '@/types';
+import { anonymizePatientData } from '@/lib/ai/anonymize';
 
 /**
- * Generates a clinical summary for a given patient using the Gemini AI.
- * @param patientId The ID of the patient.
- * @returns An object with success status and the generated summary or an error message.
+ * Construye un prompt estructurado y de alta calidad para el análisis clínico.
+ */
+function buildClinicalPrompt(anonymizedData: any): string {
+  return `
+Rol: Eres un médico experto en medicina funcional, antienvejecimiento y longevidad con 20 años de experiencia.
+
+Contexto: Estás analizando los datos clínicos anonimizados de un paciente.
+Datos del Paciente:
+${JSON.stringify(anonymizedData, null, 2)}
+
+Tarea: Genera un análisis clínico conciso y profesional en formato Markdown. La respuesta debe estar estructurada en las siguientes secciones exactas:
+1.  **Resumen Ejecutivo:** Una breve sinopsis (2-3 frases) del perfil del paciente.
+2.  **Hallazgos Clave:** Identifica los 3 a 5 biomarcadores o métricas más preocupantes o fuera del rango óptimo. Para cada uno, explica su implicación clínica de forma clara.
+3.  **Evaluación de Riesgos:** Basado en los hallazgos, describe los riesgos potenciales para la salud a mediano plazo (ej. riesgo cardiometabólico, estrés oxidativo, desequilibrio hormonal).
+4.  **Recomendaciones Priorizadas:** Sugiere de 3 a 4 áreas de enfoque para el tratamiento, ordenadas por prioridad. Deben ser recomendaciones de alto nivel (ej. "Optimizar metabolismo de la glucosa", "Reducir inflamación sistémica", "Soporte al eje adrenal").
+
+Restricciones:
+- Basa tu análisis únicamente en los datos proporcionados.
+- No inventes información ni des diagnósticos definitivos.
+- Utiliza terminología médica precisa pero comprensible.
+- La respuesta final DEBE ser únicamente el texto en formato Markdown, sin preámbulos como "Claro, aquí está tu análisis".
+`;
+}
+
+/**
+ * Genera un resumen clínico para un paciente, registrando la interacción.
  */
 export async function generateClinicalSummary(patientId: string) {
-  if (!patientId) {
-    return { success: false, error: 'Patient ID is required.' };
-  }
-
+  const startTime = Date.now();
+  
   try {
-    // 1. Fetch comprehensive patient data from the database
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: {
-        biophysicsTests: {
-          orderBy: { testDate: 'desc' },
-          take: 1,
-        },
-        biochemistryTests: {
-          orderBy: { testDate: 'desc' },
-          take: 1,
-        },
-        orthomolecularTests: {
-          orderBy: { testDate: 'desc' },
-          take: 1,
-        },
+        biophysicsTests: { orderBy: { testDate: 'desc' }, take: 1 },
+        biochemistryTests: { orderBy: { testDate: 'desc' }, take: 1 },
+        orthomolecularTests: { orderBy: { testDate: 'desc' }, take: 1 },
+        guides: { orderBy: { createdAt: 'desc' }, take: 3, select: { createdAt: true, observations: true } },
+        // Incluimos relaciones vacías para satisfacer el tipo PatientWithDetails
+        user: { select: { id: true, name: true, email: true } },
+        appointments: false,
+        foodPlans: false,
+        aiAnalyses: false,
       },
     });
 
     if (!patient) {
-      return { success: false, error: 'Patient not found.' };
+      return { success: false, error: 'Paciente no encontrado.' };
     }
 
-    // 2. Structure the data for the AI model
-    // We remove fields that are not relevant for the clinical summary
-    const patientDataForAI = {
-      demographics: {
-        firstName: patient.firstName,
-        lastName: patient.lastName,
-        chronologicalAge: patient.chronologicalAge,
-        gender: patient.gender,
-        bloodType: patient.bloodType,
-      },
-      physicianObservations: patient.observations,
-      latestBiophysicsTest: patient.biophysicsTests[0] ? {
-        biologicalAge: patient.biophysicsTests[0].biologicalAge,
-        fatPercentage: patient.biophysicsTests[0].fatPercentage,
-        bmi: patient.biophysicsTests[0].bmi,
-        systolicPressure: patient.biophysicsTests[0].systolicPressure,
-        diastolicPressure: patient.biophysicsTests[0].diastolicPressure,
-        testDate: patient.biophysicsTests[0].testDate.toISOString().split('T')[0],
-      } : null,
-      latestBiochemistryTest: patient.biochemistryTests[0] ? {
-        biochemicalAge: patient.biochemistryTests[0].biochemicalAge,
-        somatomedin: patient.biochemistryTests[0].somatomedin,
-        hba1c: patient.biochemistryTests[0].hba1c,
-        insulin: patient.biochemistryTests[0].insulin,
-        dhea: patient.biochemistryTests[0].dhea,
-        homocysteine: patient.biochemistryTests[0].homocysteine,
-        testDate: patient.biochemistryTests[0].testDate.toISOString().split('T')[0],
-      } : null,
-      latestOrthomolecularTest: patient.orthomolecularTests[0] ? {
-        orthomolecularAge: patient.orthomolecularTests[0].orthomolecularAge,
-        mercury: patient.orthomolecularTests[0].mercurio,
-        lead: patient.orthomolecularTests[0].plomo,
-        aluminum: patient.orthomolecularTests[0].aluminio,
-        zinc: patient.orthomolecularTests[0].zinc,
-        magnesium: patient.orthomolecularTests[0].magnesio,
-        testDate: patient.orthomolecularTests[0].testDate.toISOString().split('T')[0],
-      } : null,
-    };
+    // Completamos el objeto para que coincida con PatientWithDetails
+    const fullPatientDetails = {
+        ...patient,
+        appointments: [],
+        foodPlans: [],
+        aiAnalyses: [],
+    } as PatientWithDetails;
 
-    // 3. Construct the prompt for the Gemini API
-    const prompt = `
-      Eres un asistente médico experto en medicina funcional y antienvejecimiento. 
-      A partir de los siguientes datos de un paciente en formato JSON, genera un resumen clínico conciso y profesional en español, de no más de 200 palabras.
-      El resumen debe ser fácil de leer, estar estructurado en párrafos cortos y resaltar los hallazgos más relevantes, marcadores fuera de rango o patrones significativos.
-      Finaliza con una breve conclusión o recomendación general si los datos lo sugieren. No inventes información que no esté en los datos.
-
-      Datos del Paciente:
-      ${JSON.stringify(patientDataForAI, null, 2)}
-    `;
-
-    // 4. Call the Gemini API
-    const model = getGenerativeModel();
-    const result = await model.generateContent(prompt);
+    const anonymizedData = anonymizePatientData(fullPatientDetails);
+    const prompt = buildClinicalPrompt(anonymizedData);
+    
+    const result = await geminiModel.generateContent(prompt);
     const response = result.response;
     const summary = response.text();
+    
+    if (!summary) {
+      throw new Error('La respuesta de la IA estaba vacía.');
+    }
 
-    revalidatePath('/agente-ia');
+    const endTime = Date.now();
+    const responseTime = (endTime - startTime) / 1000;
+
+    await prisma.aiAnalysis.create({
+      data: {
+        patientId,
+        analysisType: 'clinical_summary',
+        prompt,
+        response: summary,
+        responseTime,
+        modelUsed: 'gemini-1.5-flash',
+      },
+    });
 
     return { success: true, summary };
-  } catch (error) {
-    console.error('Error generating clinical summary:', error);
-    return { success: false, error: 'Failed to generate summary. Please check the server logs.' };
+
+  } catch (error: any) {
+    console.error('Error en generateClinicalSummary:', {
+      error: error.message,
+      patientId,
+    });
+    
+    return { 
+      success: false, 
+      error: 'El agente de IA no pudo generar el análisis. Por favor, inténtelo de nuevo más tarde.' 
+    };
   }
 }
