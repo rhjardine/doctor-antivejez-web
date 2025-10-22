@@ -1,9 +1,11 @@
-// src/lib/actions/ai.actions.ts
+/ src/lib/actions/ai.actions.ts
 
 'use server';
 
-import prisma from '@/lib/db'; // Asumiendo que tu cliente prisma está en /lib/db
-import geminiModel from '@/lib/gemini';
+// ✅ CORRECCIÓN: Usar importaciones nombradas (con llaves {}) para coincidir
+// con la forma en que 'prisma' y 'geminiModel' son exportados.
+import { prisma } from '@/lib/db';
+import { geminiModel } from '@/lib/gemini';
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
 
@@ -46,7 +48,6 @@ export async function generateClinicalSummary(patientId: string) {
         biochemistryTests: { orderBy: { testDate: 'desc' }, take: 1 },
         orthomolecularTests: { orderBy: { testDate: 'desc' }, take: 1 },
         guides: { orderBy: { createdAt: 'desc' }, take: 3, select: { createdAt: true, observations: true } },
-        // Incluimos relaciones vacías para satisfacer el tipo PatientWithDetails
         user: { select: { id: true, name: true, email: true } },
         appointments: false,
         foodPlans: false,
@@ -58,7 +59,6 @@ export async function generateClinicalSummary(patientId: string) {
       return { success: false, error: 'Paciente no encontrado.' };
     }
 
-    // Completamos el objeto para que coincida con PatientWithDetails
     const fullPatientDetails = {
         ...patient,
         appointments: [],
