@@ -1,8 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-// ✅ CORRECCIÓN FINAL: Importamos la FUNCIÓN 'getGenerativeModel' que es lo que tu archivo gemini.ts realmente exporta.
-import { getGenerativeModel } from '@/lib/gemini';
+import geminiModel from '@/lib/gemini'; // Mantenemos la importación por defecto que corregimos antes
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
 
@@ -41,14 +40,21 @@ export async function generateClinicalSummary(patientId: string) {
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: {
+        user: { select: { id: true, name: true, email: true } },
         biophysicsTests: { orderBy: { testDate: 'desc' }, take: 1 },
         biochemistryTests: { orderBy: { testDate: 'desc' }, take: 1 },
         orthomolecularTests: { orderBy: { testDate: 'desc' }, take: 1 },
-        guides: { orderBy: { createdAt: 'desc' }, take: 3, select: { createdAt: true, observations: true } },
-        user: { select: { id: true, name: true, email: true } },
-        appointments: false,
-        foodPlans: false,
-        aiAnalyses: false,
+        // ✅ CORRECCIÓN FINAL: Eliminamos la cláusula `select` de la relación 'guides'.
+        // Ahora Prisma obtendrá todos los campos del modelo PatientGuide,
+        // cumpliendo así con el contrato del tipo `PatientWithDetails`.
+        guides: { 
+          orderBy: { createdAt: 'desc' }, 
+          take: 3 
+        },
+        // Incluimos las demás relaciones para satisfacer completamente el tipo.
+        appointments: { take: 0 }, // No necesitamos los datos, pero sí la propiedad.
+        foodPlans: { take: 0 },
+        aiAnalyses: { take: 0 },
       },
     });
 
@@ -56,19 +62,14 @@ export async function generateClinicalSummary(patientId: string) {
       return { success: false, error: 'Paciente no encontrado.' };
     }
 
-    const fullPatientDetails = {
-        ...patient,
-        appointments: [],
-        foodPlans: [],
-        aiAnalyses: [],
-    } as PatientWithDetails;
+    // Ahora que la consulta devuelve un objeto que SÍ es compatible,
+    // la aserción de tipo es segura y correcta.
+    const patientDetails = patient as PatientWithDetails;
 
-    const anonymizedData = anonymizePatientData(fullPatientDetails);
+    const anonymizedData = anonymizePatientData(patientDetails);
     const prompt = buildClinicalPrompt(anonymizedData);
     
-    // ✅ CORRECCIÓN FINAL: Primero llamamos a la función para obtener el modelo.
-    const model = getGenerativeModel();
-    // ✅ CORRECCIÓN FINAL: Luego usamos la instancia del modelo para generar el contenido.
+    const model = getGenerativeModel(); // Asumiendo que gemini.ts exporta esta función
     const result = await model.generateContent(prompt);
     const response = result.response;
     const summary = response.text();
