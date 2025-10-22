@@ -1,7 +1,9 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { geminiModel } from '@/lib/gemini';
+// ✅ CORRECCIÓN FINAL: Se cambia la importación de geminiModel para que sea una
+// importación por defecto (sin llaves), que es como se exporta en gemini.ts.
+import geminiModel from '@/lib/gemini';
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
 
