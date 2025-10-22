@@ -1,8 +1,6 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-// ✅ CORRECCIÓN DEFINITIVA 1/2: Importamos la FUNCIÓN 'getGenerativeModel'
-// que es exactamente lo que tu archivo `gemini.ts` exporta.
 import { getGenerativeModel } from '@/lib/gemini';
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
@@ -46,13 +44,10 @@ export async function generateClinicalSummary(patientId: string) {
         biophysicsTests: { orderBy: { testDate: 'desc' }, take: 1 },
         biochemistryTests: { orderBy: { testDate: 'desc' }, take: 1 },
         orthomolecularTests: { orderBy: { testDate: 'desc' }, take: 1 },
-        // ✅ CORRECCIÓN DE TIPO: Se obtienen todos los campos de 'guides' para cumplir
-        // con el tipo PatientWithDetails, eliminando el error de compilación anterior.
         guides: { 
           orderBy: { createdAt: 'desc' }, 
           take: 3 
         },
-        // Se incluyen las demás relaciones para que el objeto sea totalmente compatible.
         appointments: { take: 0 },
         foodPlans: { take: 0 },
         aiAnalyses: { take: 0 },
@@ -63,14 +58,10 @@ export async function generateClinicalSummary(patientId: string) {
       return { success: false, error: 'Paciente no encontrado.' };
     }
 
-    // La aserción de tipo ahora es segura porque la consulta es correcta.
     const patientDetails = patient as PatientWithDetails;
-
     const anonymizedData = anonymizePatientData(patientDetails);
     const prompt = buildClinicalPrompt(anonymizedData);
     
-    // ✅ CORRECCIÓN DEFINITIVA 2/2: Primero llamamos a la función importada para
-    // obtener la instancia del modelo.
     const model = getGenerativeModel();
     const result = await model.generateContent(prompt);
     
@@ -84,7 +75,9 @@ export async function generateClinicalSummary(patientId: string) {
     const endTime = Date.now();
     const responseTime = (endTime - startTime) / 1000;
 
-    await prisma.aiAnalysis.create({
+    // ✅ CORRECCIÓN DEFINITIVA: Se utiliza 'aIAnalysis' que es el nombre
+    // correcto generado por el cliente de Prisma para el modelo 'AIAnalysis'.
+    await prisma.aIAnalysis.create({
       data: {
         patientId,
         analysisType: 'clinical_summary',
