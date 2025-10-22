@@ -1,9 +1,5 @@
-/ src/lib/actions/ai.actions.ts
-
 'use server';
 
-// ✅ CORRECCIÓN: Usar importaciones nombradas (con llaves {}) para coincidir
-// con la forma en que 'prisma' y 'geminiModel' son exportados.
 import { prisma } from '@/lib/db';
 import { geminiModel } from '@/lib/gemini';
 import { PatientWithDetails } from '@/types';
