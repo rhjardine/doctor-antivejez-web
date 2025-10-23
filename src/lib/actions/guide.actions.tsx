@@ -1,5 +1,3 @@
-// src/lib/actions/guide.actions.ts
-
 'use server';
 
 import { prisma } from '@/lib/db';
@@ -89,6 +87,10 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
             items: true,
           },
         },
+        // ✅ CORRECCIÓN DEFINITIVA: Se añade la nueva relación 'aiAnalyses' a la consulta.
+        // Ahora, el objeto 'patient' devuelto por Prisma será totalmente compatible
+        // con el tipo 'PatientWithDetails', eliminando el error de compilación.
+        aiAnalyses: true,
       },
     });
     const guide = await prisma.patientGuide.findUnique({ where: { id: guideId } });
@@ -112,9 +114,6 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
       observaciones: guide.observations || '',
     };
 
-    // ✅ CORRECCIÓN: La función `render` es asíncrona y devuelve una Promesa.
-    // Se debe usar `await` para resolver la promesa y obtener la cadena de HTML
-    // antes de pasarla como argumento a la siguiente función.
     const emailHtml = await render(
       <GuideEmailTemplate
         patient={patient as PatientWithDetails}
