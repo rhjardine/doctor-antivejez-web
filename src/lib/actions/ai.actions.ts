@@ -5,7 +5,7 @@ import { getGenerativeModel } from '@/lib/gemini';
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
 
-// ... (La función buildClinicalPrompt permanece exactamente igual)
+// La función buildClinicalPrompt no necesita cambios.
 function buildClinicalPrompt(anonymizedData: any): string {
   return `
 Rol: Eres un médico experto en medicina funcional, antienvejecimiento y longevidad con 20 años de experiencia.
@@ -27,7 +27,6 @@ Restricciones:
 - La respuesta final DEBE ser únicamente el texto en formato Markdown, sin preámbulos como "Claro, aquí está tu análisis".
 `;
 }
-
 
 export async function generateClinicalSummary(patientId: string) {
   const startTime = Date.now();
@@ -53,7 +52,6 @@ export async function generateClinicalSummary(patientId: string) {
       return { success: false, error: 'Paciente no encontrado.' };
     }
 
-    // ✅ NUEVA VALIDACIÓN: Verificar si hay datos clínicos para analizar.
     const hasClinicalData = patient.biophysicsTests.length > 0 || patient.biochemistryTests.length > 0 || patient.orthomolecularTests.length > 0;
     if (!hasClinicalData) {
         console.warn(`[AI_ACTION] El paciente ${patientId} no tiene datos de tests para analizar.`);
@@ -64,10 +62,7 @@ export async function generateClinicalSummary(patientId: string) {
     const anonymizedData = anonymizePatientData(patientDetails);
     const prompt = buildClinicalPrompt(anonymizedData);
     
-    // ✅ MEJORA DE LOGGING: Imprimir el prompt para depuración.
-    // Esto nos mostrará exactamente lo que se envía a Gemini.
     console.log(`[AI_ACTION] Enviando prompt a Gemini para paciente ID: ${patientId}`);
-    // console.log(prompt); // Descomenta esta línea si necesitas ver el prompt completo en los logs.
 
     const model = getGenerativeModel();
     const result = await model.generateContent(prompt);
@@ -91,14 +86,14 @@ export async function generateClinicalSummary(patientId: string) {
         prompt,
         response: summary,
         responseTime,
-        modelUsed: 'gemini-1.5-flash',
+        // ✅ CORRECCIÓN: Actualizamos el nombre del modelo para consistencia en la auditoría.
+        modelUsed: 'gemini-1.5-flash-latest',
       },
     });
 
     return { success: true, summary };
 
   } catch (error: any) {
-    // ✅ MEJORA DE LOGGING: Imprimir el error completo para un mejor diagnóstico.
     console.error(`[AI_ACTION] Error catastrófico en generateClinicalSummary para paciente ID: ${patientId}`, error);
     
     return { 
