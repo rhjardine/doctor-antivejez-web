@@ -5,9 +5,7 @@ import { getGenerativeModel } from '@/lib/gemini';
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
 
-/**
- * Construye un prompt estructurado y de alta calidad para el análisis clínico.
- */
+// ... (La función buildClinicalPrompt permanece exactamente igual)
 function buildClinicalPrompt(anonymizedData: any): string {
   return `
 Rol: Eres un médico experto en medicina funcional, antienvejecimiento y longevidad con 20 años de experiencia.
@@ -30,12 +28,11 @@ Restricciones:
 `;
 }
 
-/**
- * Genera un resumen clínico para un paciente, registrando la interacción.
- */
+
 export async function generateClinicalSummary(patientId: string) {
   const startTime = Date.now();
-  
+  console.log(`[AI_ACTION] Iniciando análisis para paciente ID: ${patientId}`);
+
   try {
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
@@ -44,10 +41,7 @@ export async function generateClinicalSummary(patientId: string) {
         biophysicsTests: { orderBy: { testDate: 'desc' }, take: 1 },
         biochemistryTests: { orderBy: { testDate: 'desc' }, take: 1 },
         orthomolecularTests: { orderBy: { testDate: 'desc' }, take: 1 },
-        guides: { 
-          orderBy: { createdAt: 'desc' }, 
-          take: 3 
-        },
+        guides: { orderBy: { createdAt: 'desc' }, take: 3 },
         appointments: { take: 0 },
         foodPlans: { take: 0 },
         aiAnalyses: { take: 0 },
@@ -55,13 +49,26 @@ export async function generateClinicalSummary(patientId: string) {
     });
 
     if (!patient) {
+      console.error(`[AI_ACTION] Paciente no encontrado con ID: ${patientId}`);
       return { success: false, error: 'Paciente no encontrado.' };
+    }
+
+    // ✅ NUEVA VALIDACIÓN: Verificar si hay datos clínicos para analizar.
+    const hasClinicalData = patient.biophysicsTests.length > 0 || patient.biochemistryTests.length > 0 || patient.orthomolecularTests.length > 0;
+    if (!hasClinicalData) {
+        console.warn(`[AI_ACTION] El paciente ${patientId} no tiene datos de tests para analizar.`);
+        return { success: false, error: 'El paciente no tiene resultados de tests registrados para generar un análisis.' };
     }
 
     const patientDetails = patient as PatientWithDetails;
     const anonymizedData = anonymizePatientData(patientDetails);
     const prompt = buildClinicalPrompt(anonymizedData);
     
+    // ✅ MEJORA DE LOGGING: Imprimir el prompt para depuración.
+    // Esto nos mostrará exactamente lo que se envía a Gemini.
+    console.log(`[AI_ACTION] Enviando prompt a Gemini para paciente ID: ${patientId}`);
+    // console.log(prompt); // Descomenta esta línea si necesitas ver el prompt completo en los logs.
+
     const model = getGenerativeModel();
     const result = await model.generateContent(prompt);
     
@@ -69,14 +76,14 @@ export async function generateClinicalSummary(patientId: string) {
     const summary = response.text();
     
     if (!summary) {
+      console.error(`[AI_ACTION] La respuesta de Gemini para el paciente ${patientId} estaba vacía.`);
       throw new Error('La respuesta de la IA estaba vacía.');
     }
 
+    console.log(`[AI_ACTION] Análisis generado exitosamente para paciente ID: ${patientId}`);
     const endTime = Date.now();
     const responseTime = (endTime - startTime) / 1000;
 
-    // ✅ CORRECCIÓN DEFINITIVA: Se utiliza 'aIAnalysis' que es el nombre
-    // correcto generado por el cliente de Prisma para el modelo 'AIAnalysis'.
     await prisma.aIAnalysis.create({
       data: {
         patientId,
@@ -91,10 +98,8 @@ export async function generateClinicalSummary(patientId: string) {
     return { success: true, summary };
 
   } catch (error: any) {
-    console.error('Error en generateClinicalSummary:', {
-      error: error.message,
-      patientId,
-    });
+    // ✅ MEJORA DE LOGGING: Imprimir el error completo para un mejor diagnóstico.
+    console.error(`[AI_ACTION] Error catastrófico en generateClinicalSummary para paciente ID: ${patientId}`, error);
     
     return { 
       success: false, 
