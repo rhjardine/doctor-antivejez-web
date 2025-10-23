@@ -1,3 +1,4 @@
+// src/lib/gemini.ts
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Get the API key from environment variables
@@ -16,9 +17,8 @@ const genAI = new GoogleGenerativeAI(apiKey);
  * @param modelName The name of the model to use.
  * @returns The generative model instance.
  */
-export function getGenerativeModel(modelName = 'gemini-1.5-flash-latest') { // ✅ CORRECCIÓN: Usando el alias 'latest'
+export function getGenerativeModel(modelName = 'gemini-pro') { // ✅ SOLUCIÓN: Usar el modelo universal 'gemini-pro'
   
-  // Mantenemos el log de verificación para confirmar el despliegue
   console.log(`[GEMINI_INIT] Inicializando modelo: ${modelName}`);
   
   return genAI.getGenerativeModel({ model: modelName });

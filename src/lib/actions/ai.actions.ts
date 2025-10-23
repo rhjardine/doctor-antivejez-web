@@ -86,8 +86,8 @@ export async function generateClinicalSummary(patientId: string) {
         prompt,
         response: summary,
         responseTime,
-        // ✅ CORRECCIÓN: Actualizamos el nombre del modelo para consistencia en la auditoría.
-        modelUsed: 'gemini-1.5-flash-latest',
+        // ✅ SOLUCIÓN: Actualizamos el nombre del modelo para consistencia.
+        modelUsed: 'gemini-pro',
       },
     });
 
