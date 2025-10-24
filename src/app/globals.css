@@ -591,4 +591,42 @@
     box-shadow: none !important;
     border: 1px solid #d1d5db !important;
   }
+
+@layer components {
+  .card {
+    @apply bg-white border border-gray-200 rounded-xl shadow-sm p-6 md:p-8;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+  .input {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm;
+  }
+  .input-disabled {
+    @apply input bg-gray-100 cursor-not-allowed text-gray-500;
+  }
+  .input-error {
+    @apply border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500;
+  }
+  .error-message {
+    @apply mt-1 text-sm text-red-600;
+  }
+  .form-section-header {
+    @apply text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3 text-primary;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 border text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150;
+  }
+  .btn-primary {
+    @apply btn border-transparent text-white bg-primary hover:bg-primary-dark focus:ring-primary disabled:bg-gray-300 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply btn border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-primary disabled:bg-gray-200 disabled:cursor-not-allowed;
+  }
+  .btn-light-blue {
+    @apply btn border-transparent text-primary bg-blue-100 hover:bg-blue-200 focus:ring-primary;
+  }
+  .btn-success {
+    @apply btn border-transparent text-white bg-green-600 hover:bg-green-700 focus:ring-green-500;
+  }
 }
