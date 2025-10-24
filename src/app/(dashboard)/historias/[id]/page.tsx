@@ -33,12 +33,8 @@ import { telotestReportData } from '@/lib/mock-data';
 import type { PatientWithDetails } from '@/types';
 import { Button } from '@/components/ui/button';
 
-// ✅ PASO 1: Importar el nuevo formulario unificado
+// ✅ Se importa el nuevo formulario unificado
 import PatientForm from '@/components/patients/PatientForm';
-
-// ❌ PASO 2: Eliminar la importación del formulario antiguo
-// import PatientEditForm from '@/components/patients/PatientEditForm';
-
 
 type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
 type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'orthomolecular' | 'biofisica_history' | 'bioquimica_history' | 'genetica';
@@ -138,20 +134,9 @@ export default function PatientDetailPage() {
   }
 
   const renderBiofisicaContent = () => {
-    // ... (Esta función no necesita cambios)
     switch (activeTestView) {
       case 'main':
-        return (
-          <EdadBiologicaMain 
-            patient={patient} 
-            onTestClick={() => setActiveTestView('biofisica')} 
-            onBiochemistryTestClick={() => setActiveTestView('bioquimica')}
-            onOrthomolecularTestClick={() => setActiveTestView('orthomolecular')}
-            onHistoryClick={() => setActiveTestView('biofisica_history')}
-            onBiochemistryHistoryClick={() => setActiveTestView('bioquimica_history')}
-            onGeneticTestClick={() => setActiveTestView('genetica')}
-          />
-        );
+        return <EdadBiologicaMain patient={patient} onTestClick={() => setActiveTestView('biofisica')} onBiochemistryTestClick={() => setActiveTestView('bioquimica')} onOrthomolecularTestClick={() => setActiveTestView('orthomolecular')} onHistoryClick={() => setActiveTestView('biofisica_history')} onBiochemistryHistoryClick={() => setActiveTestView('bioquimica_history')} onGeneticTestClick={() => setActiveTestView('genetica')} />;
       case 'biofisica':
         return <EdadBiofisicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'bioquimica':
@@ -171,14 +156,50 @@ export default function PatientDetailPage() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header del Paciente (sin cambios) */}
+      {/* ✅ CORRECCIÓN: Se restaura el JSX completo del Header del Paciente */}
       <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
-        {/* ... (código del header existente) ... */}
+        <div className="flex items-center space-x-6">
+          <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-3xl font-bold text-primary">{patient.firstName[0]}{patient.lastName[0]}</span>
+          </div>
+          <div className="flex-1">
+            <div className="flex justify-between items-start mb-3">
+              <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
+              <button onClick={() => router.push('/historias')} className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm">
+                <FaArrowLeft />
+                <span>Volver a Pacientes</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div><p className="text-sm text-gray-500">ID</p><p className="font-medium">{patient.identification}</p></div>
+              <div><p className="text-sm text-gray-500">Edad</p><p className="font-medium">{patient.chronologicalAge} años</p></div>
+              <div><p className="text-sm text-gray-500">Género</p><p className="font-medium">{patient.gender.replace(/_/g, ' ')}</p></div>
+              <div><p className="text-sm text-gray-500">ID Único</p><p className="font-medium text-xs break-all">{patient.id}</p></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Navegación de Pestañas (sin cambios) */}
+      {/* ✅ CORRECCIÓN: Se restaura el JSX completo de la Navegación de Pestañas */}
       <div className="border-b border-gray-200">
-        {/* ... (código de las pestañas existente) ... */}
+        <div className="overflow-x-auto pb-2 custom-scrollbar-tabs">
+          <nav className="flex space-x-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabClick(tab.id as TabId)}
+                className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
+                  activeTab === tab.id
+                    ? 'bg-white text-primary shadow-md'
+                    : 'bg-primary text-white hover:bg-primary-dark shadow-sm'
+                }`}
+              >
+                <tab.icon className="text-base" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
       </div>
 
       {/* Contenido de las Pestañas */}
@@ -191,17 +212,13 @@ export default function PatientDetailPage() {
             />
         )}
         
-        {/* ✅ PASO 3: Refactorizar la pestaña 'historia' */}
         {activeTab === 'historia' && (
           isEditing ? (
-            // Si está en modo edición, renderiza el nuevo formulario unificado
-            // pasándole el paciente actual y la función de callback.
             <PatientForm 
               patient={patient} 
               onSaveSuccess={handleUpdateSuccess} 
             />
           ) : (
-            // Si no está en modo edición, muestra la vista de solo lectura (sin cambios)
             <div className="card">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Detalles de la Historia Médica</h2>
@@ -213,9 +230,34 @@ export default function PatientDetailPage() {
                   <span>Editar Historia</span>
                 </button>
               </div>
-              {/* ... (el resto del JSX de la vista de solo lectura permanece igual) ... */}
+              {/* ✅ CORRECCIÓN: Se restaura el JSX completo de la vista de solo lectura */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {/* ... */}
+                <div>
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Personal</h3>
+                  <dl className="space-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Identificación</dt><dd className="font-medium text-gray-700">{patient.identification}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Nacionalidad</dt><dd className="font-medium text-gray-700">{patient.nationality}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Lugar de Nacimiento</dt><dd className="font-medium text-gray-700">{patient.birthPlace}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Estado Civil</dt><dd className="font-medium text-gray-700">{patient.maritalStatus}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Profesión</dt><dd className="font-medium text-gray-700">{patient.profession}</dd></div>
+                  </dl>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información de Contacto</h3>
+                  <dl className="space-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Teléfono</dt><dd className="font-medium text-gray-700">{patient.phone}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Email</dt><dd className="font-medium text-gray-700">{patient.email}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Dirección</dt><dd className="font-medium text-gray-700 text-right">{patient.address}, {patient.city}, {patient.state}, {patient.country}</dd></div>
+                  </dl>
+                </div>
+                <div className="md:col-span-2 pt-4">
+                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Médica</h3>
+                  <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Grupo Sanguíneo</dt><dd className="font-medium text-gray-700">{patient.bloodType}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Edad Cronológica</dt><dd className="font-medium text-gray-700">{patient.chronologicalAge} años</dd></div>
+                  </dl>
+                  {patient.observations && (<div className="mt-4"><dt className="text-sm text-gray-500 mb-1">Observaciones</dt><dd className="text-gray-700 bg-gray-50 p-3 rounded-md border">{patient.observations}</dd></div>)}
+                </div>
               </div>
             </div>
           )
@@ -224,13 +266,24 @@ export default function PatientDetailPage() {
         {activeTab === 'biofisica' && renderBiofisicaContent()}
 
         {activeTab === 'guia' && (
-          // ... (código de la pestaña guía sin cambios) ...
+          <div className="space-y-4">
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg w-fit">
+              <Button size="sm" variant={guideView === 'form' ? 'default' : 'ghost'} onClick={() => { setGuideView('form'); setGuideToLoad(null); }}>
+                <FaFileMedicalAlt className="mr-2" /> {guideToLoad ? 'Viendo Guía' : 'Nueva Guía'}
+              </Button>
+              <Button size="sm" variant={guideView === 'history' ? 'default' : 'ghost'} onClick={() => setGuideView('history')}>
+                <FaHistory className="mr-2" /> Historial
+              </Button>
+            </div>
+            {guideView === 'form' && (<PatientGuide key={guideToLoad || 'new'} patient={patient} guideIdToLoad={guideToLoad} />)}
+            {guideView === 'history' && (<GuideHistoryView patientId={patient.id} onViewGuide={handleViewGuide} onBack={() => setGuideView('form')} />)}
+          </div>
         )}
 
         {activeTab === 'alimentacion' && <NutrigenomicGuide patient={patient} />}
         
-        {activeTab === 'omicas' && <div className="card text-center py-12">{/* ... */}</div>}
-        {active-tab === 'seguimiento' && <div className="card text-center py-12">{/* ... */}</div>}
+        {activeTab === 'omicas' && <div className="card text-center py-12"><FaDna className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3><p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p></div>}
+        {activeTab === 'seguimiento' && <div className="card text-center py-12"><FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Seguimiento</h3><p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p></div>}
       </div>
     </div>
   );
