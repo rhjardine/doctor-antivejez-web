@@ -29,9 +29,23 @@ export async function createPatient(formData: PatientFormData & { userId: string
     return { success: true, patient };
   } catch (error) {
     console.error('Error creando paciente:', error);
+
+    // ✅ ÚNICO CAMBIO: Se mejora el manejo de errores para detectar duplicados.
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        const target = error.meta?.target as string[];
+        if (target && target.includes('identification')) {
+          return { success: false, error: 'Ya existe un paciente con este número de identificación.' };
+        }
+      }
+    }
+    
+    // Se mantiene el error genérico para otros casos.
     return { success: false, error: 'Error al crear el paciente' };
   }
 }
+
+// --- EL RESTO DEL ARCHIVO PERMANECE EXACTAMENTE IGUAL ---
 
 export async function updatePatient(id: string, formData: Partial<PatientFormData>) {
   try {
