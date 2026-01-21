@@ -52,13 +52,6 @@ export async function POST(req: Request) {
 
         console.log('✅ PATIENT FOUND, CHECKING PASSWORD...');
 
-        // TEMPORARY DEBUG BYPASS - REMOVE AFTER TESTING
-        if (password === 'DEBUG123') {
-            console.log('🐛 DEBUG PASSWORD ACCEPTED - BYPASSING BCRYPT');
-            const token = await signToken({ id: patient.id, role: "PATIENT" });
-            return NextResponse.json({ success: true, token, patient }, { headers: corsHeaders });
-        }
-
         const isMatch = await bcrypt.compare(password, patient.user.password);
         console.log('🔐 PASSWORD MATCH RESULT:', isMatch);
 
