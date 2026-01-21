@@ -19,8 +19,19 @@ export async function POST(req: Request) {
         const { identification, password } = await req.json();
         console.log('🔍 ATTEMPTING LOGIN FOR ID:', identification);
 
-        const patient = await db.patient.findUnique({
-            where: { identification },
+        // 1. Limpiamos la entrada del usuario
+        const cleanID = identification.replace(/\D/g, ""); // Deja solo los números
+        console.log('🧹 CLEANED ID:', cleanID);
+
+        // 2. Buscamos el paciente con OR para cubrir ambos casos
+        const patient = await db.patient.findFirst({
+            where: {
+                OR: [
+                    { identification: cleanID },
+                    { identification: `V-${cleanID}` },
+                    { identification: identification }
+                ]
+            },
             include: { user: true }
         });
 
