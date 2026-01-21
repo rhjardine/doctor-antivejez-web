@@ -4,17 +4,18 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getPatientDetails } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
-import { 
-  FaUser, 
-  FaHeartbeat, 
-  FaBook, 
-  FaAppleAlt, 
-  FaArrowLeft, 
+import {
+  FaUser,
+  FaHeartbeat,
+  FaBook,
+  FaAppleAlt,
+  FaArrowLeft,
   FaDna,
   FaChartLine,
   FaFileMedicalAlt,
   FaHistory,
-  FaEdit
+  FaEdit,
+  FaVial // ✅ Se añade el icono para la nueva pestaña
 } from 'react-icons/fa';
 
 // Componentes existentes
@@ -32,11 +33,13 @@ import NutrigenomicGuide from '@/components/nutrition/NutrigenomicGuide';
 import { telotestReportData } from '@/lib/mock-data';
 import type { PatientWithDetails } from '@/types';
 import { Button } from '@/components/ui/button';
-
-// ✅ Se importa el nuevo formulario unificado
 import PatientForm from '@/components/patients/PatientForm';
 
-type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
+// ✅ Se importa el nuevo componente para la pestaña de Biomarcadores
+import NlrCalculator from '@/components/biomarkers/NlrCalculator';
+
+// ✅ Se actualiza el tipo TabId
+import { TabId } from '@/types';
 type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'orthomolecular' | 'biofisica_history' | 'bioquimica_history' | 'genetica';
 type GuideView = 'form' | 'history';
 
@@ -85,7 +88,7 @@ export default function PatientDetailPage() {
       setLoading(false);
     }
   }, [patientId, router]);
-  
+
   useEffect(() => {
     const tab = searchParams.get('tab');
     const view = searchParams.get('view');
@@ -115,14 +118,15 @@ export default function PatientDetailPage() {
     return <div className="text-center py-12"><p className="text-gray-500">Paciente no encontrado. Redirigiendo...</p></div>;
   }
 
+  // ✅ Se actualiza el array de pestañas
   const tabs = [
     { id: 'resumen', label: 'Resumen Clínico', icon: FaFileMedicalAlt },
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
+    { id: 'biomarcadores', label: 'Biomarcadores', icon: FaVial },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
     { id: 'omicas', label: 'Programa OMICS', icon: FaDna },
-    { id: 'seguimiento', label: 'Seguimiento', icon: FaChartLine },
   ];
 
   const handleTabClick = (tabId: TabId) => {
@@ -156,7 +160,6 @@ export default function PatientDetailPage() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* ✅ CORRECCIÓN: Se restaura el JSX completo del Header del Paciente */}
       <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
         <div className="flex items-center space-x-6">
           <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -180,7 +183,6 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* ✅ CORRECCIÓN: Se restaura el JSX completo de la Navegación de Pestañas */}
       <div className="border-b border-gray-200">
         <div className="overflow-x-auto pb-2 custom-scrollbar-tabs">
           <nav className="flex space-x-2">
@@ -188,11 +190,10 @@ export default function PatientDetailPage() {
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab.id as TabId)}
-                className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
-                  activeTab === tab.id
+                className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${activeTab === tab.id
                     ? 'bg-white text-primary shadow-md'
                     : 'bg-primary text-white hover:bg-primary-dark shadow-sm'
-                }`}
+                  }`}
               >
                 <tab.icon className="text-base" />
                 <span>{tab.label}</span>
@@ -202,27 +203,26 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* Contenido de las Pestañas */}
       <div className="min-h-[400px] mt-6">
         {activeTab === 'resumen' && (
-            <ClinicalSummary 
-                patient={patient} 
-                onNavigateToTab={handleTabClick}
-                onReloadPatient={refreshPatientData}
-            />
+          <ClinicalSummary
+            patient={patient}
+            onNavigateToTab={handleTabClick}
+            onReloadPatient={refreshPatientData}
+          />
         )}
-        
+
         {activeTab === 'historia' && (
           isEditing ? (
-            <PatientForm 
-              patient={patient} 
-              onSaveSuccess={handleUpdateSuccess} 
+            <PatientForm
+              patient={patient}
+              onSaveSuccess={handleUpdateSuccess}
             />
           ) : (
             <div className="card">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Detalles de la Historia Médica</h2>
-                <button 
+                <button
                   onClick={() => setIsEditing(true)}
                   className="btn-secondary flex items-center space-x-2"
                 >
@@ -230,7 +230,6 @@ export default function PatientDetailPage() {
                   <span>Editar Historia</span>
                 </button>
               </div>
-              {/* ✅ CORRECCIÓN: Se restaura el JSX completo de la vista de solo lectura */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <div>
                   <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Personal</h3>
@@ -262,8 +261,13 @@ export default function PatientDetailPage() {
             </div>
           )
         )}
-        
+
         {activeTab === 'biofisica' && renderBiofisicaContent()}
+
+        {/* ✅ Se añade la lógica de renderizado para la nueva pestaña */}
+        {activeTab === 'biomarcadores' && (
+          <NlrCalculator patient={patient} />
+        )}
 
         {activeTab === 'guia' && (
           <div className="space-y-4">
@@ -281,9 +285,10 @@ export default function PatientDetailPage() {
         )}
 
         {activeTab === 'alimentacion' && <NutrigenomicGuide patient={patient} />}
-        
+
         {activeTab === 'omicas' && <div className="card text-center py-12"><FaDna className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3><p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p></div>}
-        {activeTab === 'seguimiento' && <div className="card text-center py-12"><FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Seguimiento</h3><p className="text-gray-500">Esta sección para monitorizar la evolución y seguimiento del paciente está en desarrollo.</p></div>}
+
+        {/* La pestaña 'seguimiento' y su contenido han sido eliminados */}
       </div>
     </div>
   );

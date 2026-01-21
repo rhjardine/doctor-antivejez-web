@@ -1,9 +1,9 @@
 // src/types/index.ts
 
 // 1. Importar los tipos base directamente desde el cliente de Prisma
-import type { 
-  User as PrismaUser, 
-  Patient as PrismaPatient, 
+import type {
+  User as PrismaUser,
+  Patient as PrismaPatient,
   BiophysicsTest as PrismaBiophysicsTest,
   BiochemistryTest as PrismaBiochemistryTest,
   OrthomolecularTest as PrismaOrthomolecularTest,
@@ -44,4 +44,4 @@ export type PatientWithDetails = Patient & {
 
 // 4. Mantener tipos personalizados
 export type Gender = 'MASCULINO' | 'FEMENINO' | 'MASCULINO_DEPORTIVO' | 'FEMENINO_DEPORTIVO';
-export type TabId = 'resumen' | 'historia' | 'biofisica' | 'guia' | 'alimentacion' | 'omicas' | 'seguimiento';
+export type TabId = 'resumen' | 'historia' | 'biofisica' | 'biomarcadores' | 'guia' | 'alimentacion' | 'omicas';

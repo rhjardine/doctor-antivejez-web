@@ -1,47 +1,95 @@
-// src/lib/auth.ts
-import { NextAuthOptions } from 'next-auth';
-import { PrismaAdapter } from '@next-auth/prisma-adapter'; // <-- CORRECCIÓN: Importar desde '@next-auth/prisma-adapter'
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { prisma } from '@/lib/db';
-import { signIn } from '@/lib/actions/auth.actions';
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import { db } from "./db";
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(db),
+  session: {
+    strategy: "jwt",
+  },
+  pages: {
+    signIn: "/login",
+  },
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    }),
     CredentialsProvider({
-      name: 'credentials',
+      name: "Credentials",
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        // --- DEBUGGING LOGS START ---
+        console.log("🔐 [Auth] Intento de login para:", credentials?.email);
+
         if (!credentials?.email || !credentials?.password) {
+          console.log("❌ [Auth] Faltan credenciales");
           return null;
         }
 
-        const result = await signIn({
-          email: credentials.email,
-          password: credentials.password,
-        });
+        try {
+          const user = await db.user.findUnique({
+            where: {
+              email: credentials.email,
+            },
+          });
 
-        if (result.success && result.user) {
+          if (!user) {
+            console.log("❌ [Auth] Usuario NO encontrado en DB Docker:", credentials.email);
+            return null;
+          }
+
+          console.log("✅ [Auth] Usuario encontrado:", user.id);
+
+          if (!user.password) {
+             console.log("❌ [Auth] El usuario no tiene contraseña (quizás usa Google login)");
+             return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            console.log("❌ [Auth] Contraseña incorrecta para:", credentials.email);
+            return null;
+          }
+
+          console.log("✅ [Auth] Login exitoso para:", user.name);
+
           return {
-            id: result.user.id,
-            email: result.user.email,
-            name: result.user.name,
-            role: result.user.role,
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            image: user.image,
           };
+        } catch (error) {
+           console.error("🔥 [Auth] Error CRÍTICO de conexión a DB:", error);
+           return null;
         }
-
-        return null;
+        // --- DEBUGGING LOGS END ---
       },
     }),
   ],
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
   callbacks: {
+    async session({ token, session }) {
+      if (token) {
+        session.user.id = token.id;
+        session.user.name = token.name;
+        session.user.email = token.email;
+        session.user.role = token.role;
+        session.user.image = token.picture;
+      }
+      return session;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -49,17 +97,5 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as any;
-      }
-      return session;
-    },
   },
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
-  debug: process.env.NODE_ENV === 'development',
 };

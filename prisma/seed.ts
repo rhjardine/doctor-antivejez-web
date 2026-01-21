@@ -1,15 +1,21 @@
 // prisma/seed.ts
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
+import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Iniciando seeding de la base de datos...');
 
-  // --- 1. Limpiar datos antiguos de Baremos y Rangos ---
+  // --- 1. Limpiar datos de configuración ---
+  // Borramos datos previos para evitar duplicados en desarrollo.
+  // NOTA: Esto no borra pacientes, solo la configuración médica base.
   await prisma.board.deleteMany({});
   await prisma.range.deleteMany({});
-  console.log('🗑️ Baremos y Rangos antiguos eliminados.');
+  await prisma.foodItem.deleteMany({});
+  await prisma.generalGuideItem.deleteMany({});
+  await prisma.wellnessKey.deleteMany({});
+  console.log('🗑️ Datos de configuración antiguos eliminados.');
 
   // --- 2. Crear Rangos de Edad ---
   const rangesData = [
@@ -102,30 +108,28 @@ async function main() {
   await prisma.board.createMany({ data: allBoardsToCreate });
   console.log('📏 Baremos (boards) creados/actualizados.');
   
+  // ===== 4. CORRECCIÓN CRÍTICA DE ACCESO: Crear o Actualizar Admin =====
   const adminEmail = 'admin@doctorantivejez.com';
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  // Encriptamos la contraseña "123456"
+  const hashedPassword = await hash('123456', 10);
 
-  if (!existingAdmin) {
-    const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    await prisma.user.create({
-      data: {
-        email: adminEmail,
-        password: hashedPassword,
-        name: 'Dr. Admin',
-        role: 'ADMINISTRATIVO',
-      },
-    });
-    console.log('👤 Usuario administrador creado.');
-  } else {
-    console.log('👤 Usuario administrador ya existe.');
-  }
+  // Usamos upsert para garantizar que la contraseña se restablezca incluso si el usuario ya existe
+  const adminUser = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      password: hashedPassword, // Si existe, actualizamos la contraseña al valor conocido
+      role: 'MEDICO', // Aseguramos rol correcto
+    },
+    create: {
+      email: adminEmail,
+      password: hashedPassword,
+      name: 'Dr. Admin',
+      role: 'MEDICO',
+    },
+  });
+  console.log(`👤 Usuario administrador sincronizado (${adminUser.email}). Login con: 123456`);
 
-  // ===== SEEDING DE GUÍA DE ALIMENTACIÓN =====
-  console.log('🍓 Iniciando seeding de la guía de alimentación...');
-  await prisma.foodItem.deleteMany({});
-  console.log('🗑️ Alimentos antiguos eliminados.');
-
+  // ===== 5. SEEDING DE GUÍA DE ALIMENTACIÓN (DATA COMPLETA ORIGINAL) =====
   const foodItems = [
     // DESAYUNO
     { name: 'Cereales de trigo sarraceno, avena sin gluten', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
@@ -184,10 +188,7 @@ async function main() {
   console.log(`🍓 ${foodItems.length} alimentos creados.`);
 
   // ===== SEEDING DE GUÍA GENERAL Y CLAVES DE BIENESTAR =====
-  await prisma.generalGuideItem.deleteMany({});
-  await prisma.wellnessKey.deleteMany({});
-  console.log('🗑️ Guía General y Claves de Bienestar antiguas eliminadas.');
-
+  
   const foodsToAvoid = [
     "Cocina y sus derivados, atún, pez espada, grasas, frituras, huevos fritos.",
     "Caseína: lácteos de vaca y búfala, parmesano, embutidos con preservativos, refrescos, azúcar, edulcorantes, chucherías, harinas refinadas y sus derivados, cereales refinados, jugos naturales.",
@@ -223,7 +224,6 @@ async function main() {
 
   await prisma.wellnessKey.createMany({ data: longevityKeys });
   console.log('🔑 Claves de Bienestar creadas.');
-  // ==================================================================
   
   console.log('✅ Seeding completado exitosamente.');
 }

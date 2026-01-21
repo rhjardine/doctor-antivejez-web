@@ -1,23 +1,20 @@
-# docker-compose.yml (Versión Final y Definitiva para Desarrollo)
 services:
   web:
     build: .
-    # El comando que se ejecutará al iniciar: el servidor de desarrollo
-    command: npm run dev
-    # Mapea tu código local a la carpeta /app del contenedor.
+    # CAMBIO CRÍTICO: Generamos Prisma antes de iniciar el servidor dev
+    command: sh -c "npx prisma generate && npm run dev"
     volumes:
       - .:/app
-      # Excepción: no mapear node_modules para usar los del contenedor.
-      - /app/node_modules
+      - /app/node_modules # Protege los módulos instalados en Linux
     ports:
       - "3001:3000"
-      # Mapea el puerto 5555 de tu máquina (host) al puerto 5555 del contenedor.
       - "5555:5555"
     environment:
       DATABASE_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
-      # DIRECT_URL es útil para que Prisma pueda ejecutar migraciones dentro del contenedor
-      DIRECT_URL: "postgresql://user:password@db:5432/doctor_antivejez_local"
+      # NEXTAUTH_URL es para los redirects del navegador
       NEXTAUTH_URL: "http://localhost:3001"
+      # NEXTAUTH_URL_INTERNAL soluciona el error 401/500 en Docker
+      NEXTAUTH_URL_INTERNAL: "http://localhost:3000"
       NEXTAUTH_SECRET: "n5bQGpiu3t03I8NOA3RfClMcQAfYvx6Hyo7yOTWEO1M="
     depends_on:
       db:
@@ -26,12 +23,8 @@ services:
   db:
     image: postgres:15
     restart: always
-    # ===== INICIO DE LA CORRECCIÓN =====
-    # Expone el puerto 5432 interno del contenedor al puerto 5433 de tu máquina local.
-    # Esto permite que herramientas locales como `prisma migrate` se conecten.
     ports:
       - "5433:5432"
-    # ===== FIN DE LA CORRECCIÓN =====
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -40,10 +33,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d doctor_antivejez_local"]
-      interval: 10s
+      interval: 5s # Más frecuente para desarrollo rápido
       timeout: 5s
       retries: 5
 
 volumes:
   postgres_data:
-

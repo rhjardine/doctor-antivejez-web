@@ -68,6 +68,18 @@ enum BoardType {
   FORM_BIOCHEMISTRY
 }
 
+// ✅ ADICIÓN 1/3: Nuevo enum para el riesgo de NLR
+enum NlrRiskLevel {
+  OPTIMAL
+  LOW_INFLAMMATION
+  BORDERLINE
+  MODERATE_INFLAMMATION
+  HIGH_INFLAMMATION
+  SEVERE_INFLAMMATION
+  CRITICAL_INFLAMMATION
+  EXTREME_RISK
+}
+
 // =================================================================
 // Modelos de Autenticación y Usuarios (NextAuth.js)
 // =================================================================
@@ -163,9 +175,10 @@ model Patient {
   guides              PatientGuide[]
   foodPlans           FoodPlan[]
   selectedDiets       DietType[]
-
-  // --- NUEVA RELACIÓN: Se añade la conexión al modelo de análisis de IA ---
   aiAnalyses          AIAnalysis[]
+
+  // ✅ ADICIÓN 2/3: Nueva relación para los tests de NLR
+  nlrTests            NlrTest[]
 
   @@map("patients")
 }
@@ -479,7 +492,7 @@ model WellnessKey {
 }
 
 // =================================================================
-// --- NUEVO: Modelos para el Agente de IA ---
+// Modelos para el Agente de IA
 // =================================================================
 model AIAnalysis {
   id               String   @id @default(cuid())
@@ -499,6 +512,23 @@ model AIAnalysis {
   
   @@index([patientId])
   @@map("ai_analyses")
+}
+
+// ✅ ADICIÓN 3/3: Nuevo modelo para el test de NLR
+model NlrTest {
+  id           String       @id @default(cuid())
+  patientId    String
+  neutrophils  Float // Valor absoluto de neutrófilos
+  lymphocytes  Float // Valor absoluto de linfocitos
+  nlrValue     Float // El resultado del cálculo (neutrophils / lymphocytes)
+  riskLevel    NlrRiskLevel
+  testDate     DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@map("nlr_tests")
 }
 
 // =================================================================

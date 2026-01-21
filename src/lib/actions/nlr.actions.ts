@@ -1,0 +1,68 @@
+'use server';
+
+import { prisma } from '@/lib/db';
+import { revalidatePath } from 'next/cache';
+import { NlrRiskLevel } from '@prisma/client';
+
+// Función para determinar el nivel de riesgo basado en el valor de NLR
+function determineNlrRiskLevel(nlr: number): NlrRiskLevel {
+  if (nlr < 0.7) return 'OPTIMAL';
+  if (nlr <= 2) return 'LOW_INFLAMMATION';
+  if (nlr <= 3) return 'BORDERLINE';
+  if (nlr <= 7) return 'MODERATE_INFLAMMATION';
+  if (nlr <= 11) return 'HIGH_INFLAMMATION';
+  if (nlr <= 17) return 'SEVERE_INFLAMMATION';
+  if (nlr <= 23) return 'CRITICAL_INFLAMMATION';
+  return 'EXTREME_RISK';
+}
+
+interface SaveNlrTestParams {
+  patientId: string;
+  neutrophils: number;
+  lymphocytes: number;
+  testDate: Date;
+}
+
+export async function saveNlrTest(params: SaveNlrTestParams) {
+  const { patientId, neutrophils, lymphocytes, testDate } = params;
+
+  if (lymphocytes === 0) {
+    return { success: false, error: 'El valor de linfocitos no puede ser cero.' };
+  }
+
+  try {
+    const nlrValue = parseFloat((neutrophils / lymphocytes).toFixed(2));
+    const riskLevel = determineNlrRiskLevel(nlrValue);
+
+    const newTest = await prisma.nlrTest.create({
+      data: {
+        patientId,
+        neutrophils,
+        lymphocytes,
+        nlrValue,
+        riskLevel,
+        testDate,
+      },
+    });
+
+    revalidatePath(`/historias/${patientId}`);
+
+    return { success: true, data: newTest };
+  } catch (error) {
+    console.error('Error guardando el test de NLR:', error);
+    return { success: false, error: 'Ocurrió un error al guardar el resultado.' };
+  }
+}
+
+export async function getNlrHistory(patientId: string) {
+  try {
+    const history = await prisma.nlrTest.findMany({
+      where: { patientId },
+      orderBy: { testDate: 'desc' },
+    });
+    return { success: true, data: history };
+  } catch (error) {
+    console.error('Error obteniendo el historial de NLR:', error);
+    return { success: false, error: 'No se pudo cargar el historial.' };
+  }
+}

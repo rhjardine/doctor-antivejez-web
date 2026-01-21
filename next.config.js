@@ -24,6 +24,7 @@ const nextConfig = {
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   },
   // ===== FIN DE LA CORRECCIÓN DEFINITIVA =====
+  // ===== FIN DE LA CORRECCIÓN DEFINITIVA =====
 }
 
 module.exports = nextConfig
