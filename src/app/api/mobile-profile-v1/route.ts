@@ -5,7 +5,7 @@ import { verifyToken } from "@/lib/jwt";
 export const dynamic = 'force-dynamic';
 
 const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "https://doctorantivejez-patients.onrender.com",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
