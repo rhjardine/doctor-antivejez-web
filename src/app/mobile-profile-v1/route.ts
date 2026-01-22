@@ -2,18 +2,28 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyToken } from "@/lib/jwt";
 
+const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+    return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function GET(req: Request) {
     try {
         const authHeader = req.headers.get("authorization");
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Token no proporcionado" }, { status: 401 });
+            return NextResponse.json({ error: "Token no proporcionado" }, { status: 401, headers: corsHeaders });
         }
 
         const token = authHeader.split(" ")[1];
         const payload = await verifyToken(token);
 
         if (!payload) {
-            return NextResponse.json({ error: "Token inválido o expirado" }, { status: 401 });
+            return NextResponse.json({ error: "Token inválido o expirado" }, { status: 401, headers: corsHeaders });
         }
 
         const patient = await db.patient.findUnique({
@@ -42,7 +52,7 @@ export async function GET(req: Request) {
         });
 
         if (!patient) {
-            return NextResponse.json({ error: "Paciente no encontrado" }, { status: 404 });
+            return NextResponse.json({ error: "Paciente no encontrado" }, { status: 404, headers: corsHeaders });
         }
 
         return NextResponse.json({
@@ -58,10 +68,10 @@ export async function GET(req: Request) {
             biochemistry: patient.biochemistryTests[0] || null,
             guides: patient.guides,
             foodPlans: patient.foodPlans
-        });
+        }, { headers: corsHeaders });
 
     } catch (error) {
         console.error("Profile fetch error:", error);
-        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500, headers: corsHeaders });
     }
 }
