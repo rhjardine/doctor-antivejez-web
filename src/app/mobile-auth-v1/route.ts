@@ -61,7 +61,33 @@ export async function POST(req: Request) {
 
         console.log('✅ LOGIN SUCCESSFUL');
         const token = await signToken({ id: patient.id, role: "PATIENT" });
-        return NextResponse.json({ success: true, token, patient }, { headers: corsHeaders });
+
+        // Consolidamos el objeto paciente con todas las relaciones necesarias para el Home
+        const fullPatient = await db.patient.findUnique({
+            where: { id: patient.id },
+            include: {
+                biophysicsTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                biochemistryTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                guides: { orderBy: { createdAt: 'desc' }, take: 1 },
+                foodPlans: { orderBy: { createdAt: 'desc' }, take: 1, include: { items: true } }
+            }
+        });
+
+        if (!fullPatient) {
+            return NextResponse.json({ error: "Error al recuperar datos del paciente" }, { status: 500, headers: corsHeaders });
+        }
+
+        // Mapeamos el campo 'name' que espera la app móvil
+        const responseData = {
+            success: true,
+            token,
+            patient: {
+                ...fullPatient,
+                name: `${fullPatient.firstName} ${fullPatient.lastName}`.trim()
+            }
+        };
+
+        return NextResponse.json(responseData, { headers: corsHeaders });
     } catch (error) {
         console.error('💥 LOGIN ERROR:', error);
         return NextResponse.json({ error: "Server Error" }, { status: 500, headers: corsHeaders });

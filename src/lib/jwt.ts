@@ -1,6 +1,10 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+const secretString = process.env.NEXTAUTH_SECRET || 'development-secret-key-min-32-chars-long';
+if (!process.env.NEXTAUTH_SECRET && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXTAUTH_SECRET is not defined in production environment');
+}
+const secret = new TextEncoder().encode(secretString);
 
 export const signToken = async (payload: any) => {
     return await new SignJWT(payload)
