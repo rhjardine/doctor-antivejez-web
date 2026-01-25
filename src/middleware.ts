@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
-export function middleware(request: any) {
-    const { pathname } = request.nextUrl;
-    if (pathname.startsWith('/mobile-auth-v1') || pathname.startsWith('/mobile-profile-v1')) {
-        return NextResponse.next();
+import { withAuth } from "next-auth/middleware";
+export default withAuth({
+    callbacks: {
+        authorized: ({ token, req }) => {
+            if (req.nextUrl.pathname.startsWith("/mobile-")) return true;
+            if (req.nextUrl.pathname.startsWith("/vcoach-")) return true;
+            return !!token;
+        }
     }
-    return NextResponse.next();
-}
-export const config = { matcher: [] };
+});
+export const config = { matcher: ["/dashboard/:path*", "/historias/:path*", "/mobile-auth-v1", "/mobile-profile-v1", "/vcoach-chat-v1"] };
