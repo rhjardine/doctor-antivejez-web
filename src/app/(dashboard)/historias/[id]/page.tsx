@@ -36,7 +36,7 @@ import { Button } from '@/components/ui/button';
 import PatientForm from '@/components/patients/PatientForm';
 
 // ✅ Se importa el nuevo componente para la pestaña de Biomarcadores
-import NlrCalculator from '@/components/biomarkers/NlrCalculator';
+import NlrCalculator from '@/components/medical/NlrCalculator';
 
 // ✅ Se actualiza el tipo TabId
 import { TabId } from '@/types';
@@ -191,8 +191,8 @@ export default function PatientDetailPage() {
                 key={tab.id}
                 onClick={() => handleTabClick(tab.id as TabId)}
                 className={`flex-shrink-0 flex items-center space-x-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${activeTab === tab.id
-                    ? 'bg-white text-primary shadow-md'
-                    : 'bg-primary text-white hover:bg-primary-dark shadow-sm'
+                  ? 'bg-white text-primary shadow-md'
+                  : 'bg-primary text-white hover:bg-primary-dark shadow-sm'
                   }`}
               >
                 <tab.icon className="text-base" />
