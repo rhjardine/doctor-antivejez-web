@@ -1,52 +1,50 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Activity, Info, Save, History, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Activity, Info, Save, History, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface NlrCalculatorProps {
-    patient: any; // Using any for flexibility or specific Patient type if available
-}
-
-export default function NlrCalculator({ patient }: NlrCalculatorProps) {
-    const patientId = patient.id;
-    const [neutrophils, setNeutrophils] = useState<number | string>('');
-    const [lymphocytes, setLymphocytes] = useState<number | string>('');
-    const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
+export default function NlrCalculator({ patient }: { patient: any }) {
+    const [neutrophils, setNeutrophils] = useState<string>('');
+    const [lymphocytes, setLymphocytes] = useState<string>('');
     const [result, setResult] = useState<number | null>(null);
-    const [status, setStatus] = useState({ label: 'Esperando datos', color: 'text-slate-400', bg: 'bg-slate-100' });
     const [isSaving, setIsSaving] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [historyData, setHistoryData] = useState<any[]>([]);
+
+    // Lógica de Calibración PulmCrit / Farkas
+    const getClinicalStatus = (val: number) => {
+        if (val <= 3.0) return { label: 'Normal / Saludable', color: 'text-emerald-600', bg: 'bg-emerald-50', width: (val / 12) * 100 };
+        if (val <= 6.0) return { label: 'Estrés Leve / Inflamación', color: 'text-yellow-600', bg: 'bg-yellow-50', width: (val / 12) * 100 };
+        if (val <= 9.0) return { label: 'Estrés Moderado-Severo', color: 'text-orange-600', bg: 'bg-orange-50', width: (val / 12) * 100 };
+        return { label: 'Estado Crítico / Inflamación Severa', color: 'text-rose-600', bg: 'bg-rose-50', width: Math.min((val / 12) * 100, 100) };
+    };
 
     useEffect(() => {
-        if (neutrophils && lymphocytes && Number(lymphocytes) > 0) {
-            const nlr = Number(neutrophils) / Number(lymphocytes);
-            setResult(Number(nlr.toFixed(2)));
-
-            if (nlr < 1.5) {
-                setStatus({ label: 'Normal (Óptimo)', color: 'text-emerald-600', bg: 'bg-emerald-50' });
-            } else if (nlr < 2.0) {
-                setStatus({ label: 'Inflamación Muy Leve', color: 'text-emerald-500', bg: 'bg-emerald-50' });
-            } else if (nlr < 2.5) {
-                setStatus({ label: 'Inflamación Leve (Límite)', color: 'text-amber-500', bg: 'bg-amber-50' });
-            } else if (nlr < 3.0) {
-                setStatus({ label: 'Inflamación Moderada', color: 'text-amber-600', bg: 'bg-amber-50' });
-            } else if (nlr < 4.0) {
-                setStatus({ label: 'Inflamación Alta', color: 'text-orange-600', bg: 'bg-orange-50' });
-            } else if (nlr < 6.0) {
-                setStatus({ label: 'Inflamación Severa', color: 'text-rose-500', bg: 'bg-rose-50' });
-            } else if (nlr < 10.0) {
-                setStatus({ label: 'Inflamación Crítica', color: 'text-rose-600', bg: 'bg-rose-50' });
-            } else {
-                setStatus({ label: 'Riesgo Extremo', color: 'text-rose-700', bg: 'bg-rose-100' });
-            }
+        const n = parseFloat(neutrophils);
+        const l = parseFloat(lymphocytes);
+        if (n > 0 && l > 0) {
+            setResult(parseFloat((n / l).toFixed(2)));
         } else {
             setResult(null);
         }
     }, [neutrophils, lymphocytes]);
 
-    const handleSave = async () => {
-        if (!result || isSaving) return;
+    const loadHistory = useCallback(async () => {
+        try {
+            const res = await fetch(`/clinical-nlr-v1/history?patientId=${patient.id}`);
+            const data = await res.json();
+            setHistoryData(data);
+        } catch (e) { console.error(e); }
+    }, [patient.id]);
 
+    useEffect(() => {
+        if (showHistory) {
+            loadHistory();
+        }
+    }, [showHistory, loadHistory]);
+
+    const handleSave = async () => {
         setIsSaving(true);
         try {
             const response = await fetch('/clinical-nlr-v1', {
@@ -54,155 +52,141 @@ export default function NlrCalculator({ patient }: NlrCalculatorProps) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    patientId,
-                    neutrophils,
-                    lymphocytes,
-                    testDate,
-                }),
+                body: JSON.stringify({ patientId: patient.id, neutrophils, lymphocytes, testDate: new Date() }),
             });
-
-            const data = await response.json();
-            if (data.success) {
-                toast.success('Test de NLR guardado exitosamente');
+            if (response.ok) {
+                toast.success('Registro guardado en la Historia Clínica');
+                loadHistory();
             } else {
-                toast.error(data.error || 'Error al guardar el test');
+                toast.error('Error al guardar');
             }
-        } catch (error) {
-            console.error('Error saving NLR:', error);
-            toast.error('Error de conexión con el servidor');
-        } finally {
-            setIsSaving(false);
-        }
+        } catch (e) { toast.error('Error de conexión'); }
+        setIsSaving(false);
     };
 
     return (
-        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden font-sans animate-in fade-in duration-500">
-            {/* Header Corporativo */}
-            <div className="bg-[#293b64] p-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/10 rounded-lg text-[#23bcef]">
-                        <Activity size={24} />
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden font-sans">
+            {/* Header Estilo Luxury Clinic */}
+            <div className="bg-[#293b64] p-8 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 bg-[#23bcef]/20 rounded-2xl flex items-center justify-center text-[#23bcef]">
+                        <Activity size={28} />
                     </div>
-                    <h2 className="text-white font-black uppercase tracking-wider text-sm">Calculador de Inflamación (NLR)</h2>
+                    <div>
+                        <h2 className="text-white font-black uppercase tracking-tighter text-xl">Índice NLR</h2>
+                        <p className="text-[#23bcef] text-[10px] font-bold tracking-widest uppercase opacity-80">Marcador de Inflamación Crónica</p>
+                    </div>
                 </div>
-                <button className="text-[#23bcef] hover:bg-white/10 p-2 rounded-full transition-all">
-                    <Info size={20} />
+                <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-xl transition-all text-xs font-bold uppercase tracking-widest">
+                    <History size={16} /> {showHistory ? 'Cerrar Panel' : 'Ver Historial'}
                 </button>
             </div>
 
-            <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Columna 1: Inputs */}
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 gap-4">
-                        <div className="group">
-                            <label className="block text-[10px] font-black text-[#293b64] uppercase tracking-widest mb-2 ml-1">
-                                Neutrófilos (Valor Absoluto)
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    value={neutrophils}
-                                    onChange={(e) => setNeutrophils(e.target.value)}
-                                    placeholder="Ej. 4500"
-                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-lg font-bold text-slate-800 outline-none focus:border-[#23bcef] focus:bg-white transition-all shadow-inner"
-                                />
-                                <span className="absolute right-5 top-5 text-xs font-bold text-slate-400">células/µL</span>
-                            </div>
+            <div className="p-10 grid grid-cols-1 lg:grid-cols-2 gap-12">
+                {/* Formulario */}
+                {!showHistory ? (
+                    <div className="space-y-8 animate-in slide-in-from-left-4 duration-500">
+                        <div className="grid grid-cols-1 gap-6">
+                            <ClinicalInput label="Recuento de Neutrófilos" value={neutrophils} onChange={setNeutrophils} placeholder="Ej. 4500" />
+                            <ClinicalInput label="Recuento de Linfocitos" value={lymphocytes} onChange={setLymphocytes} placeholder="Ej. 2000" />
                         </div>
 
-                        <div className="group">
-                            <label className="block text-[10px] font-black text-[#293b64] uppercase tracking-widest mb-2 ml-1">
-                                Linfocitos (Valor Absoluto)
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    value={lymphocytes}
-                                    onChange={(e) => setLymphocytes(e.target.value)}
-                                    placeholder="Ej. 2000"
-                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-lg font-bold text-slate-800 outline-none focus:border-[#23bcef] focus:bg-white transition-all shadow-inner"
-                                />
-                                <span className="absolute right-5 top-5 text-xs font-bold text-slate-400">células/µL</span>
-                            </div>
-                        </div>
-
-                        <div className="group">
-                            <label className="block text-[10px] font-black text-[#293b64] uppercase tracking-widest mb-2 ml-1">
-                                Fecha del Análisis
-                            </label>
-                            <input
-                                type="date"
-                                value={testDate}
-                                onChange={(e) => setTestDate(e.target.value)}
-                                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 outline-none focus:border-[#23bcef] focus:bg-white transition-all shadow-inner"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4 pt-4">
                         <button
                             onClick={handleSave}
                             disabled={!result || isSaving}
-                            className="flex-1 bg-[#23bcef] hover:bg-[#1da8d8] text-white font-black py-4 rounded-2xl shadow-lg shadow-cyan-200 transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest disabled:opacity-50 active:scale-95"
+                            className="w-full bg-[#23bcef] hover:bg-[#1da8d8] text-white font-black py-5 rounded-2xl shadow-xl shadow-cyan-100 transition-all flex items-center justify-center gap-3 uppercase text-sm tracking-widest active:scale-[0.98] disabled:opacity-30"
                         >
-                            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                            {isSaving ? 'Guardando...' : 'Guardar Test'}
-                        </button>
-                        <button className="p-4 border-2 border-slate-100 text-slate-400 hover:border-[#293b64] hover:text-[#293b64] rounded-2xl transition-all active:scale-95">
-                            <History size={20} />
+                            {isSaving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+                            {isSaving ? 'Procesando...' : 'Registrar en Historia'}
                         </button>
                     </div>
-                </div>
+                ) : (
+                    <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 overflow-y-auto max-h-[400px] animate-in fade-in duration-500">
+                        <h4 className="text-[#293b64] font-black text-xs uppercase mb-4 tracking-widest border-b pb-2">Últimos Resultados</h4>
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="text-[9px] text-slate-400 uppercase font-bold">
+                                    <th className="pb-3">Fecha</th>
+                                    <th className="pb-3">Ratio</th>
+                                    <th className="pb-3 text-right">Riesgo</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-xs">
+                                {historyData.map((h, i) => (
+                                    <tr key={i} className="border-b border-slate-200/50 last:border-0 font-medium">
+                                        <td className="py-3 text-slate-500">{new Date(h.testDate).toLocaleDateString()}</td>
+                                        <td className="py-3 font-bold text-[#293b64]">{h.nlrValue.toFixed(2)}</td>
+                                        <td className="py-3 text-right">
+                                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${getClinicalStatus(h.nlrValue).bg} ${getClinicalStatus(h.nlrValue).color}`}>
+                                                {h.riskLevel.split('_')[0]}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
 
-                {/* Columna 2: Visualizador Clínico */}
-                <div className="flex flex-col justify-center items-center bg-slate-50 rounded-[2.5rem] p-8 border border-dashed border-slate-200 shadow-inner">
+                {/* Visualización del Stress-o-Meter */}
+                <div className="bg-slate-50 rounded-[3rem] p-10 flex flex-col justify-center items-center border border-dashed border-slate-200 relative shadow-inner">
                     {result ? (
-                        <div className="w-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
-                            <div className="text-sm font-black text-[#293b64] uppercase tracking-tighter">Resultado del Ratio</div>
-                            <div className="text-7xl font-black text-[#293b64] tracking-tighter">{result}</div>
-
-                            <div className={`inline-block px-4 py-1 rounded-full text-[10px] font-black uppercase ${status.bg} ${status.color} border border-current shadow-sm`}>
-                                {status.label}
-                            </div>
-
-                            {/* Gráfico de Riesgo (The Visual Gauge) */}
-                            <div className="relative pt-8 w-full">
-                                <div className="h-4 w-full bg-gradient-to-r from-emerald-400 via-amber-400 via-orange-400 to-rose-500 rounded-full flex overflow-hidden shadow-inner">
-                                    {/* Visual markers for the gradient bands */}
-                                </div>
-                                {/* Aguja del indicador */}
-                                <div
-                                    className="absolute top-6 transition-all duration-1000 ease-out z-10"
-                                    style={{ left: `${Math.min(Math.max((result / 10) * 100, 0), 100)}%` }}
-                                >
-                                    <div className="w-1.5 h-10 bg-[#293b64] rounded-full shadow-lg" />
-                                    <div className="w-4 h-4 bg-[#293b64] -ml-[5px] -mt-1 rounded-full border-2 border-white shadow-md" />
-                                </div>
-                                <div className="flex justify-between text-[8px] font-bold text-slate-400 mt-4 px-1 uppercase tracking-tighter">
-                                    <span>0.0</span>
-                                    <span>Normal (1.5)</span>
-                                    <span>Mod (3.0)</span>
-                                    <span>Crítico (10.0+)</span>
+                        <div className="w-full text-center space-y-8 animate-in zoom-in duration-700">
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">NLR Score Actual</p>
+                                <h3 className="text-8xl font-black text-[#293b64] tracking-tighter">{result}</h3>
+                                <div className={`inline-flex items-center gap-2 px-6 py-2 rounded-full text-[11px] font-black uppercase ${getClinicalStatus(result).bg} ${getClinicalStatus(result).color} border border-current shadow-sm`}>
+                                    {result <= 3.0 ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+                                    {getClinicalStatus(result).label}
                                 </div>
                             </div>
 
-                            {result >= 3 && (
-                                <div className="mt-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex gap-3 text-left animate-in slide-in-from-bottom-2">
-                                    <AlertCircle className="text-rose-500 shrink-0" size={18} />
-                                    <p className="text-[10px] text-rose-700 font-medium leading-relaxed">
-                                        Atención: Relación elevada (NLR {result}). Sugiere inflamación sistémica significativa. Revise biomarcadores de fase aguda y considere protocolo de remoción de inflamatorios.
-                                    </p>
+                            {/* Stress-o-Meter Gauge */}
+                            <div className="w-full space-y-4 pt-6">
+                                <div className="relative h-6 bg-slate-200 rounded-full overflow-hidden shadow-inner flex">
+                                    <div className="w-[25%] h-full bg-emerald-400 border-r border-white/20" /> {/* 0-3 */}
+                                    <div className="w-[25%] h-full bg-yellow-400 border-r border-white/20" />  {/* 3-6 */}
+                                    <div className="w-[25%] h-full bg-orange-500 border-r border-white/20" /> {/* 6-9 */}
+                                    <div className="w-[25%] h-full bg-rose-600" />                          {/* 9-12 */}
+
+                                    {/* Needle */}
+                                    <div
+                                        className="absolute top-0 w-1.5 h-full bg-[#293b64] shadow-2xl transition-all duration-1000 ease-out z-20"
+                                        style={{ left: `${getClinicalStatus(result).width}%`, transform: 'translateX(-50%)' }}
+                                    />
                                 </div>
-                            )}
+                                <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-tighter px-1">
+                                    <span>Normal (1-3)</span>
+                                    <span className="text-orange-600 font-black">Estrés {'>'} 3</span>
+                                    <span>Crítico 9+</span>
+                                </div>
+                            </div>
                         </div>
                     ) : (
-                        <div className="text-center space-y-4 opacity-30 grayscale transition-all">
-                            <Activity size={60} className="mx-auto text-slate-400 animate-pulse" />
-                            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ingrese valores para analizar</p>
+                        <div className="text-center opacity-30 group">
+                            <Activity size={80} className="mx-auto text-slate-400 group-hover:scale-110 transition-transform duration-500" />
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mt-6">Sincronización Clínica Requerida</p>
                         </div>
                     )}
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function ClinicalInput({ label, value, onChange, placeholder }: any) {
+    return (
+        <div className="space-y-2">
+            <label className="text-[10px] font-black text-[#293b64] uppercase tracking-widest ml-2">{label}</label>
+            <div className="relative">
+                <input
+                    type="number"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={placeholder}
+                    className="w-full bg-white border-2 border-slate-100 rounded-3xl px-6 py-4 text-xl font-bold text-slate-800 outline-none focus:border-[#23bcef] focus:shadow-[0_0_20px_rgba(35,188,239,0.15)] transition-all"
+                />
+                <span className="absolute right-6 top-5 text-[10px] font-black text-slate-300 uppercase tracking-widest">Abs</span>
             </div>
         </div>
     );
