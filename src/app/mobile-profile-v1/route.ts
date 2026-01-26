@@ -49,6 +49,10 @@ export async function GET(req: Request) {
                     include: {
                         items: true
                     }
+                },
+                nlrTests: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
                 }
             }
         });
@@ -68,6 +72,7 @@ export async function GET(req: Request) {
             chronologicalAge: patient.chronologicalAge,
             biophysics: patient.biophysicsTests[0] || null,
             biochemistry: patient.biochemistryTests[0] || null,
+            latestNlr: patient.nlrTests[0] || null,
             guides: patient.guides,
             foodPlans: patient.foodPlans
         }, { headers: corsHeaders });

@@ -25,7 +25,7 @@ import BiophysicsHistoryView from '@/components/biophysics/biophysics-history-vi
 import PatientGuide from '@/components/patient-guide/PatientGuide';
 import GuideHistoryView from '@/components/patient-guide/GuideHistoryView';
 import ClinicalSummary from '@/components/patients/ClinicalSummary';
-import EdadBioquimicaTestView from '@/components/biochemistry/EdadBioquimicaTestView';
+import BiochemicalAgeTest from '@/components/medical/BiochemicalAgeTest';
 import BiochemistryHistoryView from '@/components/biochemistry/BiochemistryHistoryView';
 import GeneticTestView from '@/components/genetics/GeneticTestView';
 import OrthomolecularTestView from '@/components/orthomolecular/OrthomolecularTestView';
@@ -144,7 +144,7 @@ export default function PatientDetailPage() {
       case 'biofisica':
         return <EdadBiofisicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'bioquimica':
-        return <EdadBioquimicaTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
+        return <BiochemicalAgeTest patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'orthomolecular':
         return <OrthomolecularTestView patient={patient} onBack={() => setActiveTestView('main')} onTestComplete={refreshPatientData} />;
       case 'biofisica_history':
