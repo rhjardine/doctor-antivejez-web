@@ -16,7 +16,7 @@ const getNlrRiskLevel = (value: number): NlrRiskLevel => {
 };
 
 const corsHeaders = {
-    "Access-Control-Allow-Origin": "*", // Allow for now, can be restricted to patients app if needed
+    "Access-Control-Allow-Origin": "https://doctor-antivejez-web.onrender.com",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -28,10 +28,13 @@ export async function OPTIONS() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+        console.log('📦 DATA RECEIVED:', body);
+
         const { patientId, neutrophils, lymphocytes, testDate } = body;
 
         if (!patientId || !neutrophils || !lymphocytes) {
-            return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400, headers: corsHeaders });
+            console.error('❌ Mismatched data:', { patientId, neutrophils, lymphocytes });
+            return NextResponse.json({ error: 'Faltan datos requeridos (patientId, neutrófilos o linfocitos)' }, { status: 400, headers: corsHeaders });
         }
 
         const nlrValue = Number(neutrophils) / Number(lymphocytes);
@@ -49,8 +52,11 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json({ success: true, data: test }, { status: 201, headers: corsHeaders });
-    } catch (error) {
+    } catch (error: any) {
         console.error('🔥 Error saving NLR test:', error);
-        return NextResponse.json({ error: 'Error al guardar el test de NLR' }, { status: 500, headers: corsHeaders });
+        return NextResponse.json({
+            error: 'Error al guardar el test de NLR',
+            details: error.message || 'Error desconocido'
+        }, { status: 500, headers: corsHeaders });
     }
 }
