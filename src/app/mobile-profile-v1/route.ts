@@ -82,3 +82,45 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Error interno del servidor" }, { status: 500, headers: corsHeaders });
     }
 }
+
+export async function PATCH(req: Request) {
+    try {
+        const authHeader = req.headers.get("authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401, headers: corsHeaders });
+        }
+
+        const token = authHeader.split(" ")[1];
+        const payload = await verifyToken(token);
+
+        if (!payload) {
+            return NextResponse.json({ error: "Token inválido" }, { status: 401, headers: corsHeaders });
+        }
+
+        const { shareDataConsent } = await req.json();
+
+        // El ID del token es el ID del USUARIO, necesitamos encontrar al PACIENTE asociado
+        const patient = await db.patient.findFirst({
+            where: { userId: payload.id }
+        });
+
+        if (!patient) {
+            return NextResponse.json({ error: "Perfil de paciente no encontrado" }, { status: 404, headers: corsHeaders });
+        }
+
+        const updatedPatient = await db.patient.update({
+            where: { id: patient.id },
+            data: { shareDataConsent: !!shareDataConsent }
+        });
+
+        return NextResponse.json({
+            success: true,
+            consent: updatedPatient.shareDataConsent
+        }, { headers: corsHeaders });
+
+    } catch (error) {
+        console.error("Consent update error:", error);
+        return NextResponse.json({ error: "Error al actualizar consentimiento" }, { status: 500, headers: corsHeaders });
+    }
+}
+

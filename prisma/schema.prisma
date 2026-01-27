@@ -164,6 +164,7 @@ model Patient {
   bloodType           String
   email               String
   observations        String?
+  shareDataConsent    Boolean              @default(false)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 

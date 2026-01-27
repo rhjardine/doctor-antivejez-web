@@ -258,6 +258,65 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
         } as any
       };
 
+    case 'professional_analytics':
+      // 1. Core Metrics
+      const totalPatientsCount = await prisma.patient.count();
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const newPatientsThisMonth = await prisma.patient.count({
+        where: { createdAt: { gte: startOfMonth } }
+      });
+      const prevMonthGrowth = totalPatientsCount > 0 ? (newPatientsThisMonth / totalPatientsCount) * 100 : 0;
+
+      // 2. Bio-Age Delta (Aggregated/Anonymous)
+      const testsWithDelta = await prisma.biophysicsTest.findMany({
+        select: { chronologicalAge: true, biologicalAge: true }
+      });
+      const totalDelta = testsWithDelta.reduce((acc, t) => acc + (t.chronologicalAge - t.biologicalAge), 0);
+      const avgDelta = testsWithDelta.length > 0 ? totalDelta / testsWithDelta.length : 0;
+
+      // 3. Gender Distribution (groupBy)
+      const genderStats = await (prisma as any).patient.groupBy({
+        by: ['gender'],
+        _count: { gender: true },
+      });
+
+      const genderData = genderStats.map((stat: any) => ({
+        name: stat.gender || 'Otros',
+        value: stat._count.gender
+      }));
+
+      // 4. Trend: New vs Recurring (Mocking as requested for Google Stitch Style)
+      const trendData = [
+        { name: 'Sep', new: 40, recurring: 24 },
+        { name: 'Oct', new: 30, recurring: 13 },
+        { name: 'Nov', new: 20, recurring: 98 },
+        { name: 'Dec', new: 27, recurring: 39 },
+        { name: 'Jan', new: 18, recurring: 48 },
+      ];
+
+      // 5. Adherence Filtering (🔒 PRIVACY HANDSHAKE)
+      const adherenceTransactions = await (prisma as any).omicTransaction.aggregate({
+        where: {
+          patient: { shareDataConsent: true } // 🔒 STRICT PRIVACY FILTER
+        },
+        _avg: { pointsEarned: true }
+      });
+
+      return {
+        type: 'professional_analytics',
+        data: {
+          totalPatients: totalPatientsCount,
+          growth: Math.round(prevMonthGrowth),
+          avgDelta: Number(avgDelta.toFixed(1)),
+          genderData,
+          trendData,
+          avgAdherence: Math.round(adherenceTransactions._avg.pointsEarned || 0)
+        } as any
+      };
+
     default:
       throw new Error('Tipo de reporte no válido');
   }

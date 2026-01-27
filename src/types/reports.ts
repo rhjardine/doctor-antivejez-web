@@ -6,7 +6,18 @@ export type ReportType =
   | 'treatment_adherence'
   | 'patient_evolution'
   | 'professional_performance'
-  | 'ri_bio'; // ✅ NEW RI-Bio Report Type
+  | 'ri_bio'
+  | 'professional_analytics'; // ✅ NEW Professional Analytics
+
+export interface ProfessionalAnalyticsData {
+  totalPatients: number;
+  growth: number;
+  avgDelta: number;
+  genderData: Array<{ name: string, value: number }>;
+  trendData: Array<{ name: string, new: number, recurring: number }>;
+  avgAdherence: number;
+}
+
 
 export type TimeRange =
   | 'daily'
@@ -47,5 +58,5 @@ export interface RiBioReport {
 
 export type ReportData = {
   type: ReportType;
-  data: PatientReport[] | ProfessionalReport[] | RiBioReport; // Updated Union
+  data: PatientReport[] | ProfessionalReport[] | RiBioReport | ProfessionalAnalyticsData;
 };

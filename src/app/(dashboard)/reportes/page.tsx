@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { FaFilePdf, FaFilter, FaUsers, FaChartLine, FaUserMd, FaAward, FaCalendarAlt } from 'react-icons/fa';
 import { toast } from 'sonner';
 import { generateReport } from '@/lib/actions/reports.actions';
@@ -20,7 +21,11 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  Radar
+  Radar,
+  AreaChart,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 
 const reportOptions = [
@@ -28,6 +33,8 @@ const reportOptions = [
   { id: 'treatment_adherence', label: 'Adherencia al Tratamiento', icon: FaAward },
   { id: 'patient_evolution', label: 'Evolución de Pacientes', icon: FaChartLine },
   { id: 'professional_performance', label: 'Uso por Profesionales', icon: FaUserMd },
+  { id: 'ri_bio', label: 'Ecosistema RI-Bio', icon: FaChartLine },
+  { id: 'professional_analytics', label: 'Analítica Profesional', icon: FaChartLine },
 ];
 
 const timeRangeOptions = [
@@ -42,12 +49,17 @@ const timeRangeOptions = [
 ];
 
 export default function ReportesPage() {
-  const [selectedReport, setSelectedReport] = useState<ReportType>('patient_attendance');
+  const { data: session } = useSession();
+  const [selectedReport, setSelectedReport] = useState<ReportType>('professional_analytics');
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('monthly');
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleGenerateReport = async () => {
+    if (session?.user?.role !== 'MEDICO') {
+      toast.error('Acceso denegado: Solo personal médico puede generar analíticas.');
+      return;
+    }
     setLoading(true);
     setReportData(null);
     try {
@@ -154,6 +166,114 @@ export default function ReportesPage() {
               <br /><br />
               <span className="font-bold text-[#293b64]">Recomendación:</span> Siguiente ciclo debería enfocar en {stats.radarData.sort((a: any, b: any) => a.A - b.A)[0]?.subject} para equilibrar la eficiencia sistémica.
             </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Reporte Analítica Profesional (Stitch Style)
+    if (type === 'professional_analytics') {
+      const stats = data as any;
+      const GENDER_COLORS = ['#fb7185', '#23bcef', '#94a3b8']; // Rose-Pink, Cyan, Slate
+      const TREND_COLORS = { new: '#23bcef', recurring: '#293b64' };
+
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          {/* 1. Metric Row */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pacientes Totales</h3>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-black text-[#293b64]">{stats.totalPatients}</span>
+                <span className="text-xs font-bold text-emerald-500 mb-1">+{stats.growth}%</span>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Delta Bio-Age (Promedio)</h3>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-black text-[#10b981]">-{stats.avgDelta}</span>
+                <span className="text-xs font-bold text-slate-400 mb-1">Años</span>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Adherencia Group (Consented)</h3>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-black text-[#23bcef]">{stats.avgAdherence}%</span>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 bg-[#293b64] text-white">
+              <h3 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Crecimiento Clínico</h3>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-black uppercase">Normal</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Trend AreaChart: New vs Recurring */}
+            <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <h3 className="text-sm font-black text-[#293b64] uppercase tracking-tighter mb-6">Tendencia: Pacientes Nuevos vs. Recurrentes</h3>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={stats.trendData}>
+                    <defs>
+                      <linearGradient id="gradientNew" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={TREND_COLORS.new} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={TREND_COLORS.new} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gradientRec" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={TREND_COLORS.recurring} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={TREND_COLORS.recurring} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                    <Area type="monotone" dataKey="new" name="Nuevos" stroke={TREND_COLORS.new} fillOpacity={1} fill="url(#gradientNew)" strokeWidth={3} />
+                    <Area type="monotone" dataKey="recurring" name="Recurrentes" stroke={TREND_COLORS.recurring} fillOpacity={1} fill="url(#gradientRec)" strokeWidth={3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Gender Doughnut Chart */}
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
+              <h3 className="text-sm font-black text-[#293b64] uppercase tracking-tighter self-start mb-6">Distribución por Género</h3>
+              <div className="h-64 w-full relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stats.genderData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={8}
+                      dataKey="value"
+                    >
+                      {stats.genderData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={GENDER_COLORS[index % GENDER_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-black text-[#293b64]">{stats.totalPatients}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
+                </div>
+              </div>
+              <div className="flex gap-4 mt-4">
+                {stats.genderData.map((entry: any, index: number) => (
+                  <div key={entry.name} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: GENDER_COLORS[index % GENDER_COLORS.length] }}></div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">{entry.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       );
