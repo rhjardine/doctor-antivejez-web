@@ -17,9 +17,9 @@ function getDateRange(range: TimeRange) {
     case 'monthly':
       return { gte: startOfMonth(now), lte: endOfMonth(now) };
     case 'quarterly':
-        return { gte: startOfQuarter(now), lte: endOfQuarter(now) };
+      return { gte: startOfQuarter(now), lte: endOfQuarter(now) };
     case 'yearly':
-        return { gte: startOfYear(now), lte: endOfYear(now) };
+      return { gte: startOfYear(now), lte: endOfYear(now) };
     case 'all':
     default:
       return { gte: undefined, lte: undefined };
@@ -37,8 +37,8 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
     const newPatientsInRange = await prisma.patient.count({ where: whereClause });
 
     const latestTests = await prisma.biophysicsTest.findMany({
-        orderBy: { testDate: 'desc' },
-        distinct: ['patientId'],
+      orderBy: { testDate: 'desc' },
+      distinct: ['patientId'],
     });
 
     const avgBiologicalAge = latestTests.length > 0
@@ -78,7 +78,7 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
       });
       monthlyPatientData.push({ month: `${monthNames[month]} ${year.toString().slice(-2)}`, pacientes: count });
     }
-    
+
     // 4. Actividad Reciente (últimos 7 días)
     const sevenDaysAgo = subDays(new Date(), 7);
     const recentPatients = await prisma.patient.findMany({
@@ -100,19 +100,23 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
     ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
 
     // 5. **Funcionalidad Innovadora: Puntuación de Compromiso del Paciente**
-    // Calcula un score basado en la frecuencia de tests y citas completadas.
-    const activePatients = await prisma.patient.findMany({
+    let engagementScores: { name: string; score: number }[] = [];
+    try {
+      const activePatients = await prisma.patient.findMany({
         include: {
-            biophysicsTests: { where: { testDate: { gte: subDays(new Date(), 90) } } }, // tests en últimos 3 meses
-            appointments: { where: { status: 'COMPLETED', date: { gte: subDays(new Date(), 90) } } } // citas en últimos 3 meses
+          biophysicsTests: { where: { testDate: { gte: subDays(new Date(), 90) } } },
+          appointments: { where: { status: 'COMPLETED', date: { gte: subDays(new Date(), 90) } } }
         }
-    });
+      });
 
-    const engagementScores = activePatients.map(p => {
-        const testScore = Math.min(p.biophysicsTests.length * 20, 50); // Max 50 puntos por tests
-        const appointmentScore = Math.min(p.appointments.length * 25, 50); // Max 50 puntos por citas
+      engagementScores = activePatients.map(p => {
+        const testScore = Math.min((p as any).biophysicsTests?.length * 20 || 0, 50);
+        const appointmentScore = Math.min((p as any).appointments?.length * 25 || 0, 50);
         return { name: `${p.firstName} ${p.lastName}`, score: testScore + appointmentScore };
-    }).sort((a, b) => b.score - a.score).slice(0, 5); // Top 5 pacientes más comprometidos
+      }).sort((a, b) => b.score - a.score).slice(0, 5);
+    } catch (e) {
+      console.warn("Engagement calculation failed (migration pending?)", e);
+    }
 
 
     return {

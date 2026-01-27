@@ -195,6 +195,7 @@ export default function DashboardPage() {
           growth="+12% este mes"
           icon={<Users className="text-blue-500" size={20} />}
           iconBg="bg-blue-50"
+          isPrivacyMode={isPrivacyMode}
         />
         <MetricCard
           variants={itemVariants}
@@ -203,6 +204,7 @@ export default function DashboardPage() {
           growth="+5% vs ayer"
           icon={<UserPlus className="text-emerald-500" size={20} />}
           iconBg="bg-emerald-50"
+          isPrivacyMode={isPrivacyMode}
         />
         <MetricCard
           variants={itemVariants}
@@ -211,6 +213,7 @@ export default function DashboardPage() {
           growth="-2.4 años promedio"
           icon={<Activity className="text-purple-500" size={20} />}
           iconBg="bg-purple-50"
+          isPrivacyMode={isPrivacyMode}
         />
         <MetricCard
           variants={itemVariants}
@@ -220,6 +223,7 @@ export default function DashboardPage() {
           icon={<TrendingUp className="text-white" size={20} />}
           iconBg="bg-[#23bcef]"
           isSpecial
+          isPrivacyMode={isPrivacyMode}
         />
 
         {/* --- MAIN CHARTS (Bento Row 2) --- */}
@@ -390,7 +394,7 @@ export default function DashboardPage() {
 
 // --- SUB-COMPONENTS ---
 
-function MetricCard({ label, value, growth, icon, iconBg, isSpecial, variants }: any) {
+function MetricCard({ label, value, growth, icon, iconBg, isSpecial, variants, isPrivacyMode }: any) {
   return (
     <motion.div
       variants={variants}
@@ -403,12 +407,12 @@ function MetricCard({ label, value, growth, icon, iconBg, isSpecial, variants }:
       <div className="space-y-1">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{label}</p>
         <div className="flex items-baseline gap-2">
-          <h4 className="text-4xl font-black text-[#293b64] tracking-tighter">{value}</h4>
+          <h4 className={`text-4xl font-black text-[#293b64] tracking-tighter transition-all duration-500 ${isPrivacyMode ? 'blur-lg select-none scale-95 opacity-50' : ''}`}>{value}</h4>
         </div>
       </div>
 
       <div className={`mt-4 pt-4 border-t border-slate-50 flex items-center justify-between`}>
-        <span className={`text-[10px] font-black uppercase tracking-widest ${isSpecial ? 'text-[#23bcef]' : 'text-emerald-500'}`}>
+        <span className={`text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${isPrivacyMode ? 'blur-sm select-none opacity-50' : isSpecial ? 'text-[#23bcef]' : 'text-emerald-500'}`}>
           {growth}
         </span>
         <div className="h-1.5 w-1.5 rounded-full bg-slate-100 group-hover:bg-[#23bcef] transition-colors"></div>

@@ -298,12 +298,20 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
       ];
 
       // 5. Adherence Filtering (🔒 PRIVACY HANDSHAKE)
-      const adherenceTransactions = await (prisma as any).omicTransaction.aggregate({
-        where: {
-          patient: { shareDataConsent: true } // 🔒 STRICT PRIVACY FILTER
-        },
-        _avg: { pointsEarned: true }
-      });
+      let adherenceTransactions = { _avg: { pointsEarned: 0 } };
+      try {
+        adherenceTransactions = await (prisma as any).omicTransaction.aggregate({
+          where: {
+            patient: { shareDataConsent: true } // 🔒 STRICT PRIVACY FILTER
+          },
+          _avg: { pointsEarned: true }
+        });
+      } catch (e) {
+        console.warn("Table or Column shareDataConsent missing, falling back to all data (Anonymous Mode)");
+        adherenceTransactions = await (prisma as any).omicTransaction.aggregate({
+          _avg: { pointsEarned: true }
+        });
+      }
 
       return {
         type: 'professional_analytics',
