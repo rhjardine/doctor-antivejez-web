@@ -179,8 +179,49 @@ model Patient {
 
   // ✅ ADICIÓN 2/3: Nueva relación para los tests de NLR
   nlrTests            NlrTest[]
+  omicTransactions    OmicTransaction[]
 
   @@map("patients")
+}
+
+// =================================================================
+// Modelos de RI-Bio (Adherencia y Omics)
+// =================================================================
+enum OmicType {
+  DETOX
+  NUTRITION
+  CELLULAR
+  MINDSET
+}
+
+enum DataSource {
+  MANUAL
+  CLINIC
+  WEARABLE
+  AI_AGENT
+}
+
+model OmicTransaction {
+  id              String   @id @default(cuid())
+  patientId       String
+  type            OmicType
+  pointsEarned    Int
+  pointsPotential Int      @default(100)
+  
+  // ✅ MEJORAS 2026:
+  source          DataSource @default(MANUAL) // MANUAL o SYNC (wearables)
+  metadata        Json?      // Para guardar detalles: { "stepCount": 10000, "fastingHours": 16 }
+  notes           String?    // Comentario breve del paciente
+  
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt // Crucial para auditoría médica
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([date])
+  @@map("omic_transactions")
 }
 
 model Appointment {

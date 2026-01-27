@@ -27,8 +27,8 @@ function getStartDate(range: TimeRange): Date {
       const quarter = Math.floor(now.getMonth() / 3);
       return new Date(now.getFullYear(), quarter * 3, 1);
     case 'semiannual':
-        const semester = now.getMonth() < 6 ? 0 : 6;
-        return new Date(now.getFullYear(), semester, 1);
+      const semester = now.getMonth() < 6 ? 0 : 6;
+      return new Date(now.getFullYear(), semester, 1);
     case 'annual':
       return new Date(now.getFullYear(), 0, 1);
     default:
@@ -86,15 +86,15 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
         },
         take: 10,
       });
-       return { type: 'treatment_adherence', data: adherentPatients.map(p => ({...p, testsCount: p._count.biophysicsTests})) as PatientReport[] };
+      return { type: 'treatment_adherence', data: adherentPatients.map(p => ({ ...p, testsCount: p._count.biophysicsTests })) as PatientReport[] };
 
 
     case 'patient_evolution':
       const allPatientsWithTests = await prisma.patient.findMany({
         where: {
-            biophysicsTests: {
-                some: {} // Asegura que el paciente tenga al menos un test
-            }
+          biophysicsTests: {
+            some: {} // Asegura que el paciente tenga al menos un test
+          }
         },
         include: {
           biophysicsTests: {
@@ -116,7 +116,8 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
       return { type: 'patient_evolution', data: evolutionData as PatientReport[] };
 
     case 'professional_performance':
-       const professionals = await prisma.user.findMany({
+      const professionals = await prisma.user.findMany({
+        // ... (existing logic)
         where: {
           role: 'MEDICO',
           patients: {
@@ -152,7 +153,110 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
         take: 10,
       });
 
-      return { type: 'professional_performance', data: professionals.map(p => ({...p, formsUsed: p._count.patients})) as ProfessionalReport[] };
+      return { type: 'professional_performance', data: professionals.map(p => ({ ...p, formsUsed: p._count.patients })) as ProfessionalReport[] };
+
+    case 'ri_bio':
+      // 1. Fetch Adherence Data (Omics)
+      // Bypass Prisma Client type check for newly added model
+      const omicTransactions = await (prisma as any).omicTransaction.findMany({
+        where: { date: { gte: startDate } },
+        orderBy: { date: 'asc' }
+      });
+
+      // 2. Fetch Rejuvenation Data (BioTests)
+      const tests = await prisma.biophysicsTest.findMany({
+        where: { testDate: { gte: startDate } },
+        select: { testDate: true, chronologicalAge: true, biologicalAge: true },
+        orderBy: { testDate: 'asc' }
+      });
+
+      // 3. Aggregate by Week (Simplified for visualization)
+      const weeks: Record<string, { earned: number, potential: number, rejuvenation: number, count: number }> = {};
+
+      // Process Omics
+      omicTransactions.forEach((t: any) => {
+        const weekKey = new Date(t.date).toISOString().slice(0, 10); // Daily aggregation
+        if (!weeks[weekKey]) weeks[weekKey] = { earned: 0, potential: 0, rejuvenation: 0, count: 0 };
+        weeks[weekKey].earned += t.pointsEarned;
+        weeks[weekKey].potential += t.pointsPotential;
+      });
+
+      // Process BioTests
+      let totalRejuvenationYears = 0;
+      tests.forEach((t) => {
+        const weekKey = new Date(t.testDate).toISOString().slice(0, 10);
+        const reversal = t.chronologicalAge - t.biologicalAge;
+        if (reversal > 0) {
+          if (!weeks[weekKey]) weeks[weekKey] = { earned: 0, potential: 0, rejuvenation: 0, count: 0 };
+          weeks[weekKey].rejuvenation += reversal;
+          weeks[weekKey].count += 1;
+          totalRejuvenationYears += reversal;
+        }
+      });
+
+      // 4. Calculate Global Metrics
+      const totalPointsEarned = omicTransactions.reduce((acc: number, cur: any) => acc + cur.pointsEarned, 0);
+      const totalPointsPotential = omicTransactions.reduce((acc: number, cur: any) => acc + cur.pointsPotential, 0);
+      const globalAdherence = totalPointsPotential > 0 ? (totalPointsEarned / totalPointsPotential) * 100 : 0;
+
+      // 5. Structure Chart Data
+      const chartData = Object.keys(weeks).sort().map(date => {
+        const w = weeks[date];
+        const adherence = w.potential > 0 ? (w.earned / w.potential) * 100 : 0;
+        const avgRejuvenation = w.count > 0 ? w.rejuvenation / w.count : 0;
+        return { date, adherence: Math.round(adherence), rejuvenation: Number(avgRejuvenation.toFixed(2)) };
+      });
+
+      // 6. Calculate Correlation Coefficient (Pearson r)
+      const correlatedPoints = chartData.filter(d => d.adherence > 0 && d.rejuvenation > 0);
+      let correlation = 0;
+      if (correlatedPoints.length > 2) {
+        const n = correlatedPoints.length;
+        const sumX = correlatedPoints.reduce((acc, d) => acc + d.adherence, 0);
+        const sumY = correlatedPoints.reduce((acc, d) => acc + d.rejuvenation, 0);
+        const sumXY = correlatedPoints.reduce((acc, d) => acc + (d.adherence * d.rejuvenation), 0);
+        const sumX2 = correlatedPoints.reduce((acc, d) => acc + (d.adherence * d.adherence), 0);
+        const sumY2 = correlatedPoints.reduce((acc, d) => acc + (d.rejuvenation * d.rejuvenation), 0);
+
+        const numerator = (n * sumXY) - (sumX * sumY);
+        const denominator = Math.sqrt(((n * sumX2) - (sumX ** 2)) * ((n * sumY2) - (sumY ** 2)));
+        correlation = denominator !== 0 ? numerator / denominator : 0;
+      }
+
+      // 7. Radar Data (4R Efficiency)
+      const rTypes = { 'DETOX': 'Remoción', 'NUTRITION': 'Restauración', 'CELLULAR': 'Renovación', 'MINDSET': 'Revitalización' };
+      const radarMap: Record<string, { earned: number, potential: number }> = {};
+
+      omicTransactions.forEach((t: any) => {
+        const label = rTypes[t.type as keyof typeof rTypes] || t.type;
+        if (!radarMap[label]) radarMap[label] = { earned: 0, potential: 0 };
+        radarMap[label].earned += t.pointsEarned;
+        radarMap[label].potential += t.pointsPotential;
+      });
+
+      const radarData = Object.keys(radarMap).map(subject => {
+        const d = radarMap[subject];
+        return {
+          subject,
+          A: d.potential > 0 ? Math.round((d.earned / d.potential) * 100) : 0,
+          fullMark: 100
+        };
+      });
+
+      if (radarData.length === 0) {
+        ['Remoción', 'Restauración', 'Renovación', 'Revitalización'].forEach(r => radarData.push({ subject: r, A: 0, fullMark: 100 }));
+      }
+
+      return {
+        type: 'ri_bio',
+        data: {
+          correlation: Number(correlation.toFixed(2)),
+          globalAdherence: Math.round(globalAdherence),
+          rejuvenationYears: Number(totalRejuvenationYears.toFixed(1)),
+          chartData,
+          radarData
+        } as any
+      };
 
     default:
       throw new Error('Tipo de reporte no válido');

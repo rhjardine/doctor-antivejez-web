@@ -1,24 +1,23 @@
-import { SignJWT, jwtVerify } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 
-const secretString = process.env.NEXTAUTH_SECRET || 'development-secret-key-min-32-chars-long';
-if (!process.env.NEXTAUTH_SECRET && process.env.NODE_ENV === 'production') {
-    throw new Error('NEXTAUTH_SECRET is not defined in production environment');
-}
-const secret = new TextEncoder().encode(secretString);
-
-export const signToken = async (payload: any) => {
-    return await new SignJWT(payload)
+export async function signToken(payload: any) {
+    const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+    return new SignJWT(payload)
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
-        .setExpirationTime('30d') // Token válido por 30 días para mobile
+        .setExpirationTime('30d')
         .sign(secret);
-};
+}
 
-export const verifyToken = async (token: string) => {
+export async function verifyToken(token: string | undefined) {
+    if (!token) return null;
+
     try {
+        const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
         const { payload } = await jwtVerify(token, secret);
-        return payload as { id: string; role: string };
+        return payload as any;
     } catch (error) {
+        console.error('JWT Verification Error:', error);
         return null;
     }
-};
+}

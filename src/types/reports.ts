@@ -5,7 +5,8 @@ export type ReportType =
   | 'patient_attendance'
   | 'treatment_adherence'
   | 'patient_evolution'
-  | 'professional_performance';
+  | 'professional_performance'
+  | 'ri_bio'; // ✅ NEW RI-Bio Report Type
 
 export type TimeRange =
   | 'daily'
@@ -27,7 +28,24 @@ export interface ProfessionalReport extends User {
   formsUsed?: number;
 }
 
+// ✅ Estructura de Datos para el Reporte RI-Bio
+export interface RiBioReport {
+  correlation: number; // Coeficiente r (-1 a 1)
+  globalAdherence: number; // Porcentaje (0-100)
+  rejuvenationYears: number; // Total años revertidos
+  chartData: Array<{
+    date: string;
+    adherence: number;
+    rejuvenation: number;
+  }>;
+  radarData: Array<{
+    subject: string; // 'Remoción', 'Restauración', etc.
+    A: number; // Eficiencia Actual
+    fullMark: number;
+  }>;
+}
+
 export type ReportData = {
   type: ReportType;
-  data: PatientReport[] | ProfessionalReport[];
+  data: PatientReport[] | ProfessionalReport[] | RiBioReport; // Updated Union
 };
