@@ -4,7 +4,7 @@ import { signToken } from "@/lib/jwt";
 import bcrypt from "bcryptjs";
 
 const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "https://doctorantivejez-patients.onrender.com",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
@@ -52,16 +52,7 @@ export async function POST(req: Request) {
 
         console.log('✅ PATIENT FOUND, CHECKING PASSWORD...');
 
-        const isRichard = identification === '12431453';
-        const isRichardPass = password === '123456';
-
-        let isMatch = false;
-        if (isRichard && isRichardPass) {
-            console.log('✅ EMERGENCY BYPASS: Access granted for Richard Jardine');
-            isMatch = true;
-        } else {
-            isMatch = await bcrypt.compare(password, patient.user.password);
-        }
+        const isMatch = await bcrypt.compare(password, patient.user.password);
 
         console.log('🔐 PASSWORD MATCH RESULT:', isMatch);
 
