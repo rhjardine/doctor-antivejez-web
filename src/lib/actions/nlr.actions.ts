@@ -34,16 +34,39 @@ export async function saveNlrTest(params: SaveNlrTestParams) {
     const nlrValue = parseFloat((neutrophils / lymphocytes).toFixed(2));
     const riskLevel = determineNlrRiskLevel(nlrValue);
 
-    const newTest = await prisma.nlrTest.create({
-      data: {
-        patientId,
-        neutrophils,
-        lymphocytes,
-        nlrValue,
-        riskLevel,
-        testDate,
-      },
+    // QUOTA GUARD CHECK
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: { user: true }
     });
+
+    if (!patient || !patient.user) {
+      return { success: false, error: "Error de integridad: Paciente o Médico no encontrados." };
+    }
+
+    const doctor = patient.user;
+    const isNonAdmin = doctor.role !== 'ADMIN';
+
+    if (isNonAdmin && doctor.quotaUsed >= doctor.quotaMax) {
+      return { success: false, error: "Quota Exhausted: Límite de formularios alcanzado." };
+    }
+
+    const [updatedUser, newTest] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: doctor.id },
+        data: { quotaUsed: isNonAdmin ? { increment: 1 } : undefined }
+      }),
+      prisma.nlrTest.create({
+        data: {
+          patientId,
+          neutrophils,
+          lymphocytes,
+          nlrValue,
+          riskLevel,
+          testDate,
+        },
+      })
+    ]);
 
     revalidatePath(`/historias/${patientId}`);
 

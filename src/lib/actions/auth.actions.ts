@@ -8,7 +8,7 @@ const signUpSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   name: z.string().min(1, 'El nombre es requerido'),
-  role: z.enum(['MEDICO', 'ADMINISTRATIVO']).default('MEDICO'),
+  role: z.enum(['MEDICO', 'ADMIN']).default('MEDICO'),
 });
 
 const signInSchema = z.object({

@@ -167,7 +167,15 @@ export default function PatientDetailPage() {
           </div>
           <div className="flex-1">
             <div className="flex justify-between items-start mb-3">
-              <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
+                {patient.user && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                    <FaUser className="mr-1 h-3 w-3" />
+                    Dr/a. {patient.user.name}
+                  </span>
+                )}
+              </div>
               <button onClick={() => router.push('/historias')} className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm">
                 <FaArrowLeft />
                 <span>Volver a Pacientes</span>

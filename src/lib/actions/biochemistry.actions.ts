@@ -23,7 +23,7 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
     const filledFields = Object.values(formValues).filter(
       value => typeof value === 'number' && !isNaN(value)
     );
-    
+
     if (filledFields.length === 0) {
       return { success: false, error: 'Debe completar al menos un biomarcador para guardar el test.' };
     }
@@ -56,11 +56,34 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
       ...mappedPartialAges, // Usar las edades parciales mapeadas
     };
 
-    // 4. Crear el nuevo registro del test
-    await prisma.biochemistryTest.create({
-      data: dbData,
+    // 3. QUOTA GUARD CHECK + PREPARE DATA
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: { user: true }
     });
-    
+
+    if (!patient || !patient.user) {
+      throw new Error("Error de integridad: Paciente o Médico no encontrados.");
+    }
+
+    const doctor = patient.user;
+    const isNonAdmin = doctor.role !== 'ADMIN';
+
+    if (isNonAdmin && doctor.quotaUsed >= doctor.quotaMax) {
+      throw new Error("Quota Exhausted: Has alcanzado tu límite de formularios.");
+    }
+
+    // 4. Crear el nuevo registro del test CON incremento de cuota (Transacción)
+    const [updatedUser, newTest] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: doctor.id },
+        data: { quotaUsed: isNonAdmin ? { increment: 1 } : undefined }
+      }),
+      prisma.biochemistryTest.create({
+        data: dbData,
+      })
+    ]);
+
     // 5. Revalidar la caché para que la UI se actualice
     revalidatePath(`/historias/${patientId}`);
 

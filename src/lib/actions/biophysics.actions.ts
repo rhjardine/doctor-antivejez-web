@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/db';
 import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/types/biophysics';
 // CORRECCIÓN: Se importa la función correcta y completa que has desarrollado.
-import { calculateBiofisicaResults } from '@/utils/biofisica-calculations'; 
+import { calculateBiofisicaResults } from '@/utils/biofisica-calculations';
 import { revalidatePath } from 'next/cache';
 import { Gender } from '@prisma/client';
 
@@ -36,46 +36,77 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
     );
     // ===== FIN DE LA CORRECCIÓN CLAVE =====
 
-    // 3. Guardar el nuevo test en la base de datos
-    const newTest = await prisma.biophysicsTest.create({
-      data: {
-        patientId,
-        chronologicalAge,
-        gender,
-        isAthlete,
-        testDate: new Date(),
-        biologicalAge: calculationResult.biologicalAge,
-        differentialAge: calculationResult.differentialAge,
-        fatPercentage: formValues.fatPercentage,
-        bmi: formValues.bmi,
-        digitalReflexes: formValues.digitalReflexes
-          ? ((formValues.digitalReflexes.high || 0) +
+    // 2. BUSCAR PACIENTE Y SU MÉDICO (Dueño) PARA VALIDAR CUOTA
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: { user: true }
+    });
+
+    if (!patient || !patient.user) {
+      throw new Error("Error de integridad: Paciente o Médico no encontrados.");
+    }
+
+    const doctor = patient.user;
+
+    // VALIDACIÓN DE CUOTA (QUOTA GUARD)
+    // Solo aplica si NO es ADMIN (asumimos ADMIN tiene acceso ilimitado o no se le descuenta)
+    // El requerimiento dice: "Every time ... saved by a non-ADMIN user, increment quotaUsed by 1."
+    const isNonAdmin = doctor.role !== 'ADMIN'; // Asumiendo 'ADMIN' es el rol de admin supremo
+
+    if (isNonAdmin) {
+      if (doctor.quotaUsed >= doctor.quotaMax) {
+        throw new Error("Quota Exhausted: Has alcanzado tu límite de formularios. Contacta al administrador para recargar.");
+      }
+    }
+
+    // 3. Guardar el nuevo test en la base de datos CON incremento de cuota (Transacción)
+    const [updatedUser, newTest] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: doctor.id },
+        data: {
+          quotaUsed: isNonAdmin ? { increment: 1 } : undefined
+        }
+      }),
+      prisma.biophysicsTest.create({
+        data: {
+          patientId,
+          chronologicalAge,
+          gender,
+          isAthlete,
+          testDate: new Date(),
+          biologicalAge: calculationResult.biologicalAge,
+          differentialAge: calculationResult.differentialAge,
+          fatPercentage: formValues.fatPercentage,
+          bmi: formValues.bmi,
+          digitalReflexes: formValues.digitalReflexes
+            ? ((formValues.digitalReflexes.high || 0) +
               (formValues.digitalReflexes.long || 0) +
               (formValues.digitalReflexes.width || 0)) / 3
-          : undefined,
-        visualAccommodation: formValues.visualAccommodation,
-        staticBalance: formValues.staticBalance
-          ? ((formValues.staticBalance.high || 0) +
+            : undefined,
+          visualAccommodation: formValues.visualAccommodation,
+          staticBalance: formValues.staticBalance
+            ? ((formValues.staticBalance.high || 0) +
               (formValues.staticBalance.long || 0) +
               (formValues.staticBalance.width || 0)) / 3
-          : undefined,
-        skinHydration: formValues.skinHydration,
-        systolicPressure: formValues.systolicPressure,
-        diastolicPressure: formValues.diastolicPressure,
-        fatAge: calculationResult.partialAges.fatAge,
-        bmiAge: calculationResult.partialAges.bmiAge,
-        reflexesAge: calculationResult.partialAges.reflexesAge,
-        visualAge: calculationResult.partialAges.visualAge,
-        balanceAge: calculationResult.partialAges.balanceAge,
-        hydrationAge: calculationResult.partialAges.hydrationAge,
-        systolicAge: calculationResult.partialAges.systolicAge,
-        diastolicAge: calculationResult.partialAges.diastolicAge,
-      },
-    });
+            : undefined,
+          skinHydration: formValues.skinHydration,
+          systolicPressure: formValues.systolicPressure,
+          diastolicPressure: formValues.diastolicPressure,
+          fatAge: calculationResult.partialAges.fatAge,
+          bmiAge: calculationResult.partialAges.bmiAge,
+          reflexesAge: calculationResult.partialAges.reflexesAge,
+          visualAge: calculationResult.partialAges.visualAge,
+          balanceAge: calculationResult.partialAges.balanceAge,
+          hydrationAge: calculationResult.partialAges.hydrationAge,
+          systolicAge: calculationResult.partialAges.systolicAge,
+          diastolicAge: calculationResult.partialAges.diastolicAge,
+        },
+      })
+    ]);
 
     // 4. Revalidar rutas
     revalidatePath('/dashboard');
-    revalidatePath(`/historias/${patientId}`); 
+    revalidatePath(`/historias/${patientId}`);
 
     // 5. Devolver los datos serializados para que el cliente los muestre
     const serializableData = {
@@ -85,7 +116,7 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
     };
 
     return { success: true, data: serializableData };
-    
+
   } catch (error) {
     console.error('Error en calculateAndSaveBiophysicsTest:', error);
     const errorMessage = error instanceof Error ? error.message : 'Ocurrió un error desconocido.';
@@ -151,8 +182,7 @@ export async function getBiophysicsTestHistory(patientId: string) {
       testDate: test.testDate.toISOString(),
     }));
     return { success: true, tests: serializableTests };
-  } catch (error)
-  {
+  } catch (error) {
     console.error('Error obteniendo historial de tests:', error);
     return { success: false, error: 'Error al obtener el historial', tests: [] };
   }

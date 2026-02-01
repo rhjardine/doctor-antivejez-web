@@ -14,8 +14,14 @@ datasource db {
 // ENUMS
 // =================================================================
 enum Role {
+  ADMIN
   MEDICO
-  ADMINISTRATIVO
+  COACH
+}
+
+enum UserStatus {
+  ACTIVO
+  INACTIVO
 }
 
 enum Gender {
@@ -121,6 +127,9 @@ model User {
   image         String?
   password      String?
   role          Role      @default(MEDICO)
+  status        UserStatus @default(ACTIVO)
+  quotaMax      Int       @default(0)
+  quotaUsed     Int       @default(0)
   accounts      Account[]
   sessions      Session[]
   patients      Patient[]

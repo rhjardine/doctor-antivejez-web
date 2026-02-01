@@ -48,8 +48,8 @@ export const authOptions: NextAuthOptions = {
           console.log("✅ [Auth] Usuario encontrado:", user.id);
 
           if (!user.password) {
-             console.log("❌ [Auth] El usuario no tiene contraseña (quizás usa Google login)");
-             return null;
+            console.log("❌ [Auth] El usuario no tiene contraseña (quizás usa Google login)");
+            return null;
           }
 
           const isPasswordValid = await bcrypt.compare(
@@ -62,6 +62,13 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // ===== INICIO: Validar Estatus =====
+          if (user.status === 'INACTIVO') {
+            console.log("⛔ [Auth] Usuario INACTIVO:", credentials.email);
+            throw new Error("Tu cuenta está inactiva. Contacta al administrador.");
+          }
+          // ===== FIN: Validar Estatus =====
+
           console.log("✅ [Auth] Login exitoso para:", user.name);
 
           return {
@@ -72,8 +79,8 @@ export const authOptions: NextAuthOptions = {
             image: user.image,
           };
         } catch (error) {
-           console.error("🔥 [Auth] Error CRÍTICO de conexión a DB:", error);
-           return null;
+          console.error("🔥 [Auth] Error CRÍTICO de conexión a DB:", error);
+          return null;
         }
         // --- DEBUGGING LOGS END ---
       },

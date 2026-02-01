@@ -39,7 +39,7 @@ export async function createPatient(formData: PatientFormData & { userId: string
         }
       }
     }
-    
+
     // Se mantiene el error genérico para otros casos.
     return { success: false, error: 'Error al crear el paciente' };
   }
@@ -111,7 +111,7 @@ export async function getPatientDetails(id: string) {
           },
         },
         appointments: {
-            orderBy: { date: 'asc' },
+          orderBy: { date: 'asc' },
         }
       },
     });
@@ -150,13 +150,13 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
           },
           appointments: {
             where: {
-                date: {
-                    gte: new Date()
-                },
-                status: 'SCHEDULED'
+              date: {
+                gte: new Date()
+              },
+              status: 'SCHEDULED'
             },
             orderBy: {
-                date: 'asc'
+              date: 'asc'
             },
             take: 1
           }
@@ -177,10 +177,10 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
 export async function searchPatients({ query, userId, page = 1, limit = 10 }: { query: string; userId: string; page?: number; limit?: number; }) {
   try {
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
-    
+
     const whereClause: Prisma.PatientWhereInput = {
       AND: [
-        { userId: userId },
+        ...(userId ? [{ userId }] : []),
         {
           OR: [
             { firstName: { contains: query, mode: 'insensitive' } },
@@ -196,40 +196,40 @@ export async function searchPatients({ query, userId, page = 1, limit = 10 }: { 
     const skip = (page - 1) * limit;
 
     const [patients, totalPatients] = await prisma.$transaction([
-        prisma.patient.findMany({
-            where: whereClause,
-            skip,
-            take: limit,
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
-                 biophysicsTests: {
-                  orderBy: { testDate: 'desc' },
-                  take: 1,
-                },
-                appointments: {
-                    where: {
-                        date: {
-                            gte: new Date()
-                        },
-                        status: 'SCHEDULED'
-                    },
-                    orderBy: {
-                        date: 'asc'
-                    },
-                    take: 1
-                }
+      prisma.patient.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
-            orderBy: { createdAt: 'desc' },
-        }),
-        prisma.patient.count({ where: whereClause })
+          },
+          biophysicsTests: {
+            orderBy: { testDate: 'desc' },
+            take: 1,
+          },
+          appointments: {
+            where: {
+              date: {
+                gte: new Date()
+              },
+              status: 'SCHEDULED'
+            },
+            orderBy: {
+              date: 'asc'
+            },
+            take: 1
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.patient.count({ where: whereClause })
     ]);
-    
+
     const totalPages = Math.ceil(totalPatients / limit);
     return { success: true, patients, totalPages, currentPage: page };
   } catch (error) {
