@@ -21,8 +21,8 @@ interface Professional {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'MEDICO' | 'COACH';
-  status: 'ACTIVO' | 'INACTIVO';
+  role: 'ADMIN' | 'MEDICO' | 'COACH' | 'ADMINISTRATIVO';
+  status: string;
   quotaMax: number;
   quotaUsed: number;
   cedula?: string;

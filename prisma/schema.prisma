@@ -17,6 +17,7 @@ enum Role {
   ADMIN
   MEDICO
   COACH
+  ADMINISTRATIVO
 }
 
 enum UserStatus {
@@ -127,8 +128,8 @@ model User {
   image         String?
   password      String?
   role          Role      @default(MEDICO)
-  status        UserStatus @default(ACTIVO)
-  quotaMax      Int       @default(0)
+  status        String     @default("ACTIVO")
+  quotaMax      Int       @default(100)
   quotaUsed     Int       @default(0)
   accounts      Account[]
   sessions      Session[]
