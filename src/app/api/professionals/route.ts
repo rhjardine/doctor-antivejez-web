@@ -47,31 +47,47 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        // Basic validation
-        // const { name, email, password, role, status } = body; 
+        const { name, email, password, role, status } = body;
 
-        // Check if user exists
-        const existing = await prisma.user.findUnique({ where: { email: body.email } });
-        if (existing) return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
-
-        const hashedPassword = await bcrypt.hash(body.password || '123456', 10); // Default password if not provided?
-
-        const newUser = await prisma.user.create({
-            data: {
-                name: body.name,
-                email: body.email,
-                password: hashedPassword,
-                role: body.role,
-                status: body.status,
-                quotaMax: body.quotaMax || 0,
-                quotaUsed: 0,
-                // We need to support the extra fields logic later if schema is updated
-            }
+        // 1. VALIDATION: Check if email exists before creating
+        const existing = await prisma.user.findUnique({
+            where: { email: email.toLowerCase().trim() }
         });
 
-        return NextResponse.json(newUser);
+        if (existing) {
+            return NextResponse.json(
+                { error: 'El correo electrónico ya está registrado' },
+                { status: 400 }
+            );
+        }
+
+        const hashedPassword = await bcrypt.hash(password || '123456', 10);
+
+        // 2. DEFAULT DATA & CREATE with Logging
+        try {
+            const newUser = await prisma.user.create({
+                data: {
+                    name,
+                    email: email.toLowerCase().trim(),
+                    password: hashedPassword,
+                    role: role || 'MEDICO',
+                    status: status || 'ACTIVO',
+                    quotaMax: 100, // Explicitly sending default as requested
+                    quotaUsed: 0,  // Explicitly sending 0 to avoid null constraints
+                }
+            });
+
+            return NextResponse.json(newUser);
+        } catch (prismaError) {
+            console.error('🔥 PRISMA ERROR:', prismaError);
+            return NextResponse.json(
+                { error: 'Error de base de datos al crear el usuario. Verifique los campos obligatorios.' },
+                { status: 500 }
+            );
+        }
     } catch (error) {
-        return NextResponse.json({ error: 'Error creating professional' }, { status: 500 });
+        console.error('🔥 SERVER ERROR:', error);
+        return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
     }
 }
 

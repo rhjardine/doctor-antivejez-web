@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
 
@@ -115,13 +116,17 @@ export default function ProfesionalesPage() {
       });
 
       if (res.ok) {
-        toast.success(selectedProf ? "Actualizado" : "Creado");
+        toast.success(selectedProf ? "Actualizado con éxito" : "Creado con éxito");
         setIsEditModalOpen(false);
         fetchProfessionals();
       } else {
-        toast.error("Error al guardar");
+        const errorData = await res.json();
+        toast.error(errorData.error || "Error al guardar");
       }
-    } catch (e) { toast.error("Error al guardar"); }
+    } catch (e) {
+      console.error("Save Error:", e);
+      toast.error("Error de red al guardar");
+    }
   };
 
   return (
@@ -202,6 +207,9 @@ export default function ProfesionalesPage() {
         <DialogContent className="sm:max-w-md bg-white">
           <DialogHeader>
             <DialogTitle>{selectedProf ? 'Editar Profesional' : 'Nuevo Profesional'}</DialogTitle>
+            <DialogDescription>
+              Complete los datos del profesional para {selectedProf ? 'actualizar su cuenta' : 'crear un nuevo acceso'}.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4 py-4">
             <div className="space-y-2">
@@ -240,7 +248,14 @@ export default function ProfesionalesPage() {
             {!selectedProf && (
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase text-[#293b64]">Contraseña</label>
-                <Input type="password" value={formData.password as string || ''} onChange={e => setFormData({ ...formData, password: e.target.value })} className="border-[#293b64]" placeholder="Opcional (default: 123456)" />
+                <Input
+                  type="password"
+                  autoComplete="current-password"
+                  value={formData.password as string || ''}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  className="border-[#293b64]"
+                  placeholder="Opcional (default: 123456)"
+                />
               </div>
             )}
             <DialogFooter className="mt-6">
@@ -256,6 +271,9 @@ export default function ProfesionalesPage() {
         <DialogContent className="sm:max-w-sm bg-white">
           <DialogHeader>
             <DialogTitle className="text-[#23bcef]">Recargar Cuota</DialogTitle>
+            <DialogDescription>
+              Ajuste el límite de formularios permitidos para este profesional.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-6 space-y-4">
             <p className="text-sm text-slate-600">
