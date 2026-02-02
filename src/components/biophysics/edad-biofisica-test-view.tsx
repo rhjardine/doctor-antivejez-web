@@ -5,6 +5,7 @@ import { Patient } from '../../types';
 import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, PartialAges } from '../../types/biophysics';
 import { getBiophysicsBoardsAndRanges, calculateAndSaveBiophysicsTest } from '../../lib/actions/biophysics.actions';
 import { getAgeStatus, getStatusColor } from '../../utils/biofisica-calculations';
+import { calculateAge } from '../../utils/date';
 import { toast } from 'sonner';
 import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle, FaUndo, FaSave } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
@@ -50,7 +51,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   const [boards, setBoards] = useState<BoardWithRanges[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); 
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [calculated, setCalculated] = useState(false);
 
@@ -98,7 +99,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     setCalculated(false);
     setIsSaved(false);
   };
-  
+
   const handleCalculateAndSave = async () => {
     setProcessing(true);
 
@@ -126,24 +127,24 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     try {
       const params = {
         patientId: patient.id,
-        chronologicalAge: patient.chronologicalAge,
+        chronologicalAge: calculateAge(patient.birthDate),
         gender: patient.gender,
         isAthlete: patient.gender.includes('DEPORTIVO'),
         formValues: formValues,
       };
-      
+
       const result = await calculateAndSaveBiophysicsTest(params);
 
       if (result.success && result.data) {
         const calculationResult: CalculationResult = {
-            biologicalAge: result.data.biologicalAge,
-            differentialAge: result.data.differentialAge,
-            partialAges: result.data.partialAges,
+          biologicalAge: result.data.biologicalAge,
+          differentialAge: result.data.differentialAge,
+          partialAges: result.data.partialAges,
         };
         setResults(calculationResult);
         setCalculated(true);
-        onTestComplete(); 
-        setIsSuccessModalOpen(true); 
+        onTestComplete();
+        setIsSuccessModalOpen(true);
         setIsSaved(true);
       } else {
         toast.error(result.error || 'Error al calcular y guardar el test');
@@ -154,7 +155,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
       setProcessing(false);
     }
   };
-  
+
   const handleEdit = () => {
     setIsSaved(false);
     setCalculated(false);
@@ -178,7 +179,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
   return (
     <>
       {isSuccessModalOpen && <SuccessModal onClose={() => setIsSuccessModalOpen(false)} />}
-      
+
       <div className="flex flex-col md:flex-row gap-6">
         <div className="w-full md:w-1/2 bg-primary-dark rounded-xl p-6 text-white">
           <div className="flex items-center justify-between mb-6">
@@ -279,7 +280,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
-                <p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge}</p>
+                <p className="text-3xl font-bold text-gray-900">{calculateAge(patient.birthDate)}</p>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
@@ -316,9 +317,8 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                 return (
                   <div
                     key={item.key}
-                    className={`rounded-lg p-4 text-white transition-all ${
-                      calculated ? statusColor : 'bg-gray-300'
-                    }`}
+                    className={`rounded-lg p-4 text-white transition-all ${calculated ? statusColor : 'bg-gray-300'
+                      }`}
                   >
                     <h4 className="font-medium mb-2">{item.label}</h4>
                     <div className="space-y-1 text-sm">

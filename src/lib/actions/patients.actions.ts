@@ -119,6 +119,12 @@ export async function getPatientDetails(id: string) {
     if (!patient) {
       return { success: false, error: 'Paciente no encontrado' };
     }
+
+    // [FIX] Recalculate age dynamically to ensure accuracy (fix stale DB data)
+    if (patient.birthDate) {
+      patient.chronologicalAge = calculateAge(patient.birthDate);
+    }
+
     return { success: true, patient };
   } catch (error) {
     console.error('Error obteniendo paciente:', error);
