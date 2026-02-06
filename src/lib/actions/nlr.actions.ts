@@ -23,6 +23,9 @@ interface SaveNlrTestParams {
   testDate: Date;
 }
 
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
 export async function saveNlrTest(params: SaveNlrTestParams) {
   const { patientId, neutrophils, lymphocytes, testDate } = params;
 
@@ -31,6 +34,11 @@ export async function saveNlrTest(params: SaveNlrTestParams) {
   }
 
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return { success: false, error: "No autorizado. Debes iniciar sesión." };
+    }
+
     const nlrValue = parseFloat((neutrophils / lymphocytes).toFixed(2));
     const riskLevel = determineNlrRiskLevel(nlrValue);
 
@@ -64,6 +72,7 @@ export async function saveNlrTest(params: SaveNlrTestParams) {
           nlrValue,
           riskLevel,
           testDate,
+          recordedBy: session.user.id, // Audit Trail
         },
       })
     ]);

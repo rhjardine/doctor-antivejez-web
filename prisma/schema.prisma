@@ -274,6 +274,7 @@ model BiophysicsTest {
   systolicAge         Float?
   diastolicPressure   Float?
   diastolicAge        Float?
+  recordedBy          String?  // ID del Profesional que realizó el test
   testDate            DateTime @default(now())
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -574,6 +575,7 @@ model NlrTest {
   lymphocytes  Float // Valor absoluto de linfocitos
   nlrValue     Float // El resultado del cálculo (neutrophils / lymphocytes)
   riskLevel    NlrRiskLevel
+  recordedBy   String?      // ID del Profesional que realizó el test
   testDate     DateTime     @default(now())
   createdAt    DateTime     @default(now())
 

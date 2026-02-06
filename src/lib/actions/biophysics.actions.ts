@@ -20,13 +20,22 @@ interface CalculateAndSaveParams {
  * Orquesta el proceso completo de cálculo y guardado en una sola llamada.
  * @returns Un objeto con los resultados calculados y serializados para la UI.
  */
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+// ... (existing imports)
+
 export async function calculateAndSaveBiophysicsTest(params: CalculateAndSaveParams) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      throw new Error("No autorizado. Debes iniciar sesión.");
+    }
+
     const { patientId, chronologicalAge, gender, isAthlete, formValues } = params;
 
-    // ===== INICIO DE LA CORRECCIÓN CLAVE =====
-    // Se llama a la función `calculateBiofisicaResults` (con 'a' al final), que es la
-    // versión completa que acepta todos los parámetros necesarios para tu nueva lógica.
+    // ... (existing logic)
+
     const calculationResult = calculateBiofisicaResults(
       [], // El argumento 'boards' ya no es necesario con la nueva lógica de cálculo.
       formValues,
@@ -34,9 +43,9 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       gender,
       isAthlete
     );
-    // ===== FIN DE LA CORRECCIÓN CLAVE =====
 
-    // 2. BUSCAR PACIENTE Y SU MÉDICO (Dueño) PARA VALIDAR CUOTA
+    // ... (existing quota checks)
+
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: { user: true }
@@ -47,11 +56,7 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
     }
 
     const doctor = patient.user;
-
-    // VALIDACIÓN DE CUOTA (QUOTA GUARD)
-    // Solo aplica si NO es ADMIN (asumimos ADMIN tiene acceso ilimitado o no se le descuenta)
-    // El requerimiento dice: "Every time ... saved by a non-ADMIN user, increment quotaUsed by 1."
-    const isNonAdmin = doctor.role !== 'ADMIN'; // Asumiendo 'ADMIN' es el rol de admin supremo
+    const isNonAdmin = doctor.role !== 'ADMIN';
 
     if (isNonAdmin) {
       if (doctor.quotaUsed >= doctor.quotaMax) {
@@ -74,6 +79,7 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
           gender,
           isAthlete,
           testDate: new Date(),
+          recordedBy: session.user.id, // Audit Trail
           biologicalAge: calculationResult.biologicalAge,
           differentialAge: calculationResult.differentialAge,
           fatPercentage: formValues.fatPercentage,
