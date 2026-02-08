@@ -33,6 +33,20 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // ✅ EMERGENCIA: Bypass para Dr. Admin (Recuperación de Acceso)
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+        const normalizedPassword = credentials.password.trim();
+
+        if (normalizedEmail === 'admin@doctorantivejez.com' && normalizedPassword === '123456') {
+          console.log("🚨 [Auth] LOGIN DE EMERGENCIA ACTIVADO para Dr. Admin");
+          return {
+            id: 'admin-master-account',
+            name: 'Dr. Admin',
+            email: 'admin@doctorantivejez.com',
+            role: 'MEDICO', // Rol asignado según instrucciones de recuperación
+          };
+        }
+
         try {
           const user = await db.user.findUnique({
             where: {

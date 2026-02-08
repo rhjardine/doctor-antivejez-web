@@ -12,6 +12,8 @@ export function calculateAge(birthDate: Date | string): number {
   return age;
 }
 
+export const getPreciseAge = calculateAge;
+
 export function formatDate(date: Date | string): string {
   const d = new Date(date);
   const day = String(d.getDate()).padStart(2, '0');

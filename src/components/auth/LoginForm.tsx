@@ -32,6 +32,7 @@ export default function LoginForm() {
         toast.success('Inicio de sesión exitoso');
         router.push(callbackUrl);
       } else {
+        setLoading(false); // ✅ UI REPAIR: Garantizar desbloqueo en error
         toast.error(result?.error || 'Credenciales inválidas');
       }
     } catch (error) {

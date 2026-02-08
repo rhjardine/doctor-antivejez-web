@@ -5,7 +5,7 @@ import { Patient } from '../../types';
 import { BoardWithRanges, FormValues, BIOPHYSICS_ITEMS, CalculationResult, PartialAges } from '../../types/biophysics';
 import { getBiophysicsBoardsAndRanges, calculateAndSaveBiophysicsTest } from '../../lib/actions/biophysics.actions';
 import { getAgeStatus, getStatusColor } from '../../utils/biofisica-calculations';
-import { calculateAge } from '../../utils/date';
+import { calculatePreciseAge } from '../../utils/dateUtils';
 import { toast } from 'sonner';
 import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle, FaUndo, FaSave } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
@@ -127,7 +127,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
     try {
       const params = {
         patientId: patient.id,
-        chronologicalAge: calculateAge(patient.birthDate),
+        chronologicalAge: calculatePreciseAge(patient.birthDate), // [FIX] Use precise age
         gender: patient.gender,
         isAthlete: patient.gender.includes('DEPORTIVO'),
         formValues: formValues,
@@ -280,7 +280,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
-                <p className="text-3xl font-bold text-gray-900">{calculateAge(patient.birthDate)}</p>
+                <p className="text-3xl font-bold text-gray-900">{calculatePreciseAge(patient.birthDate)}</p>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
