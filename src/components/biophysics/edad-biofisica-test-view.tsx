@@ -20,10 +20,10 @@ interface EdadBiofisicaTestViewProps {
 function SuccessModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center relative animate-slideUp">
-        <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-gray-800 mb-2">Operación realizada exitosamente</h3>
-        <p className="text-gray-600 mb-6">El test biofísico ha sido guardado correctamente.</p>
+      <div className="bg-card text-card-foreground rounded-xl shadow-2xl p-8 max-w-sm w-full text-center relative border border-border">
+        <FaCheckCircle className="text-status-green text-6xl mx-auto mb-4" />
+        <h3 className="text-xl font-bold mb-2">Operación Exitosa</h3>
+        <p className="text-muted-foreground mb-6 text-sm">El test biofísico ha sido procesado y guardado correctamente.</p>
         <button
           onClick={onClose}
           className="btn-primary w-full"
@@ -194,9 +194,8 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
               <h2 className="text-xl font-bold">
                 {patient.firstName} {patient.lastName}
               </h2>
-              <p className="text-sm opacity-80">
-                Edad: {patient.chronologicalAge} años |{' '}
-                {patient.gender.replace(/_/g, ' ')}
+              <p className="text-sm text-white/70">
+                Edad: {patient.chronologicalAge} años • {patient.gender.replace(/_/g, ' ')}
               </p>
             </div>
           </div>
@@ -276,24 +275,24 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
 
         <div className="w-full md:w-1/2 space-y-6">
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Finales</h3>
+            <h3 className="text-lg font-bold text-card-foreground uppercase tracking-tight mb-4">Resultados Finales</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Edad Cronológica</p>
-                <p className="text-3xl font-bold text-gray-900">{calculatePreciseAge(patient.birthDate)}</p>
+              <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Edad Cronológica</p>
+                <p className="text-3xl font-black text-card-foreground">{calculatePreciseAge(patient.birthDate)}</p>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Edad Biofísica</p>
-                <p className={`text-3xl font-bold ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-primary'}`}>
+              <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Edad Biofísica</p>
+                <p className={`text-3xl font-black ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-primary'}`}>
                   {calculated ? `${results.biologicalAge}` : '--'}
                 </p>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Diferencial</p>
+              <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Diferencial</p>
                 <p
-                  className={`text-3xl font-bold ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-gray-900'}`}
+                  className={`text-3xl font-black ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-card-foreground'}`}
                 >
                   {calculated ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge}` : '--'}
                 </p>
@@ -301,7 +300,7 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
             </div>
           </div>
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados por Ítem</h3>
+            <h3 className="text-lg font-bold text-card-foreground uppercase tracking-tight mb-4">Resultados por Ítem</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {BIOPHYSICS_ITEMS.map(item => {
                 const ageKey = PARTIAL_AGE_KEYS_MAP[item.key];

@@ -72,17 +72,17 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
     setCapturedImage(null);
     setError(null);
     const startCamera = async () => {
-        try {
-          const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          setStream(mediaStream);
-          if (videoRef.current) {
-            videoRef.current.srcObject = mediaStream;
-          }
-        } catch (err) {
-          setError("No se pudo acceder a la cámara.");
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
         }
-      };
-      startCamera();
+      } catch (err) {
+        setError("No se pudo acceder a la cámara.");
+      }
+    };
+    startCamera();
   };
 
   const handleConfirm = () => {
@@ -113,7 +113,7 @@ function ImageUploader({ onImageCapture, onClose }: ImageUploaderProps) {
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
       <div className="bg-white rounded-xl shadow-2xl p-6 max-w-lg w-full text-center relative">
         <h3 className="text-xl font-bold text-primary-dark mb-4">Capturar Foto del Paciente</h3>
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><FaTimes size={20}/></button>
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><FaTimes size={20} /></button>
         <div className="relative w-full aspect-video bg-gray-200 rounded-lg overflow-hidden mb-4">
           {error && !capturedImage && <div className="flex items-center justify-center h-full text-red-500 p-4">{error}</div>}
           {!capturedImage ? (
@@ -203,10 +203,10 @@ export default function NuevoPacientePage() {
         router.push(`/historias/${result.patient.id}?tab=biofisica`);
       } else {
         if (result.error?.includes('identificación')) {
-            setError('identification', { type: 'manual', message: result.error });
-            toast.error(result.error);
+          setError('identification', { type: 'manual', message: result.error });
+          toast.error(result.error);
         } else {
-            toast.error(result.error || 'Error al crear paciente');
+          toast.error(result.error || 'Error al crear paciente');
         }
       }
     } catch (error) {
@@ -224,11 +224,11 @@ export default function NuevoPacientePage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
       {isUploaderOpen && <ImageUploader onImageCapture={handleImageCapture} onClose={() => setIsUploaderOpen(false)} />}
-      
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nueva Historia Clínica</h1>
-          <p className="text-gray-600 mt-1">Registra un nuevo paciente en el sistema</p>
+          <h1 className="text-3xl font-bold text-foreground">Nueva Historia Clínica</h1>
+          <p className="text-muted-foreground mt-1">Registra un nuevo paciente en el sistema</p>
         </div>
         <button onClick={() => router.push('/historias')} className="btn-light-blue"><FaArrowLeft /><span>Volver</span></button>
       </div>
@@ -240,11 +240,11 @@ export default function NuevoPacientePage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1 flex flex-col items-center">
               <label className="label self-start">Foto</label>
-              <div onClick={() => setIsUploaderOpen(true)} className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors bg-gray-50 overflow-hidden">
+              <div onClick={() => setIsUploaderOpen(true)} className="w-40 h-40 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors bg-muted/50 overflow-hidden">
                 {photoValue ? (
                   <Image src={photoValue} alt="Foto del paciente" width={160} height={160} className="object-cover w-full h-full" />
                 ) : (
-                  <><FaCamera className="text-3xl text-gray-400 mb-2" /><span className="text-sm text-gray-500 text-center">Tomar/Adjuntar Foto</span></>
+                  <><FaCamera className="text-3xl text-muted-foreground mb-2" /><span className="text-sm text-muted-foreground text-center">Tomar/Adjuntar Foto</span></>
                 )}
               </div>
             </div>
@@ -314,7 +314,7 @@ export default function NuevoPacientePage() {
             </div>
           </div>
         </div>
-        
+
         <div className="card">
           <h2 className="form-section-header"><FaMapMarkerAlt />Dirección</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

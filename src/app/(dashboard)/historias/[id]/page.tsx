@@ -160,18 +160,18 @@ export default function PatientDetailPage() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="card bg-gradient-to-r from-primary/5 to-primary-dark/5">
+      <div className="card bg-gradient-to-r from-primary/10 to-primary-dark/30 border-primary/20">
         <div className="flex items-center space-x-6">
-          <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-3xl font-bold text-primary">{patient.firstName[0]}{patient.lastName[0]}</span>
+          <div className="w-24 h-24 rounded-full bg-primary/30 flex items-center justify-center flex-shrink-0 border-2 border-primary/40">
+            <span className="text-3xl font-bold text-white shadow-sm">{patient.firstName[0]}{patient.lastName[0]}</span>
           </div>
           <div className="flex-1">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">{patient.firstName} {patient.lastName}</h1>
+                <h1 className="text-3xl font-bold text-card-foreground">{patient.firstName} {patient.lastName}</h1>
                 {patient.user && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                    <FaUser className="mr-1 h-3 w-3" />
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white mt-1 border border-white/10">
+                    <FaUser className="mr-1 h-3 w-3 text-white/80" />
                     Dr/a. {patient.user.name}
                   </span>
                 )}
@@ -181,11 +181,11 @@ export default function PatientDetailPage() {
                 <span>Volver a Pacientes</span>
               </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div><p className="text-sm text-gray-500">ID</p><p className="font-medium">{patient.identification}</p></div>
-              <div><p className="text-sm text-gray-500">Edad</p><p className="font-medium">{patient.chronologicalAge} años</p></div>
-              <div><p className="text-sm text-gray-500">Género</p><p className="font-medium">{patient.gender.replace(/_/g, ' ')}</p></div>
-              <div><p className="text-sm text-gray-500">ID Único</p><p className="font-medium text-xs break-all">{patient.id}</p></div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">ID Paciente</p><p className="font-semibold text-white">{patient.identification}</p></div>
+              <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">Edad</p><p className="font-semibold text-white">{patient.chronologicalAge} años</p></div>
+              <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">Género</p><p className="font-semibold text-white">{patient.gender.replace(/_/g, ' ')}</p></div>
+              <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">ID de Sistema</p><p className="font-medium text-[10px] text-white/70 break-all">{patient.id}</p></div>
             </div>
           </div>
         </div>
@@ -229,7 +229,7 @@ export default function PatientDetailPage() {
           ) : (
             <div className="card">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Detalles de la Historia Médica</h2>
+                <h2 className="text-xl font-bold text-card-foreground uppercase tracking-tighter">Detalles de la Historia Médica</h2>
                 <button
                   onClick={() => setIsEditing(true)}
                   className="btn-secondary flex items-center space-x-2"

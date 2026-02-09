@@ -68,32 +68,32 @@
   .dark {
     --background: 224 71% 4%;
     --foreground: 210 40% 98%;
-    
+
     --card: 224 71% 7%;
     --card-foreground: 210 40% 98%;
-    
+
     --popover: 224 71% 7%;
     --popover-foreground: 210 40% 98%;
-    
+
     --primary: 195.5 85.3% 53.3%;
     --primary-foreground: 224 71% 4%;
-    
+
     --secondary: 224 71% 12%;
     --secondary-foreground: 210 40% 98%;
-    
+
     --muted: 224 71% 15%;
     --muted-foreground: 215 20.2% 65.1%;
-    
+
     --accent: 224 71% 15%;
     --accent-foreground: 210 40% 98%;
-    
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    
+
     --border: 224 71% 15%;
     --input: 224 71% 15%;
     --ring: 195.5 85.3% 53.3%;
-    
+
     --chart-1: 195.5 85.3% 53.3%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -176,12 +176,12 @@
   }
 
   /* ✅ INICIO DE LA FUSIÓN: Estilos para formularios y botones */
-  
+
   /* Base para todos los botones */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 border text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150;
   }
-  
+
   /* Botones (Variantes) */
   .btn-primary {
     @apply btn border-transparent text-white bg-primary hover:bg-primary-dark focus:ring-primary disabled:bg-gray-300 disabled:cursor-not-allowed;
@@ -202,7 +202,7 @@
   .btn-danger {
     @apply btn border-transparent text-white bg-red-600 hover:bg-red-700 focus:ring-red-500;
   }
-  
+
   .btn-light-blue {
     @apply btn border-transparent text-primary bg-blue-100 hover:bg-blue-200 focus:ring-primary;
   }
@@ -211,19 +211,23 @@
   .input {
     @apply block w-full px-3 py-2 bg-background border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-foreground;
   }
+
   .input-disabled {
     @apply input bg-muted cursor-not-allowed text-muted-foreground;
   }
+
   .input-error {
     @apply border-destructive ring-1 ring-destructive focus:border-destructive focus:ring-destructive;
   }
+
   .error-message {
     @apply mt-1 text-sm text-red-600;
   }
+
   .form-section-header {
-    @apply text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3 text-primary;
+    @apply text-xl font-semibold mb-6 flex items-center gap-3 text-primary;
   }
-  
+
   /* Se mantiene tu definición original de form-input-custom por si se usa en otros sitios */
   .form-input-custom {
     @apply w-full px-4 py-3 border border-gray-300 rounded-lg transition-all duration-200;
@@ -243,12 +247,18 @@
   .form-input-custom::placeholder {
     @apply text-gray-400;
   }
-  
+
   /* ✅ FIN DE LA FUSIÓN */
 
   /* Labels (tu definición original) */
   .label {
-    @apply block text-sm font-medium text-foreground/80 mb-2;
+    @apply block text-sm font-medium mb-2 opacity-90;
+    color: inherit;
+    /* Permitir que herede del contenedor si es necesario */
+  }
+
+  .card .label {
+    @apply text-card-foreground/90;
   }
 
   /* Navegación */
