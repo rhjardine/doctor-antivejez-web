@@ -227,9 +227,9 @@ export default function PatientDetailPage() {
               onSaveSuccess={handleUpdateSuccess}
             />
           ) : (
-            <div className="card">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-card-foreground uppercase tracking-tighter">Detalles de la Historia Médica</h2>
+                <h2 className="text-xl font-bold text-slate-900 uppercase tracking-tighter">Detalles de la Historia Médica</h2>
                 <button
                   onClick={() => setIsEditing(true)}
                   className="btn-secondary flex items-center space-x-2"
@@ -240,30 +240,39 @@ export default function PatientDetailPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 <div>
-                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Personal</h3>
+                  <h3 className="font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Información Personal
+                  </h3>
                   <dl className="space-y-3">
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Identificación</dt><dd className="font-medium text-gray-700">{patient.identification}</dd></div>
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Nacionalidad</dt><dd className="font-medium text-gray-700">{patient.nationality}</dd></div>
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Lugar de Nacimiento</dt><dd className="font-medium text-gray-700">{patient.birthPlace}</dd></div>
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Estado Civil</dt><dd className="font-medium text-gray-700">{patient.maritalStatus}</dd></div>
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Profesión</dt><dd className="font-medium text-gray-700">{patient.profession}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Identificación</dt><dd className="font-semibold text-slate-800">{patient.identification}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Nacionalidad</dt><dd className="font-semibold text-slate-800">{patient.nationality}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Lugar de Nacimiento</dt><dd className="font-semibold text-slate-800">{patient.birthPlace}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Estado Civil</dt><dd className="font-semibold text-slate-800">{patient.maritalStatus}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Profesión</dt><dd className="font-semibold text-slate-800">{patient.profession}</dd></div>
                   </dl>
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información de Contacto</h3>
+                  <h3 className="font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Información de Contacto
+                  </h3>
                   <dl className="space-y-3">
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Teléfono</dt><dd className="font-medium text-gray-700">{patient.phone}</dd></div>
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Email</dt><dd className="font-medium text-gray-700">{patient.email}</dd></div>
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Dirección</dt><dd className="font-medium text-gray-700 text-right">{patient.address}, {patient.city}, {patient.state}, {patient.country}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Teléfono</dt><dd className="font-semibold text-slate-800">{patient.phone}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Email</dt><dd className="font-semibold text-slate-800">{patient.email}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Dirección</dt><dd className="font-semibold text-slate-800 text-right">{patient.address}, {patient.city}, {patient.state}, {patient.country}</dd></div>
                   </dl>
                 </div>
                 <div className="md:col-span-2 pt-4">
-                  <h3 className="font-medium text-gray-800 mb-3 border-b pb-2">Información Médica</h3>
+                  <h3 className="font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Información Médica
+                  </h3>
                   <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Grupo Sanguíneo</dt><dd className="font-medium text-gray-700">{patient.bloodType}</dd></div>
-                    <div className="flex justify-between"><dt className="text-sm text-gray-500">Edad Cronológica</dt><dd className="font-medium text-gray-700">{patient.chronologicalAge} años</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Grupo Sanguíneo</dt><dd className="font-semibold text-slate-800">{patient.bloodType}</dd></div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-slate-500">Edad Cronológica</dt><dd className="font-semibold text-slate-800">{patient.chronologicalAge} años</dd></div>
                   </dl>
-                  {patient.observations && (<div className="mt-4"><dt className="text-sm text-gray-500 mb-1">Observaciones</dt><dd className="text-gray-700 bg-gray-50 p-3 rounded-md border">{patient.observations}</dd></div>)}
+                  {patient.observations && (<div className="mt-4"><dt className="text-sm font-medium text-slate-500 mb-1">Observaciones</dt><dd className="text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-100">{patient.observations}</dd></div>)}
                 </div>
               </div>
             </div>
