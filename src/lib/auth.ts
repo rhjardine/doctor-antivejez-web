@@ -25,33 +25,11 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        // --- LOGGING DE ALTA PRIORIDAD ---
-        console.log("🔓 [AUTHORIZE] Intento capturado para:", credentials?.email);
-        console.log("🔑 [AUTHORIZE] Password capturado:", credentials?.password);
-
         if (!credentials?.email || !credentials?.password) {
-          console.log("❌ [Auth] Faltan credenciales");
           return null;
         }
 
         const normalizedEmail = credentials.email.toLowerCase().trim();
-        const normalizedPassword = credentials.password.trim();
-
-        console.log("🧐 [Auth] Comparando:", normalizedEmail, "con admin@doctorantivejez.com");
-        console.log("🧐 [Auth] Comparando pass:", normalizedPassword, "con 123456");
-
-        // ✅ EMERGENCIA: Bypass para Dr. Admin (Recuperación de Acceso)
-        if (normalizedEmail === 'admin@doctorantivejez.com' && normalizedPassword === '123456') {
-          console.log("🚨🚨🚨 [Auth] ¡BYPASS ACTIVADO! Retornando objeto admin...");
-          return {
-            id: 'admin-master-account',
-            name: 'Dr. Admin (BYPASS)',
-            email: 'admin@doctorantivejez.com',
-            role: 'MEDICO',
-          };
-        }
-
-        console.log("➡️ [Auth] Bypass no activado, procediendo a DB...");
 
         try {
           const user = await db.user.findUnique({
@@ -61,14 +39,12 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user) {
-            console.log("❌ [Auth] Usuario NO encontrado en DB Docker:", credentials.email);
+            console.log("❌ [Auth] Usuario NO encontrado:", normalizedEmail);
             return null;
           }
 
-          console.log("✅ [Auth] Usuario encontrado:", user.id);
-
           if (!user.password) {
-            console.log("❌ [Auth] El usuario no tiene contraseña (quizás usa Google login)");
+            console.log("❌ [Auth] El usuario no tiene contraseña (Google Login?)");
             return null;
           }
 
@@ -78,16 +54,15 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!isPasswordValid) {
-            console.log("❌ [Auth] Contraseña incorrecta para:", credentials.email);
+            console.log("❌ [Auth] Contraseña incorrecta para:", normalizedEmail);
             return null;
           }
 
-          // ===== INICIO: Validar Estatus =====
+          // ===== Validar Estatus =====
           if (user.status === 'INACTIVO') {
-            console.log("⛔ [Auth] Usuario INACTIVO:", credentials.email);
+            console.log("⛔ [Auth] Usuario INACTIVO:", normalizedEmail);
             throw new Error("Tu cuenta está inactiva. Contacta al administrador.");
           }
-          // ===== FIN: Validar Estatus =====
 
           console.log("✅ [Auth] Login exitoso para:", user.name);
 
@@ -99,10 +74,9 @@ export const authOptions: NextAuthOptions = {
             image: user.image,
           };
         } catch (error) {
-          console.error("🔥 [Auth] Error CRÍTICO de conexión a DB:", error);
+          console.error("🔥 [Auth] Error en proceso de autorización:", error);
           return null;
         }
-        // --- DEBUGGING LOGS END ---
       },
     }),
   ],
