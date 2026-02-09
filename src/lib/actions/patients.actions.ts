@@ -132,10 +132,24 @@ export async function getPatientDetails(id: string) {
   }
 }
 
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
 export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { page?: number; limit?: number; userId?: string } = {}) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("No autorizado");
+
     const skip = (page - 1) * limit;
-    const where = userId ? { userId } : {};
+
+    // ✅ VISIBILIDAD DE DATOS (Protección Richard Jardine)
+    // Si es ADMIN, ve todo (o filtro opcional userId). 
+    // Si es MEDICO/COACH, forzamos su propio ID.
+    const effectiveUserId = session.user.role === 'ADMIN'
+      ? userId
+      : session.user.id;
+
+    const where = effectiveUserId ? { userId: effectiveUserId } : {};
 
     const [patients, totalPatients] = await prisma.$transaction([
       prisma.patient.findMany({
@@ -182,11 +196,19 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
 
 export async function searchPatients({ query, userId, page = 1, limit = 10 }: { query: string; userId: string; page?: number; limit?: number; }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("No autorizado");
+
+    // ✅ VISIBILIDAD DE DATOS
+    const effectiveUserId = session.user.role === 'ADMIN'
+      ? userId
+      : session.user.id;
+
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
 
     const whereClause: Prisma.PatientWhereInput = {
       AND: [
-        ...(userId ? [{ userId }] : []),
+        ...(effectiveUserId ? [{ userId: effectiveUserId }] : []),
         {
           OR: [
             { firstName: { contains: query, mode: 'insensitive' } },

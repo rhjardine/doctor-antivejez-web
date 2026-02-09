@@ -75,6 +75,7 @@ export default function LoginForm() {
               className="input"
               placeholder="••••••••"
               disabled={loading}
+              autoComplete="current-password"
             />
           </div>
           <button

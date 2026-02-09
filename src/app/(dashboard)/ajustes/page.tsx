@@ -80,6 +80,7 @@ export default function AjustesPage() {
                       className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-lg font-bold text-[#293b64] outline-none focus:border-[#23bcef] transition-all"
                       placeholder="Mínimo 8 caracteres, 1 Mayúscula, 1 Número"
                       disabled={isLoading}
+                      autoComplete="new-password"
                     />
                     <button
                       type="button"

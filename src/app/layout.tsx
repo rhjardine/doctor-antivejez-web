@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import AuthProvider from '@/components/layout/auth-provider'; // 👈 1. Importar el AuthProvider
+import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from 'sonner';
 import './globals.css';
 
@@ -18,14 +19,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
-        {/* ▼▼▼ 2. Envolver el contenido con AuthProvider ▼▼▼ */}
-        <AuthProvider>
-          {children}
-          <Toaster richColors position="top-right" />
-        </AuthProvider>
-        {/* ▲▲▲ Fin del wrapper ▲▲▲ */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {/* ▼▼▼ 2. Envolver el contenido con AuthProvider ▼▼▼ */}
+          <AuthProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </AuthProvider>
+          {/* ▲▲▲ Fin del wrapper ▲▲▲ */}
+        </ThemeProvider>
       </body>
     </html>
   );
