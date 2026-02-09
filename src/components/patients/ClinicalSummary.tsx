@@ -83,22 +83,22 @@ const BiologicalAgeCard = ({ patient }: { patient: PatientWithDetails }) => {
     .reverse();
 
   return (
-    <div className="card">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Edad Biológica</h3>
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h3 className="text-lg font-bold text-slate-900 mb-4 uppercase tracking-tight">Edad Biológica</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
         <div>
-          <p className="text-sm text-gray-500">Edad Cronológica</p>
-          <p className="text-3xl font-bold text-gray-900">{patient.chronologicalAge} años</p>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Edad Cronológica</p>
+          <p className="text-3xl font-black text-slate-900">{patient.chronologicalAge} años</p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">Edad Biológica</p>
-          <p className="text-3xl font-bold text-primary">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Edad Biológica</p>
+          <p className="text-3xl font-black text-primary">
             {latestTest ? `${Math.round(latestTest.biologicalAge)} años` : '--'}
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">Diferencia</p>
-          <p className={`text-3xl font-bold ${latestTest && latestTest.differentialAge < 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Diferencia</p>
+          <p className={`text-3xl font-black ${latestTest && latestTest.differentialAge < 0 ? 'text-green-600' : 'text-red-600'}`}>
             {latestTest ? `${latestTest.differentialAge > 0 ? '+' : ''}${Math.round(latestTest.differentialAge)} años` : '--'}
           </p>
         </div>
@@ -121,26 +121,26 @@ const BiologicalAgeCard = ({ patient }: { patient: PatientWithDetails }) => {
 };
 
 const BiomarkersCard = ({ onNavigate }: { onNavigate: (tab: TabId) => void }) => (
-    <div className="card">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Biomarcadores Principales</h3>
-        <button onClick={() => onNavigate('biofisica')} className="text-sm text-primary hover:underline">Ver todos</button>
-      </div>
-       <div className="h-60 flex items-center justify-center bg-gray-50 rounded-lg">
-          <p className="text-gray-500">Gráfico de biomarcadores próximamente.</p>
-       </div>
+  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Biomarcadores Principales</h3>
+      <button onClick={() => onNavigate('biofisica')} className="text-xs font-bold text-primary hover:underline uppercase">Ver todos</button>
     </div>
+    <div className="h-60 flex items-center justify-center bg-gray-50 rounded-lg">
+      <p className="text-gray-500">Gráfico de biomarcadores próximamente.</p>
+    </div>
+  </div>
 );
 
 
 const NextAppointmentCard = ({ appointment }: { appointment: Appointment }) => (
-  <div className="card">
-    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2 uppercase tracking-tight">
       <FaCalendarCheck className="text-primary" /> Próxima Cita
     </h3>
-    <div className="bg-primary/10 p-4 rounded-lg text-center">
-      <p className="font-bold text-primary-dark text-lg">{appointment.date}</p>
-      <p className="text-sm text-gray-700">{appointment.time} - {appointment.reason}</p>
+    <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl text-center">
+      <p className="font-bold text-slate-900 text-xl">{appointment.date}</p>
+      <p className="text-sm text-slate-600 font-medium">{appointment.time} - {appointment.reason}</p>
     </div>
     <div className="flex justify-between items-center mt-4 text-sm">
       <span className="text-gray-500">Última visita: {appointment.lastVisit}</span>
@@ -150,21 +150,21 @@ const NextAppointmentCard = ({ appointment }: { appointment: Appointment }) => (
 );
 
 const CurrentTreatmentCard = ({ medications, onNavigate }: { medications: Medication[], onNavigate: (tab: TabId) => void }) => (
-  <div className="card">
+  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
     <div className="flex justify-between items-center mb-4">
-      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
         <FaPills className="text-primary" /> Tratamiento Actual
       </h3>
-      <button onClick={() => onNavigate('guia')} className="text-sm text-primary hover:underline">Ver todos</button>
+      <button onClick={() => onNavigate('guia')} className="text-xs font-bold text-primary hover:underline uppercase">Ver todos</button>
     </div>
     <div className="space-y-3">
       {medications.map(med => (
-        <div key={med.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+        <div key={med.id} className="flex justify-between items-center bg-slate-50/50 p-3 rounded-xl border border-slate-100">
           <div>
-            <p className="font-medium text-gray-800">{med.name}</p>
-            <p className="text-sm text-gray-500">{med.dosage}</p>
+            <p className="font-bold text-slate-800">{med.name}</p>
+            <p className="text-sm text-slate-500 font-medium">{med.dosage}</p>
           </div>
-          <button className="text-gray-400 hover:text-primary"><FaEdit /></button>
+          <button className="text-slate-400 hover:text-primary transition-colors"><FaEdit /></button>
         </div>
       ))}
     </div>
@@ -175,19 +175,19 @@ const CurrentTreatmentCard = ({ medications, onNavigate }: { medications: Medica
 );
 
 const RecentHistoryCard = ({ history, onNavigate }: { history: HistoryEvent[], onNavigate: (tab: TabId) => void }) => (
-  <div className="card">
+  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
     <div className="flex justify-between items-center mb-4">
-      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
         <FaHistory className="text-primary" /> Historial Reciente
       </h3>
-      <button onClick={() => onNavigate('historia')} className="text-sm text-primary hover:underline">Ver todos</button>
+      <button onClick={() => onNavigate('historia')} className="text-xs font-bold text-primary hover:underline uppercase">Ver todos</button>
     </div>
     <div className="space-y-4">
       {history.map(event => (
-        <div key={event.id} className="border-l-2 border-primary pl-4">
-          <p className="font-semibold text-gray-800">{event.title}</p>
-          <p className="text-xs text-gray-500 mb-1">{event.date}</p>
-          <p className="text-sm text-gray-600">{event.description}</p>
+        <div key={event.id} className="border-l-4 border-primary/30 pl-4 py-1">
+          <p className="font-bold text-slate-800">{event.title}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{event.date}</p>
+          <p className="text-sm text-slate-600 leading-relaxed font-medium">{event.description}</p>
         </div>
       ))}
     </div>

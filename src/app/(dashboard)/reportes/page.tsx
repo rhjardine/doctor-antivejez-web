@@ -245,8 +245,8 @@ export default function ReportesPage() {
         <p className="text-muted-foreground mt-1">Genera informes detallados sobre la actividad del sistema.</p>
       </div>
 
-      <div className="card">
-        <h2 className="text-lg font-semibold text-card-foreground mb-4 opacity-90">Seleccione los Filtros</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+        <h2 className="text-lg font-bold text-slate-900 mb-6 uppercase tracking-tight">Seleccione los Filtros</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="label">Tipo de Reporte</label>
@@ -270,9 +270,9 @@ export default function ReportesPage() {
       </div>
 
       {reportData && (
-        <div className="card">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-card-foreground">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-slate-900 uppercase tracking-tighter">
               {reportOptions.find(opt => opt.id === selectedReport)?.label} - {timeRangeOptions.find(opt => opt.id === selectedTimeRange)?.label}
             </h2>
             <button className="btn-secondary flex items-center gap-2 text-sm py-2">

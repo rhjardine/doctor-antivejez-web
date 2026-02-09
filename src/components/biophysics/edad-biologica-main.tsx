@@ -71,12 +71,12 @@ export default function EdadBiologicaMain({
       id: 'genetica',
       title: 'EDAD GENÉTICA',
       icon: FaDna,
-      value: 'Ver', 
+      value: 'Ver',
       difference: undefined,
       isClickable: true,
       onClick: onGeneticTestClick,
-      color: 'bg-primary', 
-      hasHistory: false, 
+      color: 'bg-primary',
+      hasHistory: false,
       onHistoryClick: undefined,
     },
   ];
@@ -86,7 +86,7 @@ export default function EdadBiologicaMain({
     if (diff >= -2 && diff <= 3) return 'text-status-yellow';
     return 'text-status-red';
   };
-  
+
   const profileData = [
     {
       title: 'Perfil Cardiovascular',
@@ -123,20 +123,20 @@ export default function EdadBiologicaMain({
           {testCards.map((card) => {
             const Icon = card.icon;
             return (
-              <div key={card.id} className={`${card.color} rounded-xl p-6 text-white flex flex-col justify-between transition-all duration-300 ${card.isClickable ? 'hover:shadow-lg hover:-translate-y-1' : ''}`}>
+              <div key={card.id} className={`bg-white border border-slate-200 shadow-sm rounded-xl p-6 text-slate-900 flex flex-col justify-between transition-all duration-300 ${card.isClickable ? 'hover:shadow-md hover:-translate-y-1' : ''}`}>
                 <div onClick={card.isClickable ? card.onClick : undefined} className={card.isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}>
                   <div className="flex items-center justify-between mb-4">
-                    <Icon className="text-4xl opacity-80" />
+                    <Icon className="text-4xl text-primary opacity-80" />
                     {!card.isClickable && (
-                      <span className="text-xs bg-white/20 px-2 py-1 rounded">En desarrollo</span>
+                      <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full uppercase">Próximamente</span>
                     )}
                   </div>
-                  <h3 className="text-sm font-medium mb-2 opacity-90">{card.title}</h3>
-                  <p className="text-3xl font-bold">
+                  <h3 className="text-xs font-bold mb-2 text-slate-500 uppercase tracking-wider">{card.title}</h3>
+                  <p className="text-3xl font-black text-slate-900">
                     {card.value !== '--' && card.value !== 'Ver' ? `${card.value} años` : card.value}
                   </p>
                   {card.difference !== undefined && card.difference !== null && (
-                    <p className="text-sm mt-2 opacity-80">
+                    <p className={`text-sm mt-2 font-bold ${card.difference > 0 ? 'text-red-500' : 'text-green-500'}`}>
                       Diferencia: {card.difference > 0 ? '+' : ''}{card.difference} años
                     </p>
                   )}
@@ -147,10 +147,10 @@ export default function EdadBiologicaMain({
                       e.stopPropagation();
                       card.onHistoryClick!();
                     }}
-                    className="mt-4 w-full text-center py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-xs font-semibold flex items-center justify-center gap-2"
+                    className="mt-4 w-full text-center py-2 bg-slate-100 text-slate-900 rounded-lg hover:bg-slate-200 transition-colors text-xs font-bold flex items-center justify-center gap-2 uppercase tracking-tighter"
                   >
                     <FaHistory />
-                    Ver Historial
+                    Historial
                   </button>
                 )}
               </div>
@@ -165,27 +165,26 @@ export default function EdadBiologicaMain({
             const difference = profile.testAge - profile.chronoAge;
             const colorClass = getGaugeColor(difference);
             return (
-              <div key={index} className="card">
-                <h3 className="font-medium text-gray-700 mb-4">{profile.title}</h3>
+              <div key={index} className="bg-white border border-slate-200 shadow-sm rounded-xl p-6">
+                <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-tight">{profile.title}</h3>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-500">Edad Cronológica</span>
-                  <span className="font-medium">{profile.chronoAge} años</span>
+                  <span className="text-sm font-medium text-slate-500">Edad Cronológica</span>
+                  <span className="font-bold text-slate-900">{profile.chronoAge} años</span>
                 </div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-gray-500">Edad del Perfil</span>
-                  <span className={`font-medium ${colorClass}`}>{profile.testAge} años</span>
+                  <span className="text-sm font-medium text-slate-500">Edad del Perfil</span>
+                  <span className={`font-black ${colorClass}`}>{profile.testAge} años</span>
                 </div>
-                <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
                   <div
-                    className={`absolute left-0 top-0 h-full rounded-full transition-all ${
-                      difference <= -7 ? 'bg-status-green' :
-                      difference >= -2 && difference <= 3 ? 'bg-status-yellow' :
-                      'bg-status-red'
-                    }`}
+                    className={`absolute left-0 top-0 h-full rounded-full transition-all ${difference <= -7 ? 'bg-status-green' :
+                        difference >= -2 && difference <= 3 ? 'bg-status-yellow' :
+                          'bg-status-red'
+                      }`}
                     style={{ width: `${Math.min(100, Math.max(0, 50 + (difference * 2)))}%` }}
                   />
                 </div>
-                <p className={`text-xs mt-2 text-center ${colorClass}`}>
+                <p className={`text-xs mt-2 text-center font-black uppercase tracking-tighter ${colorClass}`}>
                   {difference > 0 ? '+' : ''}{difference} años
                 </p>
               </div>

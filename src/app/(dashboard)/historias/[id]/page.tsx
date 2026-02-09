@@ -159,33 +159,35 @@ export default function PatientDetailPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="card bg-gradient-to-r from-primary/10 to-primary-dark/30 border-primary/20">
-        <div className="flex items-center space-x-6">
-          <div className="w-24 h-24 rounded-full bg-primary/30 flex items-center justify-center flex-shrink-0 border-2 border-primary/40">
-            <span className="text-3xl font-bold text-white shadow-sm">{patient.firstName[0]}{patient.lastName[0]}</span>
-          </div>
-          <div className="flex-1">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <h1 className="text-3xl font-bold text-card-foreground">{patient.firstName} {patient.lastName}</h1>
-                {patient.user && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white mt-1 border border-white/10">
-                    <FaUser className="mr-1 h-3 w-3 text-white/80" />
-                    Dr/a. {patient.user.name}
-                  </span>
-                )}
-              </div>
-              <button onClick={() => router.push('/historias')} className="flex items-center space-x-2 px-4 py-2 text-primary bg-primary/10 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors shadow-sm">
-                <FaArrowLeft />
-                <span>Volver a Pacientes</span>
-              </button>
+    <div className="space-y-6 animate-fadeIn pb-12">
+      <div className="bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-8 text-white shadow-xl shadow-primary/10 relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center space-x-6">
+            <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 border-4 border-white/30 shadow-2xl">
+              <span className="text-4xl font-black text-white">{patient.firstName[0]}{patient.lastName[0]}</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-              <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">ID Paciente</p><p className="font-semibold text-white">{patient.identification}</p></div>
-              <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">Edad</p><p className="font-semibold text-white">{patient.chronologicalAge} años</p></div>
-              <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">Género</p><p className="font-semibold text-white">{patient.gender.replace(/_/g, ' ')}</p></div>
-              <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">ID de Sistema</p><p className="font-medium text-[10px] text-white/70 break-all">{patient.id}</p></div>
+            <div className="flex-1">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h1 className="text-4xl font-black tracking-tight text-white mb-1">{patient.firstName} {patient.lastName}</h1>
+                  {patient.user && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white mt-1 border border-white/10">
+                      <FaUser className="mr-1 h-3 w-3 text-white/80" />
+                      Dr/a. {patient.user.name}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => router.push('/historias')} className="flex items-center space-x-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/20 transition-all shadow-lg backdrop-blur-sm font-bold text-sm">
+                  <FaArrowLeft />
+                  <span>Volver</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">ID Paciente</p><p className="font-semibold text-white">{patient.identification}</p></div>
+                <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">Edad</p><p className="font-semibold text-white">{patient.chronologicalAge} años</p></div>
+                <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">Género</p><p className="font-semibold text-white">{patient.gender.replace(/_/g, ' ')}</p></div>
+                <div><p className="text-xs font-bold text-white/50 uppercase tracking-wider">ID de Sistema</p><p className="font-medium text-[10px] text-white/70 break-all">{patient.id}</p></div>
+              </div>
             </div>
           </div>
         </div>
