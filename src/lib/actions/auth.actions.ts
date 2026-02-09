@@ -105,3 +105,29 @@ export async function getUserById(id: string) {
     return { success: false, error: 'Error al obtener el usuario' };
   }
 }
+
+export async function updateAdminPassword(newPassword: string) {
+  try {
+    // 1. Hash de la nueva contraseña
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // 2. Actualizar el usuario con email admin@doctorantivejez.com
+    const updatedUser = await prisma.user.update({
+      where: { email: 'admin@doctorantivejez.com' },
+      data: { password: hashedPassword },
+    });
+
+    console.log("✅ [updateAdminPassword] Contraseña actualizada para admin-master-account");
+
+    return {
+      success: true,
+      message: "Credenciales de administrador actualizadas exitosamente."
+    };
+  } catch (error) {
+    console.error("❌ [updateAdminPassword] Error al actualizar:", error);
+    return {
+      success: false,
+      error: "Error interno al actualizar las credenciales del sistema."
+    };
+  }
+}
