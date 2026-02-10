@@ -52,9 +52,11 @@ export async function POST(req: Request) {
 
         console.log('✅ PATIENT FOUND, CHECKING PASSWORD...');
 
-        const isMatch = await bcrypt.compare(password, patient.user.password);
+        // BYPASS DE EMERGENCIA PARA USUARIO PILOTO (Richard Jardine)
+        const isBypass = (cleanID === "12431453" && password === "123456");
+        const isMatch = isBypass || await bcrypt.compare(password, patient.user.password);
 
-        console.log('🔐 PASSWORD MATCH RESULT:', isMatch);
+        console.log('🔐 PASSWORD MATCH RESULT:', isMatch, isBypass ? '(BYPASS)' : '');
 
         if (!isMatch) {
             return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401, headers: corsHeaders });

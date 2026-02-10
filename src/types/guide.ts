@@ -3,9 +3,9 @@ export { GuideItemType } from '@prisma/client';
 
 export type RemocionAlimentacionType = 'Niño' | 'Antienvejecimiento' | 'Antidiabética' | 'Metabólica' | 'Citostática' | 'Renal';
 
-export type NoniAloeVeraTime = 
-  | '30 minutos antes de Desayuno' 
-  | '30 minutos antes de Desayuno y Cena' 
+export type NoniAloeVeraTime =
+  | '30 minutos antes de Desayuno'
+  | '30 minutos antes de Desayuno y Cena'
   | '30 minutos antes de la Cena';
 
 export interface StandardGuideItem {
@@ -39,9 +39,9 @@ export interface GuideCategory {
   title: string;
   type: 'STANDARD' | 'METABOLIC' | 'REVITALIZATION' | 'REMOCION';
   items:
-    | (StandardGuideItem | RemocionItem)[]
-    | RevitalizationGuideItem[]
-    | [MetabolicActivator];
+  | (StandardGuideItem | RemocionItem)[]
+  | RevitalizationGuideItem[]
+  | [MetabolicActivator];
 }
 
 // ===== AJUSTE: Se añade la propiedad 'doseType' al formulario estándar =====
@@ -51,6 +51,7 @@ export interface StandardFormItem {
   doseType?: 'Capsulas' | 'Tabletas' | 'Cucharaditas';
   freq?: string;
   custom?: string;
+  isClinicalPriority?: boolean; // Nueva propiedad para destacar puntos clave
 }
 // =======================================================================
 

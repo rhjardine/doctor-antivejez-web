@@ -5,13 +5,13 @@ import { PatientWithDetails } from '@/types';
 // ===== ANÁLISIS Y CORRECCIÓN ESTRATÉGICA =====
 // La importación se simplifica. 'DietType' ahora es el enum oficial de Prisma.
 // Ya no se necesita un 'DietTypeEnum' separado.
-import { 
-    FoodPlanTemplate, 
-    FoodItem, 
-    MealType, 
-    BloodTypeGroup, 
+import {
+    FoodPlanTemplate,
+    FoodItem,
+    MealType,
+    BloodTypeGroup,
     DietType, // Se utiliza el enum unificado.
-    GeneralGuideItem, 
+    GeneralGuideItem,
     WellnessKey
 } from '@/types/nutrition';
 // ===========================================
@@ -29,7 +29,15 @@ import ActivityGuide from './ActivityGuide';
 
 export default function NutrigenomicGuide({ patient }: { patient: PatientWithDetails }) {
     const [activeTab, setActiveTab] = useState('plan');
-    const [bloodType, setBloodType] = useState<BloodTypeGroup>('O_B');
+    // Mapeo lógico de Grupo Sanguíneo a Categoría Nutrigenómica
+    const getInitialBloodGroup = (bt: string): BloodTypeGroup => {
+        const type = bt.toUpperCase();
+        if (type.includes('O') || type.includes('B')) return 'O_B';
+        if (type.includes('A')) return 'A_AB'; // A y AB
+        return 'ALL';
+    };
+
+    const [bloodType, setBloodType] = useState<BloodTypeGroup>(getInitialBloodGroup(patient.bloodType || 'O'));
     // ===== ANÁLISIS Y CORRECCIÓN ESTRATÉGICA =====
     // El estado se tipa directamente con el enum 'DietType'.
     // El error de tipo desaparece porque `patient.selectedDiets` (que es DietType[]
@@ -50,7 +58,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         if (result.success && result.data) {
             const initialTemplate = result.data.foodTemplate;
             const patientPlan = patient.foodPlans?.[0];
-            
+
             if (patientPlan && patientPlan.items) {
                 const patientItems = patientPlan.items;
                 patientItems.forEach(item => {
@@ -129,7 +137,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
         for (const key in foodData) {
             const mealType = key as MealType;
             if (Object.prototype.hasOwnProperty.call(filtered, mealType)) {
-                filtered[mealType] = (foodData[mealType] || []).filter(item => 
+                filtered[mealType] = (foodData[mealType] || []).filter(item =>
                     item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType
                 );
             }
@@ -146,10 +154,10 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12 bg-primary-dark rounded-xl">
-                <motion.div 
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-12 h-12 border-4 border-sky-400 border-t-transparent rounded-full"
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-12 h-12 border-4 border-sky-400 border-t-transparent rounded-full"
                 />
             </div>
         );
@@ -192,7 +200,7 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
                             <div className="flex flex-wrap gap-x-4 gap-y-2">
                                 {Object.values(DietType).map(diet => (
                                     <label key={diet} className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="w-4 h-4 text-sky-400 bg-white/20 border-gray-500 rounded focus:ring-sky-500"/>
+                                        <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="w-4 h-4 text-sky-400 bg-white/20 border-gray-500 rounded focus:ring-sky-500" />
                                         <span className="text-sm text-gray-200 font-medium capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
                                     </label>
                                 ))}
