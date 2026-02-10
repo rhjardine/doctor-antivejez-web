@@ -39,11 +39,11 @@ export default function BiochemistryHistoryView({ patient, onBack, onHistoryChan
   const [testToDelete, setTestToDelete] = useState<BiochemistryTest | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const sortedTests = useMemo(() => 
+  const sortedTests = useMemo(() =>
     [...(patient.biochemistryTests || [])].sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime()),
     [patient.biochemistryTests]
   );
-  
+
   useEffect(() => {
     if (sortedTests.length > 0 && !selectedTest) {
       setSelectedTest(sortedTests[0]);
@@ -68,7 +68,7 @@ export default function BiochemistryHistoryView({ patient, onBack, onHistoryChan
       const result = await deleteBiochemistryTest(testToDelete.id);
       if (result.success) {
         toast.success('Test eliminado exitosamente.');
-        setSelectedTest(null); 
+        setSelectedTest(null);
         onHistoryChange();
       } else {
         toast.error(result.error || 'No se pudo eliminar el test.');
@@ -96,12 +96,12 @@ export default function BiochemistryHistoryView({ patient, onBack, onHistoryChan
         </div>
 
         {sortedTests.length === 0 ? (
-            <div className="card text-center py-12"><FaFlask className="mx-auto text-6xl text-gray-300 mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">No hay tests registrados</h3><p className="text-gray-500">Aún no se han realizado tests bioquímicos para este paciente.</p></div>
+          <div className="card text-center py-12"><FaFlask className="mx-auto text-6xl text-gray-300 mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">No hay tests registrados</h3><p className="text-gray-500">Aún no se han realizado tests bioquímicos para este paciente.</p></div>
         ) : (
           <>
-            <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center"><FaChartLine className="mr-2 text-primary" />Evolución de Edad Bioquímica vs. Cronológica</h3>
-              <div className="h-80"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" /><XAxis dataKey="date" stroke="#666" /><YAxis stroke="#666" label={{ value: 'Años', angle: -90, position: 'insideLeft' }} /><Tooltip /><Legend /><Line type="monotone" dataKey="Edad Bioquímica" stroke="#82ca9d" strokeWidth={2} activeDot={{ r: 8 }} /><Line type="monotone" dataKey="Edad Cronológica" stroke="#8884d8" strokeWidth={2} /></LineChart></ResponsiveContainer></div>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center"><FaChartLine className="mr-2 text-primary" />Evolución de Edad Bioquímica vs. Cronológica</h3>
+              <div className="h-80"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" /><XAxis dataKey="date" stroke="#666" /><YAxis stroke="#666" label={{ value: 'Años', angle: -90, position: 'insideLeft' }} /><Tooltip /><Legend /><Line type="monotone" dataKey="Edad Bioquímica" stroke="rgb(35, 188, 239)" strokeWidth={2} activeDot={{ r: 8 }} /><Line type="monotone" dataKey="Edad Cronológica" stroke="#8884d8" strokeWidth={2} /></LineChart></ResponsiveContainer></div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -125,18 +125,24 @@ export default function BiochemistryHistoryView({ patient, onBack, onHistoryChan
 
               <div className="lg:col-span-2">
                 {selectedTest && (
-                  <div className="card">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Detalles del Test - {formatDateTime(selectedTest.testDate)}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                      <FaFlask className="mr-2 text-primary" />
+                      Detalles del Test - {formatDateTime(selectedTest.testDate)}
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {BIOCHEMISTRY_ITEMS.map(({ key, label }) => {
                         const value = (selectedTest as any)[key];
                         const ageValue = (selectedTest as any)[`${key}Age`];
                         const status = ageValue ? getBiochemistryStatus(ageValue, selectedTest.chronologicalAge) : 'SIN CALCULAR';
+                        const statusColor = status === 'REJUVENECIDO' ? 'text-green-600' : status === 'NORMAL' ? 'text-yellow-600' : status === 'ENVEJECIDO' ? 'text-red-600' : 'text-gray-400';
+
                         return (
-                          <div key={key} className={`p-3 rounded-lg text-white ${getStatusColorClass(status, true)}`}>
-                            <p className="text-sm font-medium">{label}</p>
-                            <p className="text-lg font-bold">{value != null ? Number(value).toFixed(2) : '--'}</p>
-                            <p className="text-xs opacity-80">Edad: {ageValue != null ? Number(ageValue).toFixed(1) : '--'}a</p>
+                          <div key={key} className="bg-gray-50 rounded-lg p-3 text-center border border-slate-100">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-1">{label}</p>
+                            <p className="text-xl font-black text-slate-900">{value != null ? Number(value).toFixed(2) : '--'}</p>
+                            <p className="text-xs text-slate-500 mt-1">Edad: <span className="font-bold">{ageValue != null ? Number(ageValue).toFixed(1) : '--'}a</span></p>
+                            <p className={`text-[10px] font-black uppercase tracking-tighter mt-1 ${statusColor}`}>{status}</p>
                           </div>
                         );
                       })}
