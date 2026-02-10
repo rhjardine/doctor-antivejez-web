@@ -91,6 +91,7 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
         // Ahora, el objeto 'patient' devuelto por Prisma será totalmente compatible
         // con el tipo 'PatientWithDetails', eliminando el error de compilación.
         aiAnalyses: true,
+        geneticTests: true,
       },
     });
     const guide = await prisma.patientGuide.findUnique({ where: { id: guideId } });
