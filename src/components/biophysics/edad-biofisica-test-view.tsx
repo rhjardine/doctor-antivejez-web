@@ -274,25 +274,25 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
         </div>
 
         <div className="w-full md:w-1/2 space-y-6">
-          <div className="card">
-            <h3 className="text-lg font-bold text-card-foreground uppercase tracking-tight mb-4">Resultados Finales</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight mb-4">Resultados Finales</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Edad Cronológica</p>
-                <p className="text-3xl font-black text-card-foreground">{calculatePreciseAge(patient.birthDate)}</p>
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Edad Cronológica</p>
+                <p className="text-3xl font-black text-slate-900">{calculatePreciseAge(patient.birthDate)}</p>
               </div>
 
-              <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Edad Biofísica</p>
-                <p className={`text-3xl font-black ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-primary'}`}>
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Edad Biofísica</p>
+                <p className={`text-3xl font-black ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-slate-900'}`}>
                   {calculated ? `${results.biologicalAge}` : '--'}
                 </p>
               </div>
 
-              <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Diferencial</p>
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Diferencial</p>
                 <p
-                  className={`text-3xl font-black ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-card-foreground'}`}
+                  className={`text-3xl font-black ${calculated ? getStatusColor(getAgeStatus(results.differentialAge)) : 'text-slate-900'}`}
                 >
                   {calculated ? `${results.differentialAge > 0 ? '+' : ''}${results.differentialAge}` : '--'}
                 </p>

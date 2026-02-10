@@ -73,7 +73,7 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
       'Edad Biológica': test.biologicalAge,
       'Edad Cronológica': test.chronologicalAge,
     }))
-    .reverse(); 
+    .reverse();
 
   const handleDeleteRequest = (test: BiophysicsTest) => {
     setTestToDelete(test);
@@ -102,7 +102,7 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
 
   return (
     <>
-      <DeleteConfirmationModal 
+      <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
@@ -128,8 +128,8 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
           </div>
         </div>
 
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
             <FaChartLine className="mr-2 text-primary" />
             Evolución de Edad Biológica vs. Cronológica
           </h3>
@@ -155,11 +155,10 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
               {patient.biophysicsTests.map(test => (
                 <div
                   key={test.id}
-                  className={`p-4 rounded-lg transition-all duration-200 border-l-4 ${
-                    selectedTest?.id === test.id
+                  className={`p-4 rounded-lg transition-all duration-200 border-l-4 ${selectedTest?.id === test.id
                       ? 'bg-primary/10 border-primary shadow-md'
                       : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-400'
-                  }`}
+                    }`}
                 >
                   <div className="flex justify-between items-start">
                     <div onClick={() => setSelectedTest(test)} className="flex-grow cursor-pointer">
@@ -171,7 +170,7 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
                         Diferencial: {test.differentialAge > 0 ? '+' : ''}{Math.round(test.differentialAge)} años
                       </p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => handleDeleteRequest(test)}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors ml-2 flex-shrink-0"
                       title="Eliminar este test"
@@ -186,8 +185,8 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
 
           <div className="lg:col-span-2">
             {selectedTest ? (
-              <div className="card">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
                   <FaInfoCircle className="mr-2 text-primary" />
                   Detalles del Test - {formatDateTime(selectedTest.testDate)}
                 </h3>
@@ -211,7 +210,7 @@ export default function BiophysicsHistoryView({ patient, onBack, onHistoryChange
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full card">
+              <div className="flex items-center justify-center h-full bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                 <p className="text-gray-500">No hay tests registrados para este paciente.</p>
               </div>
             )}
