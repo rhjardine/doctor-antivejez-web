@@ -7,6 +7,7 @@ import type {
   BiophysicsTest as PrismaBiophysicsTest,
   BiochemistryTest as PrismaBiochemistryTest,
   OrthomolecularTest as PrismaOrthomolecularTest,
+  GeneticTest as PrismaGeneticTest,
   Board as PrismaBoard,
   Range as PrismaRange,
   Appointment as PrismaAppointment,
@@ -22,6 +23,7 @@ export type Patient = PrismaPatient;
 export type BiophysicsTest = PrismaBiophysicsTest;
 export type BiochemistryTest = PrismaBiochemistryTest;
 export type OrthomolecularTest = PrismaOrthomolecularTest;
+export type GeneticTest = PrismaGeneticTest;
 export type Board = PrismaBoard;
 export type Range = PrismaRange;
 export type Appointment = PrismaAppointment;
@@ -36,6 +38,7 @@ export type PatientWithDetails = Patient & {
   biophysicsTests: BiophysicsTest[];
   biochemistryTests: BiochemistryTest[];
   orthomolecularTests: OrthomolecularTest[];
+  geneticTests: GeneticTest[];
   appointments: Appointment[];
   guides: PatientGuide[];
   foodPlans: (FoodPlan & { items: FoodItem[] })[];

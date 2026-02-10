@@ -128,7 +128,7 @@ export const BiochemicalAgeTest = ({ patient, onBack, onTestComplete }: Biochemi
                     <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
                         <ChevronLeft size={20} className="text-slate-400" />
                     </button>
-                    <h2 className="text-xl font-bold text-[#293b64]">Test Bioquímico</h2>
+                    <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-1 flex-1 uppercase tracking-tighter">Test Bioquímico</h2>
                 </div>
 
                 <form className="space-y-4">
@@ -188,18 +188,18 @@ export const BiochemicalAgeTest = ({ patient, onBack, onTestComplete }: Biochemi
             <div className="flex-1 space-y-6">
                 {/* Resumen Global (Hero Header) */}
                 {results ? (
-                    <div className="bg-[#293b64] rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl relative overflow-hidden animate-in slide-in-from-bottom-4 duration-700">
-                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <div className="bg-white rounded-[2.5rem] p-8 text-slate-900 flex flex-col md:flex-row justify-between items-center shadow-sm border border-slate-200 relative overflow-hidden animate-in slide-in-from-bottom-4 duration-700">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 text-slate-200">
                             <CheckCircle2 size={120} />
                         </div>
                         <div className="z-10 text-center md:text-left mb-6 md:mb-0">
-                            <p className="text-cyan-400 font-bold uppercase tracking-widest text-xs mb-2">Edad Cronológica: <span className="text-white text-lg">{patient.chronologicalAge}</span></p>
-                            <h3 className="text-3xl lg:text-4xl font-black italic">{patient.firstName} {patient.lastName}</h3>
+                            <p className="text-primary font-bold uppercase tracking-widest text-xs mb-2">Edad Cronológica: <span className="text-slate-900 text-lg">{patient.chronologicalAge}</span></p>
+                            <h3 className="text-3xl lg:text-4xl font-black italic text-slate-900">{patient.firstName} {patient.lastName}</h3>
                         </div>
-                        <div className="text-center z-10 bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 min-w-[200px]">
-                            <p className="text-xs font-medium opacity-80 uppercase mb-1">Edad Bioquímica</p>
-                            <p className="text-5xl font-black text-[#23bcef]">{results.biologicalAge.toFixed(1)}</p>
-                            <div className={`text-sm font-bold mt-1 ${results.differentialAge >= 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        <div className="text-center z-10 bg-slate-50 p-6 rounded-3xl border border-slate-100 min-w-[200px]">
+                            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Edad Bioquímica</p>
+                            <p className="text-5xl font-black text-primary">{results.biologicalAge.toFixed(1)}</p>
+                            <div className={`text-sm font-bold mt-1 ${results.differentialAge >= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                                 {results.differentialAge >= 0 ? `+${results.differentialAge.toFixed(1)} años de rezago` : `${results.differentialAge.toFixed(1)} años de ventaja`}
                             </div>
                         </div>

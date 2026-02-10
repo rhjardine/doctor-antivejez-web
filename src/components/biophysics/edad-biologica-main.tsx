@@ -25,10 +25,12 @@ export default function EdadBiologicaMain({
   const lastBiophysicsTest = patient.biophysicsTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
   const lastBiochemistryTest = patient.biochemistryTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
   const lastOrthomolecularTest = patient.orthomolecularTests?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
+  const lastGeneticTest = (patient as any).geneticTests?.sort((a: any, b: any) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())[0];
 
   const biophysicsDifference = lastBiophysicsTest?.biologicalAge ? Math.round(lastBiophysicsTest.biologicalAge - patient.chronologicalAge) : undefined;
   const biochemistryDifference = lastBiochemistryTest?.biochemicalAge ? Math.round(lastBiochemistryTest.biochemicalAge - patient.chronologicalAge) : undefined;
   const orthomolecularDifference = lastOrthomolecularTest?.orthomolecularAge ? Math.round(lastOrthomolecularTest.orthomolecularAge - patient.chronologicalAge) : undefined;
+  const geneticDifference = lastGeneticTest?.biologicalAge ? Math.round(lastGeneticTest.biologicalAge - patient.chronologicalAge) : undefined;
 
   const testCards = [
     {
@@ -71,13 +73,13 @@ export default function EdadBiologicaMain({
       id: 'genetica',
       title: 'EDAD GENÉTICA',
       icon: FaDna,
-      value: 'Ver',
-      difference: undefined,
+      value: lastGeneticTest?.biologicalAge ? Math.round(lastGeneticTest.biologicalAge) : 'Ver',
+      difference: geneticDifference,
       isClickable: true,
       onClick: onGeneticTestClick,
       color: 'bg-primary',
-      hasHistory: false,
-      onHistoryClick: undefined,
+      hasHistory: (patient as any).geneticTests && (patient as any).geneticTests.length > 0,
+      onHistoryClick: onGeneticTestClick, // O crear onGeneticHistoryClick si es necesario
     },
   ];
 
@@ -178,8 +180,8 @@ export default function EdadBiologicaMain({
                 <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
                   <div
                     className={`absolute left-0 top-0 h-full rounded-full transition-all ${difference <= -7 ? 'bg-status-green' :
-                        difference >= -2 && difference <= 3 ? 'bg-status-yellow' :
-                          'bg-status-red'
+                      difference >= -2 && difference <= 3 ? 'bg-status-yellow' :
+                        'bg-status-red'
                       }`}
                     style={{ width: `${Math.min(100, Math.max(0, 50 + (difference * 2)))}%` }}
                   />

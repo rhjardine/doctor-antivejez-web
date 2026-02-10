@@ -32,3 +32,19 @@ export interface TelotestReport {
   generalRecommendations: GeneralRecommendation[];
   references: ScientificReference[];
 }
+
+export interface GeneticTestRecord {
+  id: string;
+  patientId: string;
+  chronologicalAge: number;
+  averageTelomereLength: string;
+  biologicalAge: number;
+  differentialAge: number;
+  interpretation?: string | null;
+  therapeuticResults?: any;
+  recommendations?: any;
+  testDate: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+

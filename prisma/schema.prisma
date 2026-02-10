@@ -182,6 +182,7 @@ model Patient {
   biophysicsTests     BiophysicsTest[]
   biochemistryTests   BiochemistryTest[]
   orthomolecularTests OrthomolecularTest[]
+  geneticTests        GeneticTest[]
   appointments        Appointment[]
   guides              PatientGuide[]
   foodPlans           FoodPlan[]
@@ -583,6 +584,25 @@ model NlrTest {
 
   @@index([patientId])
   @@map("nlr_tests")
+}
+
+model GeneticTest {
+  id                    String   @id @default(cuid())
+  patientId             String
+  chronologicalAge      Float
+  averageTelomereLength String
+  biologicalAge         Float
+  differentialAge       Float
+  interpretation        String?  @db.Text
+  therapeuticResults    Json?    // Array de objetos category/items
+  recommendations       Json?    // Array de objetos category/points
+  testDate              DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("genetic_tests")
 }
 
 // =================================================================
