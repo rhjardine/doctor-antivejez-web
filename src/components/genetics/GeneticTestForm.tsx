@@ -68,54 +68,54 @@ export default function GeneticTestForm({ patient, onBack, onSuccess }: GeneticT
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fadeIn">
-            <div className="bg-[#293b64] rounded-2xl p-8 text-white shadow-xl">
-                <button onClick={onBack} className="flex items-center space-x-2 text-slate-300 hover:text-white mb-6 transition-colors">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fadeIn text-slate-900">
+            <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+                <button onClick={onBack} className="flex items-center space-x-2 text-slate-500 hover:text-slate-900 mb-6 transition-colors font-medium">
                     <FaArrowLeft />
                     <span>Volver</span>
                 </button>
 
                 <div className="flex items-center gap-4 mb-8">
-                    <div className="p-4 bg-white/10 rounded-2xl">
+                    <div className="p-4 bg-[#293b64] rounded-2xl">
                         <FaDna className="text-4xl text-white" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold">Nuevo Test Genético</h2>
-                        <p className="text-slate-300 text-sm">Ingresa los resultados del laboratorio Telotes</p>
+                        <h2 className="text-2xl font-black tracking-tight text-slate-900">Nuevo Test Genético</h2>
+                        <p className="text-slate-500 text-sm">Ingresa los resultados del laboratorio Telotes</p>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 ml-1">Fecha del Test</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 ml-1">Fecha del Test</label>
                         <input
                             {...register('testDate')}
                             type="date"
-                            className="w-full bg-slate-800/50 border-2 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                            className="w-full bg-[#293b64] border-2 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                         />
-                        {errors.testDate && <p className="text-red-400 text-xs mt-1">{errors.testDate.message}</p>}
+                        {errors.testDate && <p className="text-red-500 text-xs mt-1">{errors.testDate.message}</p>}
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 ml-1">Longitud de Telómeros (kb)</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 ml-1">Longitud de Telómeros (kb)</label>
                         <input
                             {...register('averageTelomereLength')}
                             type="text"
                             placeholder="Ej: 1.34 kb"
-                            className="w-full bg-slate-800/50 border-2 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                            className="w-full bg-[#293b64] border-2 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-400"
                         />
-                        {errors.averageTelomereLength && <p className="text-red-400 text-xs mt-1">{errors.averageTelomereLength.message}</p>}
+                        {errors.averageTelomereLength && <p className="text-red-500 text-xs mt-1">{errors.averageTelomereLength.message}</p>}
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 ml-1">Edad Biológica Estimada</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 ml-1">Edad Biológica Estimada</label>
                         <input
                             {...register('estimatedBiologicalAge')}
                             type="number"
                             placeholder="Años"
-                            className="w-full bg-slate-800/50 border-2 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                            className="w-full bg-[#293b64] border-2 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-400"
                         />
-                        {errors.estimatedBiologicalAge && <p className="text-red-400 text-xs mt-1">{errors.estimatedBiologicalAge.message}</p>}
+                        {errors.estimatedBiologicalAge && <p className="text-red-500 text-xs mt-1">{errors.estimatedBiologicalAge.message}</p>}
                     </div>
 
                     <button

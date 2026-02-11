@@ -123,18 +123,18 @@ export const BiochemicalAgeTest = ({ patient, onBack, onTestComplete }: Biochemi
         <div className="flex flex-col lg:flex-row gap-6 p-6 bg-slate-50 min-h-screen font-sans">
 
             {/* PANEL DE ENTRADA (Left Input Panel) */}
-            <div className="w-full lg:w-1/3 bg-white rounded-3xl shadow-sm border border-slate-200 p-8 space-y-6 h-fit sticky top-6">
+            <div className="w-full lg:w-1/3 bg-[#293b64] rounded-3xl shadow-sm border border-slate-700 p-8 space-y-6 h-fit sticky top-6 text-white font-sans">
                 <div className="flex items-center gap-2 mb-4">
-                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                        <ChevronLeft size={20} className="text-slate-400" />
+                    <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <ChevronLeft size={20} className="text-slate-300" />
                     </button>
-                    <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-1 flex-1 uppercase tracking-tighter">Test Bioquímico</h2>
+                    <h2 className="text-xl font-bold text-white border-b border-white/10 pb-1 flex-1 uppercase tracking-tighter">Test Bioquímico</h2>
                 </div>
 
                 <form className="space-y-4">
                     {BIOCHEMISTRY_ITEMS.map((item) => (
                         <div key={item.key} className="group">
-                            <label className="text-xs font-semibold text-slate-500 mb-1 block ml-1 uppercase tracking-wider">
+                            <label className="text-xs font-semibold text-slate-300 mb-1 block ml-1 uppercase tracking-wider">
                                 {item.label}
                             </label>
                             <div className="relative">
@@ -149,10 +149,9 @@ export const BiochemicalAgeTest = ({ patient, onBack, onTestComplete }: Biochemi
                                             disabled={!isEditMode && !!results}
                                             onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                                             value={field.value ?? ''}
-                                            // UI FIX: Persistent Pure White background and specific border colors
                                             className={`w-full bg-white border-2 rounded-xl px-4 py-3 text-slate-900 font-bold outline-none transition-all placeholder:text-slate-300
-                                ${errors[item.key] ? 'border-rose-400 focus:border-rose-500' : 'border-slate-100 focus:border-[#23bcef]'}
-                                focus:ring-4 focus:ring-cyan-50 disabled:opacity-70 disabled:bg-white disabled:text-slate-700
+                                ${errors[item.key] ? 'border-rose-400 focus:border-rose-500' : 'border-white/10 focus:border-[#23bcef]'}
+                                focus:ring-4 focus:ring-cyan-500/20 disabled:opacity-70 disabled:bg-slate-50 disabled:text-slate-400
                             `}
                                         />
                                     )}
@@ -177,7 +176,7 @@ export const BiochemicalAgeTest = ({ patient, onBack, onTestComplete }: Biochemi
                     </button>
                     <button
                         onClick={() => { setIsEditMode(true); setResults(null); }}
-                        className="p-4 border-2 border-slate-100 text-slate-400 hover:border-[#293b64] hover:text-[#293b64] rounded-2xl transition-all active:scale-[0.98]"
+                        className="p-4 border-2 border-white/10 text-slate-300 hover:border-white hover:text-white rounded-2xl transition-all active:scale-[0.98]"
                     >
                         {isEditMode ? <Save size={20} /> : <Edit3 size={20} />}
                     </button>
