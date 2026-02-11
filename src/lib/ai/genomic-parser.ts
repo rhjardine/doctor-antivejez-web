@@ -166,8 +166,10 @@ export async function extractGenomicData(
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Use Gemini 1.5 Pro for its large context window (handles 71-page PDFs)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        // Use Gemini 1.5 Pro (latest) for its large context window
+        // Fallback to Flash if Pro fails
+        const modelPro = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+        const modelFlash = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = reportType === 'TELOTEST' ? TELOTEST_PROMPT : NUTRIGEN_PROMPT;
 
@@ -176,15 +178,30 @@ export async function extractGenomicData(
         // Strip data URI prefix if present
         const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
 
-        const result = await model.generateContent([
-            prompt,
-            {
-                inlineData: {
-                    data: cleanBase64,
-                    mimeType: "application/pdf",
+        let result;
+        try {
+            console.log(`[GenomicParser] Attempting with gemini-1.5-pro-latest...`);
+            result = await modelPro.generateContent([
+                prompt,
+                {
+                    inlineData: {
+                        data: cleanBase64,
+                        mimeType: "application/pdf",
+                    },
                 },
-            },
-        ]);
+            ]);
+        } catch (proError: any) {
+            console.warn(`[GenomicParser] gemini-1.5-pro-latest failed: ${proError.message}. Retrying with gemini-1.5-flash...`);
+            result = await modelFlash.generateContent([
+                prompt,
+                {
+                    inlineData: {
+                        data: cleanBase64,
+                        mimeType: "application/pdf",
+                    },
+                },
+            ]);
+        }
 
         const responseText = result.response.text();
         console.log(`[GenomicParser] AI Response received (Length: ${responseText.length})`);
