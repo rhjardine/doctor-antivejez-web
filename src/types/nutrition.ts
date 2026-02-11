@@ -1,8 +1,8 @@
 // src/types/nutrition.ts
-import type { 
-    FoodItem as PrismaFoodItem, 
-    GeneralGuideItem as PrismaGeneralGuideItem, 
-    WellnessKey as PrismaWellnessKey,
+import type {
+  FoodItem as PrismaFoodItem,
+  GeneralGuideItem as PrismaGeneralGuideItem,
+  WellnessKey as PrismaWellnessKey,
 } from '@prisma/client';
 
 // ===== ANÁLISIS Y CORRECCIÓN ESTRATÉGICA =====
@@ -14,21 +14,20 @@ import type {
 // 2. FUENTE ÚNICA DE LA VERDAD: Se elimina la declaración manual de 'const DietType' y
 //    'type DietTypeEnum'. El enum 'DietType' importado directamente de Prisma se convierte
 //    en la única fuente de la verdad, garantizando la sincronización con la base de datos.
-import { 
-    MealType, 
-    BloodTypeGroup, 
-    GeneralGuideType,
-    DietType // Importamos el enum directamente desde el cliente de Prisma.
+import {
+  GeneralGuideType,
+  DietType, // Importamos el enum directamente desde el cliente de Prisma.
+  FoodCategory
 } from '@prisma/client';
 
 // Re-exportamos los enums y tipos para que el resto de la aplicación
 // los consuma desde este archivo central, manteniendo la arquitectura limpia.
-export { MealType, BloodTypeGroup, GeneralGuideType, DietType };
+export { MealType, BloodTypeGroup, GeneralGuideType, DietType, FoodCategory };
 
 // Interfaces extendidas (práctica correcta que se mantiene)
-export interface FoodItem extends PrismaFoodItem {}
-export interface GeneralGuideItem extends PrismaGeneralGuideItem {}
-export interface WellnessKey extends PrismaWellnessKey {}
+export interface FoodItem extends PrismaFoodItem { }
+export interface GeneralGuideItem extends PrismaGeneralGuideItem { }
+export interface WellnessKey extends PrismaWellnessKey { }
 
 // Tipos personalizados que componen los tipos de Prisma.
 // Se mejora la robustez para que se adapten a los enums.

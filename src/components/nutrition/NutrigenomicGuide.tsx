@@ -12,7 +12,8 @@ import {
     BloodTypeGroup,
     DietType, // Se utiliza el enum unificado.
     GeneralGuideItem,
-    WellnessKey
+    WellnessKey,
+    FoodCategory
 } from '@/types/nutrition';
 // ===========================================
 import { getFullNutritionData, savePatientNutritionPlan } from '@/lib/actions/nutrition.actions';
@@ -92,7 +93,15 @@ export default function NutrigenomicGuide({ patient }: { patient: PatientWithDet
     const handleAddItem = (mealType: MealType, name: string) => {
         if (!foodData) return;
         const newItem: FoodItem = {
-            id: `temp_${Date.now()}`, name, mealType, bloodTypeGroup: 'ALL', isDefault: false, createdAt: new Date(), updatedAt: new Date(), foodPlanId: null
+            id: `temp_${Date.now()}`,
+            name,
+            mealType,
+            bloodTypeGroup: 'ALL',
+            category: 'BENEFICIAL',
+            isDefault: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            foodPlanId: null
         };
         const updatedMeal = [...foodData[mealType], newItem];
         setFoodData({ ...foodData, [mealType]: updatedMeal });
