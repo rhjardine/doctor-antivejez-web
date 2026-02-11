@@ -92,6 +92,7 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
         // con el tipo 'PatientWithDetails', eliminando el error de compilación.
         aiAnalyses: true,
         geneticTests: true,
+        labReports: true,
       },
     });
     const guide = await prisma.patientGuide.findUnique({ where: { id: guideId } });

@@ -8,13 +8,14 @@ import type {
   BiochemistryTest as PrismaBiochemistryTest,
   OrthomolecularTest as PrismaOrthomolecularTest,
   GeneticTest as PrismaGeneticTest,
+  LabReport as PrismaLabReport,
   Board as PrismaBoard,
   Range as PrismaRange,
   Appointment as PrismaAppointment,
   PatientGuide as PrismaPatientGuide,
   FoodPlan as PrismaFoodPlan,
   FoodItem as PrismaFoodItem,
-  AIAnalysis as PrismaAIAnalysis // ✅ NUEVO: Importar el tipo AIAnalysis
+  AIAnalysis as PrismaAIAnalysis
 } from '@prisma/client';
 
 // 2. Re-exportar los tipos base de Prisma
@@ -24,6 +25,7 @@ export type BiophysicsTest = PrismaBiophysicsTest;
 export type BiochemistryTest = PrismaBiochemistryTest;
 export type OrthomolecularTest = PrismaOrthomolecularTest;
 export type GeneticTest = PrismaGeneticTest;
+export type LabReport = PrismaLabReport;
 export type Board = PrismaBoard;
 export type Range = PrismaRange;
 export type Appointment = PrismaAppointment;
@@ -39,6 +41,7 @@ export type PatientWithDetails = Patient & {
   biochemistryTests: BiochemistryTest[];
   orthomolecularTests: OrthomolecularTest[];
   geneticTests: GeneticTest[];
+  labReports: LabReport[];
   appointments: Appointment[];
   guides: PatientGuide[];
   foodPlans: (FoodPlan & { items: FoodItem[] })[];

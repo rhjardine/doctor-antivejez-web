@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { FaArrowLeft, FaPrint, FaPlus } from 'react-icons/fa';
+import { FaArrowLeft, FaPrint, FaPlus, FaUpload } from 'react-icons/fa';
 import type { TelotestReport } from '@/types/genetics';
 import { formatDate } from '@/utils/date';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ interface GeneticTestViewProps {
   report: TelotestReport;
   onBack: () => void;
   onNewTest?: () => void;
+  onUploadPdf?: () => void;
 }
 
 const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
@@ -20,7 +21,7 @@ const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title
   </div>
 );
 
-const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNewTest }) => {
+const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNewTest, onUploadPdf }) => {
   const { patient, results, interpretation, therapeuticResults, generalRecommendations, references } = report;
 
   const getCategoryColor = (category: string) => {
@@ -54,6 +55,11 @@ const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNew
           {onNewTest && (
             <Button onClick={onNewTest} className="flex-1 md:flex-none gap-2 bg-primary hover:bg-primary-dark shadow-md shadow-primary/20 text-white font-bold">
               <FaPlus size={14} /> Nuevo Test
+            </Button>
+          )}
+          {onUploadPdf && (
+            <Button onClick={onUploadPdf} className="flex-1 md:flex-none gap-2 bg-[#293b64] hover:bg-[#1e2d4f] shadow-md shadow-[#293b64]/20 text-white font-bold">
+              <FaUpload size={14} /> Subir PDF
             </Button>
           )}
           <Button onClick={handlePrint} className="flex-1 md:flex-none gap-2 bg-slate-900 hover:bg-slate-800 shadow-md shadow-slate-200 text-white font-bold">

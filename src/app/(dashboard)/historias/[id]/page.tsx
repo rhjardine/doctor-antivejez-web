@@ -29,6 +29,7 @@ import BiochemicalAgeTest from '@/components/medical/BiochemicalAgeTest';
 import BiochemistryHistoryView from '@/components/biochemistry/BiochemistryHistoryView';
 import GeneticTestView from '@/components/genetics/GeneticTestView';
 import GeneticTestForm from '@/components/genetics/GeneticTestForm';
+import GenomicHub from '@/components/genetics/GenomicHub';
 import OrthomolecularTestView from '@/components/orthomolecular/OrthomolecularTestView';
 import NutrigenomicGuide from '@/components/nutrition/NutrigenomicGuide';
 import { telotestReportData } from '@/lib/mock-data';
@@ -41,7 +42,7 @@ import NlrCalculator from '@/components/medical/NlrCalculator';
 
 // ✅ Se actualiza el tipo TabId
 import { TabId } from '@/types';
-type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'orthomolecular' | 'biofisica_history' | 'bioquimica_history' | 'genetica' | 'genetica_form';
+type ActiveTestView = 'main' | 'biofisica' | 'bioquimica' | 'orthomolecular' | 'biofisica_history' | 'bioquimica_history' | 'genetica' | 'genetica_form' | 'genomic_hub';
 type GuideView = 'form' | 'history';
 
 export default function PatientDetailPage() {
@@ -153,17 +154,18 @@ export default function PatientDetailPage() {
       case 'bioquimica_history':
         return <BiochemistryHistoryView patient={patient} onBack={() => setActiveTestView('main')} onHistoryChange={refreshPatientData} />;
       case 'genetica':
-        // Si el paciente tiene tests genéticos, podríamos mostrar el historial o el último reporte.
-        // Por ahora mantenemos el reporte mock para la visualización, pero permitimos ir al form.
         return (
           <GeneticTestView
             report={telotestReportData}
             onBack={() => setActiveTestView('main')}
             onNewTest={() => setActiveTestView('genetica_form')}
+            onUploadPdf={() => setActiveTestView('genomic_hub')}
           />
         );
       case 'genetica_form':
-        return <GeneticTestForm patient={patient} onBack={() => setActiveTestView('main')} onSuccess={() => { setActiveTestView('genetica'); refreshPatientData(); }} />;
+        return <GeneticTestForm patient={patient} onBack={() => setActiveTestView('genetica')} onSuccess={() => { setActiveTestView('genetica'); refreshPatientData(); }} />;
+      case 'genomic_hub':
+        return <GenomicHub patient={patient} onBack={() => setActiveTestView('genetica')} onTestSaved={() => { refreshPatientData(); }} />;
       default:
         return null;
     }

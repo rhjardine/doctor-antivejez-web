@@ -53,6 +53,10 @@ export async function GET(req: Request) {
                 nlrTests: {
                     orderBy: { createdAt: 'desc' },
                     take: 1
+                },
+                geneticTests: {
+                    orderBy: { testDate: 'desc' },
+                    take: 1
                 }
             }
         });
@@ -73,6 +77,14 @@ export async function GET(req: Request) {
             biophysics: patient.biophysicsTests[0] || null,
             biochemistry: patient.biochemistryTests[0] || null,
             latestNlr: patient.nlrTests[0] || null,
+            geneticSummary: patient.geneticTests[0] ? {
+                telomereLength: patient.geneticTests[0].averageTelomereLength,
+                biologicalAge: patient.geneticTests[0].biologicalAge,
+                chronologicalAge: patient.geneticTests[0].chronologicalAge,
+                agingDelta: patient.geneticTests[0].differentialAge,
+                rejuvenationScore: Math.max(0, Math.min(100, 50 + (patient.geneticTests[0].chronologicalAge - patient.geneticTests[0].biologicalAge) * 5)),
+                lastTestDate: patient.geneticTests[0].testDate?.toISOString() || null,
+            } : null,
             guides: patient.guides,
             foodPlans: patient.foodPlans
         }, { headers: corsHeaders });
