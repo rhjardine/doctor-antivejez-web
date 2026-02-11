@@ -19,13 +19,13 @@ async function main() {
 
   // --- 2. Crear Rangos de Edad ---
   const rangesData = [
-    { id: 1, minAge: 21, maxAge: 28 },   { id: 2, minAge: 28, maxAge: 35 },
-    { id: 3, minAge: 35, maxAge: 42 },   { id: 4, minAge: 42, maxAge: 49 },
-    { id: 5, minAge: 49, maxAge: 56 },   { id: 6, minAge: 56, maxAge: 63 },
-    { id: 7, minAge: 63, maxAge: 70 },   { id: 8, minAge: 70, maxAge: 77 },
-    { id: 9, minAge: 77, maxAge: 84 },   { id: 10, minAge: 84, maxAge: 91 },
-    { id: 11, minAge: 91, maxAge: 98 },  { id: 12, minAge: 98, maxAge: 105 },
-    { id: 13, minAge: 105, maxAge: 112 },{ id: 14, minAge: 112, maxAge: 120 },
+    { id: 1, minAge: 21, maxAge: 28 }, { id: 2, minAge: 28, maxAge: 35 },
+    { id: 3, minAge: 35, maxAge: 42 }, { id: 4, minAge: 42, maxAge: 49 },
+    { id: 5, minAge: 49, maxAge: 56 }, { id: 6, minAge: 56, maxAge: 63 },
+    { id: 7, minAge: 63, maxAge: 70 }, { id: 8, minAge: 70, maxAge: 77 },
+    { id: 9, minAge: 77, maxAge: 84 }, { id: 10, minAge: 84, maxAge: 91 },
+    { id: 11, minAge: 91, maxAge: 98 }, { id: 12, minAge: 98, maxAge: 105 },
+    { id: 13, minAge: 105, maxAge: 112 }, { id: 14, minAge: 112, maxAge: 120 },
   ];
   await prisma.range.createMany({ data: rangesData });
   console.log('📊 Rangos de edad creados.');
@@ -107,7 +107,7 @@ async function main() {
 
   await prisma.board.createMany({ data: allBoardsToCreate });
   console.log('📏 Baremos (boards) creados/actualizados.');
-  
+
   // ===== 4. CORRECCIÓN CRÍTICA DE ACCESO: Crear o Actualizar Admin =====
   const adminEmail = 'admin@doctorantivejez.com';
   // Encriptamos la contraseña "123456"
@@ -132,54 +132,60 @@ async function main() {
   // ===== 5. SEEDING DE GUÍA DE ALIMENTACIÓN (DATA COMPLETA ORIGINAL) =====
   const foodItems = [
     // DESAYUNO
-    { name: 'Cereales de trigo sarraceno, avena sin gluten', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Tortilla de huevo con avena s/g', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Creps de avena s/g', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Leche de soya o almendras', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Huevo revuelto con vegetales y queso de cabra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Yogur de cabra con frutas', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Huevo escalfado con verduras al vapor', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Cereales de', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Creps de yuca', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Suero de leche (Whey protein)', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Huevo duro cocido con tiras de queso de cabra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Omelette de clara de huevo con champiñones', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Infusiones o café sin azúcar', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Pan sin gluten', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'ALL' as const },
-    { name: 'Batido de proteínas con espinacas', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'ALL' as const },
-    { name: 'Tostadas de pan integral con mantequilla de almendra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'ALL' as const },
-    
+    { name: 'Cereales de trigo sarraceno, avena sin gluten', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Tortilla de huevo con avena s/g', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Creps de avena s/g', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Leche de soya o almendras', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Huevo revuelto con vegetales y queso de cabra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Yogur de cabra con frutas', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Huevo escalfado con verduras al vapor', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Cereales de', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Creps de yuca', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Suero de leche (Whey protein)', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Huevo duro cocido con tiras de queso de cabra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Omelette de clara de huevo con champiñones', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Infusiones o café sin azúcar', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const, category: 'NEUTRAL' as const },
+    { name: 'Pan sin gluten', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'ALL' as const, category: 'NEUTRAL' as const },
+    { name: 'Batido de proteínas con espinacas', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'ALL' as const, category: 'BENEFICIAL' as const },
+    { name: 'Tostadas de pan integral con mantequilla de almendra', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'ALL' as const, category: 'NEUTRAL' as const },
+
+    // Explicit AVOID Items (examples based on rules)
+    { name: 'Trigo (Gluten)', mealType: 'DESAYUNO' as const, bloodTypeGroup: 'O_B' as const, category: 'AVOID' as const },
+    { name: 'Cerdo', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const, category: 'AVOID' as const },
+    { name: 'Carne Roja', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const, category: 'AVOID' as const },
+    { name: 'Embutidos', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const, category: 'AVOID' as const },
+
     // ALMUERZO
-    { name: 'Carnes rojas o blancas', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Pasticho de berenjena con carne', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Tomate relleno con carne molida', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Rissoto o ñoquis', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Pizza de casabe con queso de cabra', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Kibbe con ensalada Fatush', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Lomito con jojoticos chinos', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Carnes blancas', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Pasticho de berenjena con pollo', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Tomate relleno con pollo', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Pizza de coliflor con queso de cabra', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Falafel con ensalada Tabule de quinoa', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Pollo a la naranja con ensalada budda', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Ensaladas', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const },
-    { name: 'Granos', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const },
-    { name: 'Pan sin gluten', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const },
+    { name: 'Carnes rojas o blancas', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Pasticho de berenjena con carne', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Tomate relleno con carne molida', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Rissoto o ñoquis', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const, category: 'NEUTRAL' as const },
+    { name: 'Pizza de casabe con queso de cabra', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const, category: 'NEUTRAL' as const },
+    { name: 'Kibbe con ensalada Fatush', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const, category: 'NEUTRAL' as const },
+    { name: 'Lomito con jojoticos chinos', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Carnes blancas', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Pasticho de berenjena con pollo', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Tomate relleno con pollo', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Pizza de coliflor con queso de cabra', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const, category: 'NEUTRAL' as const },
+    { name: 'Falafel con ensalada Tabule de quinoa', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Pollo a la naranja con ensalada budda', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Ensaladas', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const, category: 'BENEFICIAL' as const },
+    { name: 'Granos', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const, category: 'NEUTRAL' as const },
+    { name: 'Pan sin gluten', mealType: 'ALMUERZO' as const, bloodTypeGroup: 'ALL' as const, category: 'NEUTRAL' as const },
 
     // CENA
-    { name: 'Ensaladas de sardinas, salmón o mariscos', mealType: 'CENA' as const, bloodTypeGroup: 'O_B' as const },
-    { name: 'Sushi', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Ceviche', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Antipasto', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Carpaccio', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const },
+    { name: 'Ensaladas de sardinas, salmón o mariscos', mealType: 'CENA' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: 'Sushi', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const, category: 'NEUTRAL' as const },
+    { name: 'Ceviche', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Antipasto', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const, category: 'NEUTRAL' as const },
+    { name: 'Carpaccio', mealType: 'CENA' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
 
     // MERIENDAS Y POSTRES
-    { name: 'Gelatina de lámina o 1 cda de polvo sin sabor en infusión con stevia o limón (GELATE)', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'O_B' as const },
-    { name: '7 Semillas: almendras, nueces, pistacho, merey, guyama tostada', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Batido de proteina: 1 cda de suero o ricotta sin sal, whey protein o soy protein', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Helado Vegano (leche de almendras o coco)', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const },
-    { name: 'Tableta de Cacao Natives 100%', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const },
+    { name: 'Gelatina de lámina o 1 cda de polvo sin sabor en infusión con stevia o limón (GELATE)', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'O_B' as const, category: 'BENEFICIAL' as const },
+    { name: '7 Semillas: almendras, nueces, pistacho, merey, guyama tostada', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Batido de proteina: 1 cda de suero o ricotta sin sal, whey protein o soy protein', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Helado Vegano (leche de almendras o coco)', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
+    { name: 'Tableta de Cacao Natives 100%', mealType: 'MERIENDAS_POSTRES' as const, bloodTypeGroup: 'A_AB' as const, category: 'BENEFICIAL' as const },
   ];
 
   await prisma.foodItem.createMany({
@@ -188,7 +194,7 @@ async function main() {
   console.log(`🍓 ${foodItems.length} alimentos creados.`);
 
   // ===== SEEDING DE GUÍA GENERAL Y CLAVES DE BIENESTAR =====
-  
+
   const foodsToAvoid = [
     "Cocina y sus derivados, atún, pez espada, grasas, frituras, huevos fritos.",
     "Caseína: lácteos de vaca y búfala, parmesano, embutidos con preservativos, refrescos, azúcar, edulcorantes, chucherías, harinas refinadas y sus derivados, cereales refinados, jugos naturales.",
@@ -224,7 +230,7 @@ async function main() {
 
   await prisma.wellnessKey.createMany({ data: longevityKeys });
   console.log('🔑 Claves de Bienestar creadas.');
-  
+
   console.log('✅ Seeding completado exitosamente.');
 }
 

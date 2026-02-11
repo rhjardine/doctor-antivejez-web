@@ -132,6 +132,25 @@ export async function getPatientDetails(id: string) {
   }
 }
 
+export async function getPatientBiophysicsTrends(id: string) {
+  try {
+    const trends = await prisma.biophysicsTest.findMany({
+      where: { patientId: id },
+      select: {
+        testDate: true,
+        chronologicalAge: true,
+        biologicalAge: true,
+      },
+      orderBy: { testDate: 'asc' }, // Ascending for time series chart
+    });
+
+    return { success: true, trends };
+  } catch (error) {
+    console.error('Error obteniendo tendencias:', error);
+    return { success: false, error: 'Error al obtener tendencias', trends: [] };
+  }
+}
+
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 

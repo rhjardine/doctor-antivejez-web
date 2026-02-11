@@ -39,6 +39,7 @@ import PatientForm from '@/components/patients/PatientForm';
 
 // ✅ Se importa el nuevo componente para la pestaña de Biomarcadores
 import NlrCalculator from '@/components/medical/NlrCalculator';
+import BiophysicsTrendsChart from '@/components/biophysics/BiophysicsTrendsChart';
 
 // ✅ Se actualiza el tipo TabId
 import { TabId } from '@/types';
@@ -125,6 +126,7 @@ export default function PatientDetailPage() {
     { id: 'resumen', label: 'Resumen Clínico', icon: FaFileMedicalAlt },
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
+    { id: 'tendencias', label: 'Tendencias', icon: FaChartLine }, // ✅ Nueva pestaña
     { id: 'biomarcadores', label: 'Biomarcadores', icon: FaVial },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
@@ -319,6 +321,12 @@ export default function PatientDetailPage() {
         {activeTab === 'alimentacion' && <NutrigenomicGuide patient={patient} />}
 
         {activeTab === 'omicas' && <div className="card text-center py-12"><FaDna className="text-6xl text-gray-300 mx-auto mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Programa OMICS</h3><p className="text-gray-500">La integración con estudios genómicos, proteómicos y metabolómicos estará disponible pronto.</p></div>}
+
+
+        {/* ✅ Pestaña Tendencias */}
+        {activeTab === 'tendencias' && (
+          <BiophysicsTrendsChart patientId={patient.id} />
+        )}
 
         {/* La pestaña 'seguimiento' y su contenido han sido eliminados */}
       </div>

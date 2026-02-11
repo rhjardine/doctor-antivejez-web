@@ -57,6 +57,12 @@ enum BloodTypeGroup {
   A_AB
 }
 
+enum FoodCategory {
+  BENEFICIAL
+  NEUTRAL
+  AVOID
+}
+
 enum GeneralGuideType {
   AVOID
   SUBSTITUTE
@@ -516,6 +522,7 @@ model FoodItem {
   name           String
   mealType       MealType
   bloodTypeGroup BloodTypeGroup @default(ALL)
+  category       FoodCategory   @default(BENEFICIAL)
   isDefault      Boolean        @default(true)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

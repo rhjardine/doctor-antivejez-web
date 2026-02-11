@@ -50,4 +50,4 @@ export type PatientWithDetails = Patient & {
 
 // 4. Mantener tipos personalizados
 export type Gender = 'MASCULINO' | 'FEMENINO' | 'MASCULINO_DEPORTIVO' | 'FEMENINO_DEPORTIVO';
-export type TabId = 'resumen' | 'historia' | 'biofisica' | 'biomarcadores' | 'guia' | 'alimentacion' | 'omicas';
+export type TabId = 'resumen' | 'historia' | 'biofisica' | 'tendencias' | 'biomarcadores' | 'guia' | 'alimentacion' | 'omicas';
