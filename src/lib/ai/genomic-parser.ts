@@ -166,10 +166,12 @@ export async function extractGenomicData(
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Use Gemini 2.5 Pro for its large context window (handles 71-page PDFs)
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro-preview-05-06" });
+        // Use Gemini 1.5 Pro for its large context window (handles 71-page PDFs)
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
         const prompt = reportType === 'TELOTEST' ? TELOTEST_PROMPT : NUTRIGEN_PROMPT;
+
+        console.log(`[GenomicParser] Starting extraction for ${reportType}...`);
 
         // Strip data URI prefix if present
         const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
@@ -185,6 +187,7 @@ export async function extractGenomicData(
         ]);
 
         const responseText = result.response.text();
+        console.log(`[GenomicParser] AI Response received (Length: ${responseText.length})`);
 
         // Clean potential markdown wrapping
         const cleanJson = responseText
@@ -194,9 +197,11 @@ export async function extractGenomicData(
 
         try {
             const data = JSON.parse(cleanJson) as GenomicExtraction;
+            console.log(`[GenomicParser] JSON parsed successfully for ${reportType}`);
             return { success: true, data };
         } catch (parseError) {
-            console.error("[GenomicParser] JSON parse error:", parseError);
+            console.error("[GenomicParser] JSON parsing failed:", parseError);
+            console.debug("[GenomicParser] Raw response text:", responseText);
             return {
                 success: false,
                 clinicalError: 'El informe no pudo ser interpretado correctamente. Verifique que es un PDF válido de Fagron y reintente.',

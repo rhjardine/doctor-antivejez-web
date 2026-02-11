@@ -37,6 +37,8 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { pdfBase64, patientId, reportType, testDate } = body;
 
+        console.log(`[GenomicExtract API] Request received: patient=${patientId}, type=${reportType}, bodyLength=${JSON.stringify(body).length}`);
+
         // ── Validation ──────────────────────────────────────────
         if (!pdfBase64) {
             return NextResponse.json(
@@ -98,7 +100,9 @@ export async function POST(req: Request) {
         });
 
         // ── AI Extraction ───────────────────────────────────────
+        console.log(`[GenomicExtract API] Starting AI extraction...`);
         const result = await extractGenomicData(pdfBase64, reportType);
+        console.log(`[GenomicExtract API] AI Extraction finished: success=${result.success}`);
 
         if (!result.success || !result.data) {
             // Update LabReport with ERROR status
