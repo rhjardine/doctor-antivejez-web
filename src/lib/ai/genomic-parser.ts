@@ -166,9 +166,9 @@ export async function extractGenomicData(
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Use Gemini 1.5 Pro (latest) for its large context window
+        // Use Gemini 2.0 Pro (New Generation) as primary model
         // Fallback to Flash if Pro fails
-        const modelPro = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+        const modelPro = genAI.getGenerativeModel({ model: "gemini-2.0-pro" });
         const modelFlash = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = reportType === 'TELOTEST' ? TELOTEST_PROMPT : NUTRIGEN_PROMPT;
@@ -180,7 +180,7 @@ export async function extractGenomicData(
 
         let result;
         try {
-            console.log(`[GenomicParser] Attempting with gemini-1.5-pro-latest...`);
+            console.log(`[GenomicParser] Attempting with gemini-2.0-pro...`);
             result = await modelPro.generateContent([
                 prompt,
                 {
@@ -191,7 +191,7 @@ export async function extractGenomicData(
                 },
             ]);
         } catch (proError: any) {
-            console.warn(`[GenomicParser] gemini-1.5-pro-latest failed: ${proError.message}. Retrying with gemini-1.5-flash...`);
+            console.warn(`[GenomicParser] gemini-2.0-pro failed: ${proError.message}. Retrying with gemini-1.5-flash...`);
             result = await modelFlash.generateContent([
                 prompt,
                 {
