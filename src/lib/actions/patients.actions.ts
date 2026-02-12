@@ -223,6 +223,7 @@ export async function searchPatients({ query, userId, page = 1, limit = 10 }: { 
       ? userId
       : session.user.id;
 
+    const queryParts = query.trim().split(/\s+/).filter(part => part.length > 0);
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
 
     const whereClause: Prisma.PatientWhereInput = {
@@ -230,10 +231,18 @@ export async function searchPatients({ query, userId, page = 1, limit = 10 }: { 
         ...(effectiveUserId ? [{ userId: effectiveUserId }] : []),
         {
           OR: [
-            { firstName: { contains: query, mode: 'insensitive' } },
-            { lastName: { contains: query, mode: 'insensitive' } },
-            { identification: { contains: query, mode: 'insensitive' } },
-            { email: { contains: query, mode: 'insensitive' } },
+            // Búsqueda por partes (Nombre y Apellido)
+            ...queryParts.map(part => ({
+              OR: [
+                { firstName: { contains: part, mode: 'insensitive' as const } },
+                { lastName: { contains: part, mode: 'insensitive' as const } },
+              ]
+            })),
+            // Búsqueda exacta/parcial por identificación
+            { identification: { contains: query, mode: 'insensitive' as const } },
+            // Búsqueda por email
+            { email: { contains: query, mode: 'insensitive' as const } },
+            // Búsqueda por número de control si es numérico
             ...(isNumericQuery ? [{ controlNumber: { equals: Number(query) } }] : []),
           ],
         }

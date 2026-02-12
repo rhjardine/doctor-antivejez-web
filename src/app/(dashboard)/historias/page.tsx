@@ -34,7 +34,7 @@ export default function HistoriasPage() {
     if (status === 'authenticated' && session?.user?.id) {
       loadPatients(currentPage, session.user.id);
     } else if (status === 'unauthenticated') {
-        setLoading(false);
+      setLoading(false);
     }
   }, [currentPage, session, status]);
 
@@ -72,7 +72,7 @@ export default function HistoriasPage() {
       setLoading(false);
     }
   };
-  
+
   const handleDelete = async () => {
     if (!patientToDelete || !session?.user?.id) return;
 
@@ -129,7 +129,7 @@ export default function HistoriasPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-gray-900"
               />
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function HistoriasPage() {
             const isMale = patient.gender.startsWith('MASCULINO');
             const iconBgColor = isMale ? 'bg-blue-100' : 'bg-pink-100';
             const iconTextColor = isMale ? 'text-blue-600' : 'text-pink-600';
-            
+
             return (
               <div key={patient.id} className="card hover:shadow-lg transition-shadow">
                 <div className="flex items-start space-x-4">
