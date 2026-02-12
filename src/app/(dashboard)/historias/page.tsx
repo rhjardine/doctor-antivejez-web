@@ -118,7 +118,7 @@ export default function HistoriasPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="card">
+      <div className="card bg-[#293b64] text-white">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">

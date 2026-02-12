@@ -21,10 +21,10 @@
     /* Color del texto que va sobre el color primario (blanco) */
     --primary-foreground: 210 40% 98%;
 
-    /* --- Colores para Tarjetas (Azul Oscuro Corporativo) --- */
-    --card: 220 44% 28%;
-    /* Color del texto que va sobre las tarjetas (blanco) */
-    --card-foreground: 210 40% 98%;
+    /* --- Colores para Tarjetas (Restaurado a Blanco) --- */
+    --card: 0 0% 100%;
+    /* Color del texto que va sobre las tarjetas (oscuro) */
+    --card-foreground: 224 71% 4%;
 
     /* --- Colores Secundarios y de Acento (Neutros) --- */
     --secondary: 210 40% 96.1%;
