@@ -15,6 +15,8 @@ import type {
 //    'type DietTypeEnum'. El enum 'DietType' importado directamente de Prisma se convierte
 //    en la única fuente de la verdad, garantizando la sincronización con la base de datos.
 import {
+  MealType,
+  BloodTypeGroup,
   GeneralGuideType,
   DietType, // Importamos el enum directamente desde el cliente de Prisma.
   FoodCategory
