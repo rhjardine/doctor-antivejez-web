@@ -1,20 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyToken } from "@/lib/jwt";
+import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
 export const dynamic = 'force-dynamic';
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "https://doctorantivejez-patients.onrender.com",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "GET, PATCH, OPTIONS");
 }
 
 export async function GET(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "GET, PATCH, OPTIONS");
+
     try {
         const authHeader = req.headers.get("authorization");
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -31,33 +28,12 @@ export async function GET(req: Request) {
         const patient = await db.patient.findUnique({
             where: { id: payload.id },
             include: {
-                biophysicsTests: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1
-                },
-                biochemistryTests: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1
-                },
-                guides: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1
-                },
-                foodPlans: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1,
-                    include: {
-                        items: true
-                    }
-                },
-                nlrTests: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1
-                },
-                geneticTests: {
-                    orderBy: { testDate: 'desc' },
-                    take: 1
-                }
+                biophysicsTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                biochemistryTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                guides: { orderBy: { createdAt: 'desc' }, take: 1 },
+                foodPlans: { orderBy: { createdAt: 'desc' }, take: 1, include: { items: true } },
+                nlrTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                geneticTests: { orderBy: { testDate: 'desc' }, take: 1 }
             }
         });
 
@@ -90,12 +66,14 @@ export async function GET(req: Request) {
         }, { headers: corsHeaders });
 
     } catch (error) {
-        console.error("Profile fetch error:", error);
+        console.error("Profile fetch error:", (error as Error).message);
         return NextResponse.json({ error: "Error interno del servidor" }, { status: 500, headers: corsHeaders });
     }
 }
 
 export async function PATCH(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "GET, PATCH, OPTIONS");
+
     try {
         const authHeader = req.headers.get("authorization");
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -111,7 +89,6 @@ export async function PATCH(req: Request) {
 
         const { shareDataConsent } = await req.json();
 
-        // El ID del token es el ID del USUARIO, necesitamos encontrar al PACIENTE asociado
         const patient = await db.patient.findFirst({
             where: { userId: payload.id }
         });
@@ -131,8 +108,7 @@ export async function PATCH(req: Request) {
         }, { headers: corsHeaders });
 
     } catch (error) {
-        console.error("Consent update error:", error);
+        console.error("Consent update error:", (error as Error).message);
         return NextResponse.json({ error: "Error al actualizar consentimiento" }, { status: 500, headers: corsHeaders });
     }
 }
-

@@ -2,18 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { signToken } from "@/lib/jwt";
 import bcrypt from "bcryptjs";
+import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "http://localhost:3000",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
 }
 
 export async function POST(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
+
     try {
         const { identification, password } = await req.json();
         const patient = await db.patient.findUnique({

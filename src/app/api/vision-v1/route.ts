@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
 export const dynamic = 'force-dynamic';
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
 }
 
 export async function POST(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
+
     try {
         const body = await req.json();
         const { imageBase64 } = body;
@@ -25,7 +22,6 @@ export async function POST(req: Request) {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // Extract base64 content - strip data URI prefix if present
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
 
         const prompt = `Analiza esta imagen y retorna un JSON.
@@ -61,12 +57,12 @@ export async function POST(req: Request) {
             const data = JSON.parse(cleanJson);
             return NextResponse.json(data, { headers: corsHeaders });
         } catch (e) {
-            console.error("JSON Parse Error", e);
+            console.error("JSON Parse Error:", (e as Error).message);
             return NextResponse.json({ error: "Invalid AI response" }, { status: 500, headers: corsHeaders });
         }
 
     } catch (error) {
-        console.error("Vision AI Error:", error);
+        console.error("Vision AI Error:", (error as Error).message);
         return NextResponse.json(
             { error: "Internal Server Error" },
             { status: 500, headers: corsHeaders }

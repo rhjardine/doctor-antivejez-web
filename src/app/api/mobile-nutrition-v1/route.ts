@@ -1,20 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyToken } from "@/lib/jwt";
+import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
 export const dynamic = 'force-dynamic';
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*", // Allow mobile app access
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "GET, OPTIONS");
 }
 
 export async function GET(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "GET, OPTIONS");
+
     try {
         // 1. Authorization Check
         const authHeader = req.headers.get("Authorization");
@@ -39,18 +36,12 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Patient not found" }, { status: 404, headers: corsHeaders });
         }
 
-        const bloodType = patient.bloodType || 'O'; // Default to O if not set
+        const bloodType = patient.bloodType || 'O';
 
-        // 3. Determine Goal Group (A/AB -> A_AB, O/B -> O_B)
-        // Logic: 
-        // If patient is A or AB -> wants A_AB + ALL
-        // If patient is O or B -> wants O_B + ALL
-        // We filter out items that are specifically for the OTHER group.
-
+        // 3. Determine Goal Group
         const targetGroup = (bloodType.includes('A') || bloodType.includes('AB')) ? 'A_AB' : 'O_B';
 
         // 4. Fetch Food Items
-        // We fetch items that are either for ALL or match the specific target group
         const foodItems = await db.foodItem.findMany({
             where: {
                 OR: [
@@ -58,9 +49,7 @@ export async function GET(req: Request) {
                     { bloodTypeGroup: targetGroup }
                 ]
             },
-            orderBy: {
-                name: 'asc'
-            }
+            orderBy: { name: 'asc' }
         });
 
         // 5. Structure Response
@@ -72,7 +61,7 @@ export async function GET(req: Request) {
         }, { headers: corsHeaders });
 
     } catch (error) {
-        console.error("[MobileNutrition] Error:", error);
+        console.error("[MobileNutrition] Error:", (error as Error).message);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: corsHeaders });
     }
 }

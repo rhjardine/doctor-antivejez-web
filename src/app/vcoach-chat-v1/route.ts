@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
+import { checkRateLimit } from "@/lib/rate-limit";
+
 export const dynamic = 'force-dynamic';
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "https://doctorantivejez-patients.onrender.com",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-export async function OPTIONS() { return NextResponse.json({}, { headers: corsHeaders }); }
+
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
+}
+
 export async function POST(req: Request) {
+    // Rate limit check
+    const rateLimitResponse = await checkRateLimit(req);
+    if (rateLimitResponse) return rateLimitResponse;
+
+    const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
+
     try {
         const { message, history, patientContext } = await req.json();
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -41,13 +49,8 @@ export async function POST(req: Request) {
         const result = await chat.sendMessage(message);
         const text = result.response.text();
 
-        // AUDIT LOGGING
+        // AUDIT LOGGING (non-blocking)
         try {
-            // Un-comment and ensure db is imported if available, or assume global db for now based on snippet
-            // Since db import is missing in original file, I need to add it. 
-            // Wait, I should add the import in a separate step or include it if I can access top of file. 
-            // The constraint is 3 tasks. I will assume db is needed.
-            // Let's rely on the user snippet behavior: "Inyecta este código".
             const { db } = await import("@/lib/db");
             await db.aIAnalysis.create({
                 data: {
@@ -60,9 +63,11 @@ export async function POST(req: Request) {
                 }
             });
         } catch (auditError) {
-            console.error("⚠️ Fallo al registrar auditoría de IA:", auditError);
+            console.error("Audit logging failed:", (auditError as Error).message);
         }
 
         return NextResponse.json({ text }, { headers: corsHeaders });
-    } catch (e) { return NextResponse.json({ error: "IA Offline" }, { status: 500, headers: corsHeaders }); }
+    } catch (e) {
+        return NextResponse.json({ error: "IA Offline" }, { status: 500, headers: corsHeaders });
+    }
 }

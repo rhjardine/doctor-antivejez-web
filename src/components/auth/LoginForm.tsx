@@ -14,7 +14,7 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: 'admin@doctorantivejez.com',
-    password: 'admin123',
+    password: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,10 +32,10 @@ export default function LoginForm() {
         toast.success('Inicio de sesión exitoso');
         router.push(callbackUrl);
       } else {
-        setLoading(false); // ✅ UI REPAIR: Garantizar desbloqueo en error
         toast.error(result?.error || 'Credenciales inválidas');
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast.error('Error al conectar con el servidor');
     } finally {
       setLoading(false);
@@ -57,6 +57,7 @@ export default function LoginForm() {
               id="email"
               type="email"
               required
+              autoComplete="username"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="input"
@@ -70,12 +71,12 @@ export default function LoginForm() {
               id="password"
               type="password"
               required
+              autoComplete="current-password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="input"
               placeholder="••••••••"
               disabled={loading}
-              autoComplete="current-password"
             />
           </div>
           <button

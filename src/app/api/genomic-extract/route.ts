@@ -5,34 +5,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { extractGenomicData } from "@/lib/ai/genomic-parser";
+import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
 export const dynamic = 'force-dynamic';
 
 // Maximum processing time for large PDFs (71-page NutriGen)
 export const maxDuration = 60;
 
-const ALLOWED_ORIGINS = [
-    "https://doctorantivejez-patients.onrender.com",
-    "https://doctor-antivejez-web.onrender.com",
-];
-
-function getCorsHeaders(req: Request) {
-    const origin = req.headers.get("origin") || "";
-    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-    return {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "true",
-    };
-}
-
 export async function OPTIONS(req: Request) {
-    return NextResponse.json({}, { headers: getCorsHeaders(req) });
+    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
 }
 
 export async function POST(req: Request) {
-    const corsHeaders = getCorsHeaders(req);
+    const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
     try {
         const body = await req.json();
@@ -148,7 +133,7 @@ export async function POST(req: Request) {
         console.error("[GenomicExtract API] Error:", error);
         return NextResponse.json(
             { error: "Error interno del servidor al procesar el informe genómico." },
-            { status: 500, headers: getCorsHeaders(req) }
+            { status: 500, headers: getCorsHeaders(req, "POST, OPTIONS") }
         );
     }
 }

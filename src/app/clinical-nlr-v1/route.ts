@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { NlrRiskLevel } from '@prisma/client';
+import { getCorsHeaders, handleCorsPreflightOrReject } from '@/lib/cors';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,25 +16,18 @@ const getNlrRiskLevel = (value: number): NlrRiskLevel => {
     return 'EXTREME_RISK';
 };
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "https://doctor-antivejez-web.onrender.com",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
 }
 
 export async function POST(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
+
     try {
         const body = await req.json();
-        console.log('📦 DATA RECEIVED:', body);
-
         const { patientId, neutrophils, lymphocytes, testDate } = body;
 
         if (!patientId || !neutrophils || !lymphocytes) {
-            console.error('❌ Mismatched data:', { patientId, neutrophils, lymphocytes });
             return NextResponse.json({ error: 'Faltan datos requeridos (patientId, neutrófilos o linfocitos)' }, { status: 400, headers: corsHeaders });
         }
 
@@ -53,7 +47,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true, data: test }, { status: 201, headers: corsHeaders });
     } catch (error: any) {
-        console.error('🔥 Error saving NLR test:', error);
+        console.error('NLR test error:', (error as Error).message);
         return NextResponse.json({
             error: 'Error al guardar el test de NLR',
             details: error.message || 'Error desconocido'

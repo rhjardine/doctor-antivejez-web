@@ -1,26 +1,22 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
 export const dynamic = 'force-dynamic';
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "https://doctorantivejez-patients.onrender.com",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
 }
 
 export async function POST(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
+
     try {
         const { message, history, patientContext } = await req.json();
 
-        // Server-side API Key check
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            console.error("❌ Missing GEMINI_API_KEY in server environment");
+            console.error("Missing GEMINI_API_KEY in server environment");
             return NextResponse.json(
                 { error: "Server Configuration Error: API Key missing" },
                 { status: 500, headers: corsHeaders }
@@ -29,7 +25,6 @@ export async function POST(req: Request) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Construct robust system prompt
         const systemInstruction = `Eres el VCoach de Doctor Antivejez. 
     Paciente: ${patientContext?.name || 'Paciente'}. 
     Edad Bio: ${patientContext?.bioAge || '?'}. 
@@ -44,7 +39,6 @@ export async function POST(req: Request) {
             systemInstruction: systemInstruction
         });
 
-        // Sanitize history
         const validHistory = Array.isArray(history) ? history.map((h: any) => ({
             role: h.role === 'user' || h.role === 'model' ? h.role : 'user',
             parts: h.parts || [{ text: "" }]
@@ -54,12 +48,10 @@ export async function POST(req: Request) {
         const result = await chat.sendMessage(message);
         const responseText = result.response.text();
 
-        return NextResponse.json({ text: responseText }, {
-            headers: corsHeaders
-        });
+        return NextResponse.json({ text: responseText }, { headers: corsHeaders });
 
     } catch (error) {
-        console.error("🔥 VCoach Backend Error:", error);
+        console.error("VCoach Backend Error:", (error as Error).message);
         return NextResponse.json(
             { error: "El servicio de IA está temporalmente no disponible." },
             { status: 500, headers: corsHeaders }
