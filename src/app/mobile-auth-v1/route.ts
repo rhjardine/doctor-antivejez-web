@@ -47,16 +47,31 @@ export async function POST(req: Request) {
 
         const token = await signToken({ id: patient.id, role: "PATIENT" });
 
-        // Consolidamos el objeto paciente con todas las relaciones necesarias
-        const fullPatient = await db.patient.findUnique({
-            where: { id: patient.id },
-            include: {
-                biophysicsTests: { orderBy: { createdAt: 'desc' }, take: 1 },
-                biochemistryTests: { orderBy: { createdAt: 'desc' }, take: 1 },
-                guides: { orderBy: { createdAt: 'desc' }, take: 1 },
-                foodPlans: { orderBy: { createdAt: 'desc' }, take: 1, include: { items: true } }
-            }
-        });
+        // Consolidamos el objeto paciente — con fallback si la BD tiene drift
+        let fullPatient;
+        try {
+            fullPatient = await db.patient.findUnique({
+                where: { id: patient.id },
+                include: {
+                    biophysicsTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                    biochemistryTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                    guides: { orderBy: { createdAt: 'desc' }, take: 1 },
+                    foodPlans: { orderBy: { createdAt: 'desc' }, take: 1, include: { items: true } }
+                }
+            });
+        } catch (richQueryError) {
+            // Fallback: query without food items (schema drift protection)
+            console.warn('⚠️ [Auth] Rich query failed (possible schema drift), using fallback:', (richQueryError as Error).message);
+            fullPatient = await db.patient.findUnique({
+                where: { id: patient.id },
+                include: {
+                    biophysicsTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                    biochemistryTests: { orderBy: { createdAt: 'desc' }, take: 1 },
+                    guides: { orderBy: { createdAt: 'desc' }, take: 1 },
+                    foodPlans: { orderBy: { createdAt: 'desc' }, take: 1 }
+                }
+            });
+        }
 
         if (!fullPatient) {
             return NextResponse.json({ error: "Error al recuperar datos del paciente" }, { status: 500, headers: corsHeaders });
