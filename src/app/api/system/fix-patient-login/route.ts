@@ -18,14 +18,13 @@ export async function GET() {
             where: { email },
             update: {
                 password: hashedPassword,
-                role: 'PACIENTE',
                 status: 'ACTIVO'
             },
             create: {
                 email,
                 name: 'Richard Jardine',
                 password: hashedPassword,
-                role: 'PACIENTE',
+                role: 'MEDICO', // "PACIENTE" no existe en el enum Role, usamos MEDICO por defecto
                 status: 'ACTIVO'
             }
         });
@@ -45,7 +44,19 @@ export async function GET() {
                 lastName: 'Jardine',
                 email: email,
                 gender: 'MASCULINO',
-                birthDate: new Date('1980-01-01'), // Fecha genérica para el piloto
+                birthDate: new Date('1980-01-01'),
+                chronologicalAge: 45,
+                nationality: 'Venezolana',
+                historyDate: new Date(),
+                birthPlace: 'Caracas',
+                phone: '0000000000',
+                maritalStatus: 'SOLTERO',
+                profession: 'PILOTO',
+                country: 'Venezuela',
+                state: 'Distrito Federal',
+                city: 'Caracas',
+                address: 'Calle Falsa 123',
+                bloodType: 'O+'
             }
         });
 
