@@ -56,14 +56,7 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!isPasswordValid) {
-            console.log("❌ [Auth v2.1] Contraseña incorrecta para:", normalizedEmail);
-            console.log("🔍 [Debug] Longitud pass recibida:", credentials.password.length);
-            const hashInDb = user.password || "";
-            console.log("🔍 [Debug] Hash en DB empieza por:", hashInDb.substring(0, 10));
-
-            if (!hashInDb.startsWith("$2")) {
-              console.log("⚠️ [CRITICAL] El password en la DB NO parece un hash de bcrypt. ¿Es texto plano?");
-            }
+            console.log("❌ [Auth] Contraseña incorrecta para:", normalizedEmail);
             return null;
           }
 

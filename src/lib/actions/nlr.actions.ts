@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { NlrRiskLevel } from '@prisma/client';
+import { consumeTestCredit } from './professionals.actions';
 
 // Función para determinar el nivel de riesgo basado en el valor de NLR
 function determineNlrRiskLevel(nlr: number): NlrRiskLevel {
@@ -55,27 +56,25 @@ export async function saveNlrTest(params: SaveNlrTestParams) {
     const doctor = patient.user;
     const isNonAdmin = doctor.role !== 'ADMIN';
 
-    if (isNonAdmin && doctor.quotaUsed >= doctor.quotaMax) {
-      return { success: false, error: "Quota Exhausted: Límite de formularios alcanzado." };
+    // Ledger: NLR es un marcador biofísico
+    if (isNonAdmin) {
+      const creditResult = await consumeTestCredit(doctor.id, 'BIOFISICA', 'Test NLR consumido');
+      if (!creditResult.success) {
+        return { success: false, error: creditResult.error || 'Créditos insuficientes.' };
+      }
     }
 
-    const [updatedUser, newTest] = await prisma.$transaction([
-      prisma.user.update({
-        where: { id: doctor.id },
-        data: { quotaUsed: isNonAdmin ? { increment: 1 } : undefined }
-      }),
-      prisma.nlrTest.create({
-        data: {
-          patientId,
-          neutrophils,
-          lymphocytes,
-          nlrValue,
-          riskLevel,
-          testDate,
-          recordedBy: session.user.id, // Audit Trail
-        },
-      })
-    ]);
+    const newTest = await prisma.nlrTest.create({
+      data: {
+        patientId,
+        neutrophils,
+        lymphocytes,
+        nlrValue,
+        riskLevel,
+        testDate,
+        recordedBy: session.user.id, // Audit Trail
+      },
+    });
 
     revalidatePath(`/historias/${patientId}`);
 

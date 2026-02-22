@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { FaPlus, FaSearch } from 'react-icons/fa';
 import { toast } from 'sonner';
 import { ProfessionalRow } from '@/components/professionals/ProfessionalRow';
-import { rechargeProfessionalQuota } from '@/lib/actions/professionals.actions';
+import { rechargeCredits } from '@/lib/actions/professionals.actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,18 +16,32 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 
-// Interface must match API response
+// Types aligned with API + Ledger
+type TestType = 'BIOFISICA' | 'BIOQUIMICA' | 'ORTOMOLECULAR' | 'GENETICA';
+
+interface TestBalances {
+  BIOFISICA: number;
+  BIOQUIMICA: number;
+  ORTOMOLECULAR: number;
+  GENETICA: number;
+}
+
 interface Professional {
   id: string;
   name: string;
   email: string;
   role: 'ADMIN' | 'MEDICO' | 'COACH' | 'ADMINISTRATIVO';
   status: string;
-  quotaMax: number;
-  quotaUsed: number;
-  cedula?: string;
+  balances: TestBalances;
   password?: string;
 }
+
+const TEST_TYPE_LABELS: Record<TestType, string> = {
+  BIOFISICA: 'Biofísica',
+  BIOQUIMICA: 'Bioquímica',
+  ORTOMOLECULAR: 'Ortomolecular',
+  GENETICA: 'Genética',
+};
 
 export default function ProfesionalesPage() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -40,7 +54,8 @@ export default function ProfesionalesPage() {
   const [selectedProf, setSelectedProf] = useState<Professional | null>(null);
 
   // Forms state
-  const [rechargeAmount, setRechargeAmount] = useState(50);
+  const [rechargeAmount, setRechargeAmount] = useState(10);
+  const [rechargeTestType, setRechargeTestType] = useState<TestType>('BIOFISICA');
   const [formData, setFormData] = useState<Partial<Professional>>({});
 
   const fetchProfessionals = async () => {
@@ -80,9 +95,9 @@ export default function ProfesionalesPage() {
   // Handlers
   const handleRecharge = async () => {
     if (!selectedProf) return;
-    const res = await rechargeProfessionalQuota(selectedProf.id, rechargeAmount);
+    const res = await rechargeCredits(selectedProf.id, rechargeTestType, rechargeAmount);
     if (res.success) {
-      toast.success("Cuota recargada con éxito");
+      toast.success(`${rechargeAmount} créditos de ${TEST_TYPE_LABELS[rechargeTestType]} recargados`);
       setIsRechargeModalOpen(false);
       fetchProfessionals(); // Refresh list
     } else {
@@ -128,6 +143,8 @@ export default function ProfesionalesPage() {
       toast.error("Error de red al guardar");
     }
   };
+
+  const currentTestBalance = selectedProf?.balances?.[rechargeTestType] ?? 0;
 
   return (
     <div className="space-y-6 p-6 bg-slate-50/50 min-h-screen">
@@ -178,22 +195,21 @@ export default function ProfesionalesPage() {
             <thead>
               <tr className="bg-[#293b64] text-white text-xs uppercase tracking-wider">
                 <th className="p-4 font-black">Nombre / Profesional</th>
-                <th className="p-4 font-black">Identificación</th>
                 <th className="p-4 font-black">Rol</th>
                 <th className="p-4 font-black text-center">Estatus</th>
-                <th className="p-4 font-black text-center">Créditos Disp.</th>
+                <th className="p-4 font-black">Créditos por Test</th>
                 <th className="p-4 font-black text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={6} className="p-8 text-center text-slate-400">Cargando...</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-slate-400">Cargando...</td></tr>
               ) : filtered.map(prof => (
                 <ProfessionalRow
                   key={prof.id}
                   prof={prof}
                   onEdit={() => { setSelectedProf(prof); setFormData(prof); setIsEditModalOpen(true); }}
-                  onRecharge={() => { setSelectedProf(prof); setIsRechargeModalOpen(true); }}
+                  onRecharge={() => { setSelectedProf(prof); setRechargeTestType('BIOFISICA'); setRechargeAmount(10); setIsRechargeModalOpen(true); }}
                   onDelete={() => handleDelete(prof)}
                 />
               ))}
@@ -266,28 +282,58 @@ export default function ProfesionalesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Recharge Modal */}
+      {/* Recharge Modal — Ledger Pattern */}
       <Dialog open={isRechargeModalOpen} onOpenChange={setIsRechargeModalOpen}>
         <DialogContent className="sm:max-w-sm bg-white">
           <DialogHeader>
-            <DialogTitle className="text-[#23bcef]">Recargar Cuota</DialogTitle>
+            <DialogTitle className="text-[#23bcef]">Recargar Créditos</DialogTitle>
             <DialogDescription>
-              Ajuste el límite de formularios permitidos para este profesional.
+              Seleccione el tipo de test y la cantidad para <span className="font-bold">{selectedProf?.name}</span>.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-6 space-y-4">
-            <p className="text-sm text-slate-600">
-              Añadir créditos al balance actual de <span className="font-bold">{selectedProf?.quotaMax && (selectedProf.quotaMax - selectedProf.quotaUsed)}</span>.
-            </p>
-            <Input
-              type="number"
-              value={rechargeAmount}
-              onChange={e => setRechargeAmount(Number(e.target.value))}
-              className="text-center text-3xl font-black text-[#293b64] h-16 border-2 border-dashed border-[#23bcef]"
-            />
+          <div className="py-6 space-y-5">
+            {/* Test Type Selector */}
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase text-[#293b64]">Tipo de Test</label>
+              <select
+                value={rechargeTestType}
+                onChange={e => setRechargeTestType(e.target.value as TestType)}
+                className="w-full flex h-10 rounded-md border-2 border-[#293b64] bg-white px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#23bcef]"
+              >
+                {(Object.keys(TEST_TYPE_LABELS) as TestType[]).map((type) => (
+                  <option key={type} value={type}>{TEST_TYPE_LABELS[type]}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Current Balance Display */}
+            <div className="bg-slate-50 rounded-xl p-3 flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-500 uppercase">Saldo Actual</span>
+              <span className={`font-black text-lg ${currentTestBalance > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {currentTestBalance}
+              </span>
+            </div>
+
+            {/* Amount Input */}
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase text-[#293b64]">Cantidad a Recargar</label>
+              <Input
+                type="number"
+                min={1}
+                max={100 - currentTestBalance}
+                value={rechargeAmount}
+                onChange={e => setRechargeAmount(Number(e.target.value))}
+                className="text-center text-3xl font-black text-[#293b64] h-16 border-2 border-dashed border-[#23bcef]"
+              />
+              <p className="text-[10px] text-slate-400 text-center">
+                Máximo: {100 - currentTestBalance} (límite de 100 créditos)
+              </p>
+            </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleRecharge} className="w-full bg-[#23bcef] text-white font-black hover:bg-cyan-600">CONFIRMAR RECARGA</Button>
+            <Button onClick={handleRecharge} className="w-full bg-[#23bcef] text-white font-black hover:bg-cyan-600">
+              CONFIRMAR RECARGA
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

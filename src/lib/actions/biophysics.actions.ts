@@ -6,6 +6,7 @@ import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/t
 import { calculateBiofisicaResults } from '@/utils/biofisica-calculations';
 import { revalidatePath } from 'next/cache';
 import { Gender } from '@prisma/client';
+import { consumeTestCredit } from './professionals.actions';
 
 // --- ENFOQUE UNIFICADO: CALCULAR Y GUARDAR EN UN SOLO PASO ---
 interface CalculateAndSaveParams {
@@ -58,57 +59,52 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
     const doctor = patient.user;
     const isNonAdmin = doctor.role !== 'ADMIN';
 
+    // Ledger: Consumir crédito de BIOFISICA (solo para no-admin)
     if (isNonAdmin) {
-      if (doctor.quotaUsed >= doctor.quotaMax) {
-        throw new Error("Quota Exhausted: Has alcanzado tu límite de formularios. Contacta al administrador para recargar.");
+      const creditResult = await consumeTestCredit(doctor.id, 'BIOFISICA', 'Test Biofísica consumido');
+      if (!creditResult.success) {
+        throw new Error(creditResult.error || 'Créditos insuficientes para Biofísica.');
       }
     }
 
-    // 3. Guardar el nuevo test en la base de datos CON incremento de cuota (Transacción)
-    const [updatedUser, newTest] = await prisma.$transaction([
-      prisma.user.update({
-        where: { id: doctor.id },
-        data: {
-          quotaUsed: isNonAdmin ? { increment: 1 } : undefined
-        }
-      }),
-      prisma.biophysicsTest.create({
-        data: {
-          patientId,
-          chronologicalAge,
-          gender,
-          isAthlete,
-          testDate: new Date(),
-          recordedBy: session.user.id, // Audit Trail
-          biologicalAge: calculationResult.biologicalAge,
-          differentialAge: calculationResult.differentialAge,
-          fatPercentage: formValues.fatPercentage,
-          bmi: formValues.bmi,
-          digitalReflexes: formValues.digitalReflexes
-            ? ((formValues.digitalReflexes.high || 0) +
-              (formValues.digitalReflexes.long || 0) +
-              (formValues.digitalReflexes.width || 0)) / 3
-            : undefined,
-          visualAccommodation: formValues.visualAccommodation,
-          staticBalance: formValues.staticBalance
-            ? ((formValues.staticBalance.high || 0) +
-              (formValues.staticBalance.long || 0) +
-              (formValues.staticBalance.width || 0)) / 3
-            : undefined,
-          skinHydration: formValues.skinHydration,
-          systolicPressure: formValues.systolicPressure,
-          diastolicPressure: formValues.diastolicPressure,
-          fatAge: calculationResult.partialAges.fatAge,
-          bmiAge: calculationResult.partialAges.bmiAge,
-          reflexesAge: calculationResult.partialAges.reflexesAge,
-          visualAge: calculationResult.partialAges.visualAge,
-          balanceAge: calculationResult.partialAges.balanceAge,
-          hydrationAge: calculationResult.partialAges.hydrationAge,
-          systolicAge: calculationResult.partialAges.systolicAge,
-          diastolicAge: calculationResult.partialAges.diastolicAge,
-        },
-      })
-    ]);
+    // 3. Guardar el nuevo test en la base de datos
+    const newTest = await prisma.biophysicsTest.create({
+      data: {
+        patientId,
+        chronologicalAge,
+        gender,
+        isAthlete,
+        testDate: new Date(),
+        recordedBy: session.user.id, // Audit Trail (legacy)
+        doctorId: session.user.id,   // Ledger: Médico que consumió el crédito
+        biologicalAge: calculationResult.biologicalAge,
+        differentialAge: calculationResult.differentialAge,
+        fatPercentage: formValues.fatPercentage,
+        bmi: formValues.bmi,
+        digitalReflexes: formValues.digitalReflexes
+          ? ((formValues.digitalReflexes.high || 0) +
+            (formValues.digitalReflexes.long || 0) +
+            (formValues.digitalReflexes.width || 0)) / 3
+          : undefined,
+        visualAccommodation: formValues.visualAccommodation,
+        staticBalance: formValues.staticBalance
+          ? ((formValues.staticBalance.high || 0) +
+            (formValues.staticBalance.long || 0) +
+            (formValues.staticBalance.width || 0)) / 3
+          : undefined,
+        skinHydration: formValues.skinHydration,
+        systolicPressure: formValues.systolicPressure,
+        diastolicPressure: formValues.diastolicPressure,
+        fatAge: calculationResult.partialAges.fatAge,
+        bmiAge: calculationResult.partialAges.bmiAge,
+        reflexesAge: calculationResult.partialAges.reflexesAge,
+        visualAge: calculationResult.partialAges.visualAge,
+        balanceAge: calculationResult.partialAges.balanceAge,
+        hydrationAge: calculationResult.partialAges.hydrationAge,
+        systolicAge: calculationResult.partialAges.systolicAge,
+        diastolicAge: calculationResult.partialAges.diastolicAge,
+      },
+    });
 
     // 4. Revalidar rutas
     revalidatePath('/dashboard');

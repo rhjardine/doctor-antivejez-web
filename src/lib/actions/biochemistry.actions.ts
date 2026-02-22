@@ -3,8 +3,11 @@
 // src/lib/actions/biochemistry.actions.ts
 import { prisma } from '@/lib/db';
 import { calculateBioquimicaResults } from '@/utils/bioquimica-calculations';
-import { BiochemistryFormValues, BiochemistryCalculationResult, BIOCHEMISTRY_ITEMS } from '@/types/biochemistry'; // Import BIOCHEMISTRY_ITEMS
+import { BiochemistryFormValues, BiochemistryCalculationResult, BIOCHEMISTRY_ITEMS } from '@/types/biochemistry';
 import { revalidatePath } from 'next/cache';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { consumeTestCredit } from './professionals.actions';
 
 interface SaveTestParams {
   patientId: string;
@@ -29,11 +32,15 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
     }
     // ========================================================================
 
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return { success: false, error: "No autorizado. Debes iniciar sesión." };
+    }
+
     // 2. Calcular los resultados usando la lógica centralizada
     const results = calculateBioquimicaResults(formValues, chronologicalAge);
 
     // 3. Preparar los datos para guardar en la base de datos
-    // Mapear formValues y partialAges a los nombres de campo correctos para Prisma
     const mappedFormValues = BIOCHEMISTRY_ITEMS.reduce((acc, item) => {
       // @ts-ignore - Dynamic key access
       acc[item.key] = formValues[item.key];
@@ -52,11 +59,12 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
       chronologicalAge,
       biochemicalAge: results.biologicalAge,
       differentialAge: results.differentialAge,
-      ...mappedFormValues, // Usar los valores mapeados
-      ...mappedPartialAges, // Usar las edades parciales mapeadas
+      doctorId: session.user.id,
+      ...mappedFormValues,
+      ...mappedPartialAges,
     };
 
-    // 3. QUOTA GUARD CHECK + PREPARE DATA
+    // 4. QUOTA GUARD CHECK (Ledger)
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: { user: true }
@@ -69,25 +77,22 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
     const doctor = patient.user;
     const isNonAdmin = doctor.role !== 'ADMIN';
 
-    if (isNonAdmin && doctor.quotaUsed >= doctor.quotaMax) {
-      throw new Error("Quota Exhausted: Has alcanzado tu límite de formularios.");
+    if (isNonAdmin) {
+      const creditResult = await consumeTestCredit(doctor.id, 'BIOQUIMICA', 'Test Bioquímica consumido');
+      if (!creditResult.success) {
+        throw new Error(creditResult.error || 'Créditos insuficientes para Bioquímica.');
+      }
     }
 
-    // 4. Crear el nuevo registro del test CON incremento de cuota (Transacción)
-    const [updatedUser, newTest] = await prisma.$transaction([
-      prisma.user.update({
-        where: { id: doctor.id },
-        data: { quotaUsed: isNonAdmin ? { increment: 1 } : undefined }
-      }),
-      prisma.biochemistryTest.create({
-        data: dbData,
-      })
-    ]);
+    // 5. Crear el nuevo registro del test
+    const newTest = await prisma.biochemistryTest.create({
+      data: dbData,
+    });
 
-    // 5. Revalidar la caché para que la UI se actualice
+    // 6. Revalidar la caché para que la UI se actualice
     revalidatePath(`/historias/${patientId}`);
 
-    // 6. Devolver los resultados completos para la UI
+    // 7. Devolver los resultados completos para la UI
     return { success: true, data: results };
 
   } catch (error: any) {

@@ -88,6 +88,13 @@ enum ReportProcessingStatus {
   ERROR
 }
 
+enum TestType {
+  BIOFISICA
+  BIOQUIMICA
+  ORTOMOLECULAR
+  GENETICA
+}
+
 enum LabReportType {
   TELOTEST
   NUTRIGEN
@@ -147,11 +154,18 @@ model User {
   password      String?
   role          Role      @default(MEDICO)
   status        String     @default("ACTIVO")
-  quotaMax      Int       @default(100)
-  quotaUsed     Int       @default(0)
   accounts      Account[]
   sessions      Session[]
   patients      Patient[]
+
+  // Ledger Pattern: Créditos por tipo de test
+  creditTransactions       CreditTransaction[]
+
+  // Relaciones inversas: Tests realizados por este médico
+  conductedBiophysicsTests     BiophysicsTest[]     @relation("DoctorBiophysics")
+  conductedBiochemistryTests   BiochemistryTest[]   @relation("DoctorBiochemistry")
+  conductedOrthomolecularTests OrthomolecularTest[] @relation("DoctorOrthomolecular")
+  conductedGeneticTests        GeneticTest[]        @relation("DoctorGenetics")
 
   @@map("users")
 }
@@ -163,6 +177,24 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// =================================================================
+// Modelo Ledger de Créditos (Libro Mayor)
+// =================================================================
+model CreditTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  testType    TestType
+  amount      Int      // Positivo = recarga, Negativo = consumo
+  description String?  // Ej. "Recarga Admin", "Test Biofísica consumido"
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, testType])
+  @@map("credit_transactions")
 }
 
 // =================================================================
@@ -294,12 +326,14 @@ model BiophysicsTest {
   systolicAge         Float?
   diastolicPressure   Float?
   diastolicAge        Float?
-  recordedBy          String?  // ID del Profesional que realizó el test
+  recordedBy          String?  // ID del Profesional que realizó el test (legacy)
+  doctorId            String?  // Médico que consumió el crédito
   testDate            DateTime @default(now())
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  User?   @relation("DoctorBiophysics", fields: [doctorId], references: [id])
 
   @@map("biophysics_tests")
 }
@@ -330,11 +364,13 @@ model BiochemistryTest {
   fshAge              Float?
   boneDensitometry    Float?
   boneDensitometryAge Float?
+  doctorId            String?  // Médico que consumió el crédito
   testDate            DateTime @default(now())
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  User?   @relation("DoctorBiochemistry", fields: [doctorId], references: [id])
 
   @@map("biochemistry_tests")
 }
@@ -345,6 +381,7 @@ model OrthomolecularTest {
   chronologicalAge  Float
   orthomolecularAge Float
   differentialAge   Float
+  doctorId          String?  // Médico que consumió el crédito
   testDate          DateTime @default(now())
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -442,6 +479,7 @@ model OrthomolecularTest {
   zirconioAge       Float?
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  User?   @relation("DoctorOrthomolecular", fields: [doctorId], references: [id])
 
   @@map("orthomolecular_tests")
 }
@@ -616,11 +654,13 @@ model GeneticTest {
   interpretation        String?  @db.Text
   therapeuticResults    Json?    // Array de objetos category/items
   recommendations       Json?    // Array de objetos category/points
+  doctorId              String?  // Médico que consumió el crédito
   testDate              DateTime @default(now())
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  User?   @relation("DoctorGenetics", fields: [doctorId], references: [id])
 
   @@map("genetic_tests")
 }
