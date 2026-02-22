@@ -7,6 +7,8 @@ import { ProfessionalRow } from '@/components/professionals/ProfessionalRow';
 import { rechargeCredits } from '@/lib/actions/professionals.actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useSession } from 'next-auth/react';
+import { AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +46,9 @@ const TEST_TYPE_LABELS: Record<TestType, string> = {
 };
 
 export default function ProfesionalesPage() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'ADMIN';
+
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,6 +56,8 @@ export default function ProfesionalesPage() {
   // Modals state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [profToDelete, setProfToDelete] = useState<Professional | null>(null);
   const [selectedProf, setSelectedProf] = useState<Professional | null>(null);
 
   // Forms state
@@ -99,23 +106,34 @@ export default function ProfesionalesPage() {
     if (res.success) {
       toast.success(`${rechargeAmount} créditos de ${TEST_TYPE_LABELS[rechargeTestType]} recargados`);
       setIsRechargeModalOpen(false);
-      fetchProfessionals(); // Refresh list
+      fetchProfessionals();
     } else {
       toast.error(res.error || "Error al recargar");
     }
   };
 
-  const handleDelete = async (prof: Professional) => {
-    if (!confirm("¿Eliminar este profesional?")) return;
+  const handleDeleteRequest = (prof: Professional) => {
+    if (!isAdmin) return;
+    setProfToDelete(prof);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!profToDelete) return;
     try {
-      const res = await fetch(`/api/professionals?id=${prof.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/professionals?id=${profToDelete.id}`, { method: 'DELETE' });
       if (res.ok) {
-        toast.success("Profesional eliminado");
+        toast.success(`Profesional "${profToDelete.name}" eliminado`);
         fetchProfessionals();
       } else {
-        toast.error("Error al eliminar");
+        toast.error("Error al eliminar el profesional");
       }
-    } catch (e) { toast.error("Error al eliminar"); }
+    } catch (e) {
+      toast.error("Error de conexión al eliminar");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setProfToDelete(null);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -208,9 +226,10 @@ export default function ProfesionalesPage() {
                 <ProfessionalRow
                   key={prof.id}
                   prof={prof}
+                  isAdmin={isAdmin}
                   onEdit={() => { setSelectedProf(prof); setFormData(prof); setIsEditModalOpen(true); }}
                   onRecharge={() => { setSelectedProf(prof); setRechargeTestType('BIOFISICA'); setRechargeAmount(10); setIsRechargeModalOpen(true); }}
-                  onDelete={() => handleDelete(prof)}
+                  onDelete={() => handleDeleteRequest(prof)}
                 />
               ))}
             </tbody>
@@ -337,6 +356,45 @@ export default function ProfesionalesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Modal — Admin Only */}
+      {isAdmin && (
+        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <DialogContent className="sm:max-w-sm bg-white">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-rose-600" />
+                </div>
+                <DialogTitle className="text-rose-600 text-lg">Confirmar Eliminación</DialogTitle>
+              </div>
+              <DialogDescription className="text-slate-600 text-sm leading-relaxed">
+                ¿Estás seguro de que deseas eliminar al profesional{' '}
+                <span className="font-bold text-slate-800">"{profToDelete?.name}"</span>?
+                <br />
+                <span className="text-rose-500 font-semibold mt-2 block">
+                  Esta acción eliminará también su historial de créditos y no puede deshacerse.
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4 gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => { setIsDeleteModalOpen(false); setProfToDelete(null); }}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleDeleteConfirm}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black"
+              >
+                Sí, Eliminar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
