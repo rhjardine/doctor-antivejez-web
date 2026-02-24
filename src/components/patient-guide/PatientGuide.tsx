@@ -282,12 +282,33 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
         setIsLoadingGuide(true);
         const result = await getPatientGuideDetails(guideIdToLoad);
         if (result.success && result.data) {
-          setSelections(result.data.selections as Selections);
+          const loadedSelections = result.data.selections as Selections;
+          setSelections(loadedSelections);
           setObservaciones(result.data.observations || '');
           setGuideDate(new Date(result.data.createdAt).toISOString().split('T')[0]);
-          toast.success("Guía cargada exitosamente.");
+
+          // Collect all selected item IDs
+          const selectedIds = new Set(
+            Object.entries(loadedSelections)
+              .filter(([, v]) => (v as any)?.selected)
+              .map(([k]) => k)
+          );
+
+          // Auto-open every category that has at least one selected item
+          const openMap: Record<string, boolean> = {};
+          for (const cat of initialGuideData) {
+            const hasSelection =
+              (cat.items as StandardGuideItem[]).some(item => selectedIds.has(item.id)) ||
+              (cat.id === 'cat_activador' && (
+                selectedIds.has('am_bioterapico') ||
+                Array.from(selectedIds).some(id => id.startsWith('am_hom_') || id.startsWith('am_bach_'))
+              ));
+            if (hasSelection) openMap[cat.id] = true;
+          }
+          setOpenCategories(openMap);
+          toast.success('Guía histórica cargada correctamente.');
         } else {
-          toast.error(result.error || "No se pudo cargar la guía.");
+          toast.error(result.error || 'No se pudo cargar la guía.');
         }
         setIsLoadingGuide(false);
       };

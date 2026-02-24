@@ -189,8 +189,9 @@ export async function getGuideTemplate() {
 }
 
 /**
- * Guarda la guía del paciente serializando las selecciones al formato PatientProtocol[]
- * que la PWA entiende directamente.
+ * Guarda la guía del paciente con las selecciones RAW del formulario
+ * (formato Selections), para que el historial pueda recargarse correctamente.
+ * La conversión a PatientProtocol[] se hace en el endpoint móvil.
  */
 export async function savePatientGuide(patientId: string, formData: GuideFormValues, guideData?: GuideCategory[]) {
   try {
@@ -199,19 +200,15 @@ export async function savePatientGuide(patientId: string, formData: GuideFormVal
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
     if (!patient) throw new Error('Paciente no encontrado');
 
-    // Serializar: selections → PatientProtocol[] para que la PWA lo entienda directamente
-    const serializedProtocols = serializeGuideToProtocol(selections, guideData || []);
-
-    // Guardar en BD: serializedProtocols como el JSON principal
+    // Guardamos las selecciones RAW del formulario para poder recargar el historial
     const newGuide = await prisma.patientGuide.create({
       data: {
         patientId,
         observations: observaciones,
-        selections: serializedProtocols as any,
+        selections: selections as any,
         createdAt: new Date(guideDate),
       },
     });
-
 
     revalidatePath(`/historias/${patientId}`);
 
