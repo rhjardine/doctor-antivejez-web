@@ -135,9 +135,7 @@ const PrintableGuideContent = forwardRef<HTMLDivElement, PrintableGuideContentPr
                                             <span className="font-semibold">Bioterápico + Bach:</span>
                                             <span className="text-gray-600 ml-2 text-sm">
                                                 {bioTerapicoSelection.gotas} gotas, {bioTerapicoSelection.vecesAlDia} veces al día.{' '}
-                                                {(Array.isArray(bioTerapicoSelection.horario) ? bioTerapicoSelection.horario : [bioTerapicoSelection.horario]).map(h =>
-                                                    h === 'Desayuno y Cena' ? ' 30 min antes de Desayuno y Cena.' : ' Cada 15 min por 1h en crisis.'
-                                                ).join(' y ')}
+                                                {(Array.isArray(bioTerapicoSelection.horario) ? bioTerapicoSelection.horario : (bioTerapicoSelection.horario ? [bioTerapicoSelection.horario] : [])).join(' / ')}
                                             </span>
                                         </div>
                                     )}
@@ -183,7 +181,9 @@ const PrintableGuideContent = forwardRef<HTMLDivElement, PrintableGuideContentPr
                                                 treatmentDetails = item.dose;
                                             } else if (category.type === 'REVITALIZATION') {
                                                 const rev = details as RevitalizationFormItem;
-                                                treatmentDetails = `${rev.complejoB_cc || '3 cc'} / ${rev.bioquel_cc || '3 cc'} - ${rev.frequency || ''}`;
+                                                const otroNombre = rev.otroMedicamento === 'Otro' ? (rev.otroMedicamento_custom || 'Otro') : (rev.otroMedicamento || 'Bioquel');
+                                                const freq = rev.vecesXSemana && rev.totalDosis ? `${rev.vecesXSemana} veces/sem por ${rev.totalDosis} dosis` : '';
+                                                treatmentDetails = `Complejo B: ${rev.complejoB_cc || '3 cc'} + ${otroNombre}: ${rev.otro_cc || '3 cc'} intramuscular. ${freq}`;
                                             } else if (category.type === 'REMOCION') {
                                                 const rem = details as RemocionFormItem;
                                                 const remItem = item as RemocionItem;

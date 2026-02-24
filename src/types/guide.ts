@@ -8,6 +8,15 @@ export type NoniAloeVeraTime =
   | '30 minutos antes de Desayuno y Cena'
   | '30 minutos antes de la Cena';
 
+export type MetabolicHorario =
+  | '30 min antes del Desayuno'
+  | '30 min antes del Almuerzo'
+  | '30 min antes de la Cena'
+  | '30 min antes del Desayuno y Cena'
+  | 'o cada 15 min durante 1h en crisis';
+
+export type SueroFrecuencia = 'Diaria' | 'Semanal' | 'Quincenal' | 'Mensual';
+
 export interface StandardGuideItem {
   id: string;
   name: string;
@@ -37,42 +46,44 @@ export interface MetabolicActivator {
 export interface GuideCategory {
   id: string;
   title: string;
-  type: 'STANDARD' | 'METABOLIC' | 'REVITALIZATION' | 'REMOCION';
+  type: 'STANDARD' | 'METABOLIC' | 'REVITALIZATION' | 'REMOCION' | 'SUERO' | 'BIONEURAL';
   items:
   | (StandardGuideItem | RemocionItem)[]
   | RevitalizationGuideItem[]
   | [MetabolicActivator];
 }
 
-// ===== AJUSTE: Se añade la propiedad 'doseType' al formulario estándar =====
 export interface StandardFormItem {
   selected?: boolean;
   qty?: string;
-  doseType?: 'Capsulas' | 'Tabletas' | 'Cucharaditas';
+  doseType?: 'Capsulas' | 'Tabletas';
   freq?: string;
   custom?: string;
-  isClinicalPriority?: boolean; // Nueva propiedad para destacar puntos clave
+  personalizacion?: string; // ej: "(5HTP o Ashwaganda)"
+  isClinicalPriority?: boolean;
 }
-// =======================================================================
 
 export interface RevitalizationFormItem {
   selected?: boolean;
   complejoB_cc?: string;
-  bioquel_cc?: string;
-  frequency?: '1 vez por semana por 10 dosis' | '2 veces por semana por 10 dosis' | '';
+  otroMedicamento?: 'Bioquel' | 'Procaína' | 'Otro';
+  otroMedicamento_custom?: string;
+  otro_cc?: string;
+  vecesXSemana?: number;
+  totalDosis?: number;
 }
 
 export interface MetabolicFormItem {
   selected?: boolean;
   gotas?: number;
   vecesAlDia?: number;
-  horario?: ('Desayuno y Cena' | 'Emergencia')[];
+  horario?: MetabolicHorario[];
 }
 
 export interface RemocionFormItem {
   selected?: boolean;
   cucharadas?: number;
-  horario?: 'en el día' | 'en la tarde' | 'en la noche al acostarse';
+  horario?: 'en el día' | 'en la tarde' | 'al acostarse (1 sola vez)';
   semanas?: number;
   alimentacionTipo?: RemocionAlimentacionType[];
   tacita_qty?: number;
@@ -80,19 +91,21 @@ export interface RemocionFormItem {
   frascos?: number;
 }
 
-export type Selections = Record<string, StandardFormItem | RevitalizationFormItem | MetabolicFormItem | RemocionFormItem>;
+export interface SueroFormItem {
+  selected?: boolean;
+  dosis?: string;
+  frecuencia?: SueroFrecuencia;
+}
+
+export interface BioNeuralFormItem {
+  selected?: boolean;
+  dosis?: string;
+}
+
+export type Selections = Record<string, StandardFormItem | RevitalizationFormItem | MetabolicFormItem | RemocionFormItem | SueroFormItem | BioNeuralFormItem>;
 
 export interface GuideFormValues {
   guideDate: string;
   selections: Selections;
   observaciones?: string;
-  terapiaBioNeural?: {
-    nombre: string;
-    dosis: string;
-  };
-  controlTerapia?: {
-    fecha: string;
-    terapia: string;
-    coach: string;
-  }[];
 }
