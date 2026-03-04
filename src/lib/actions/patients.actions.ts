@@ -5,9 +5,10 @@ import { Prisma } from '@prisma/client';
 import { PatientFormData, patientSchema } from '@/utils/validation';
 import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
-  console.log("Intentando conectar con DATABASE_URL:", process.env.DATABASE_URL ? "Variable encontrada" : "¡¡¡Variable NO encontrada!!!");
 
   try {
     const validatedData = patientSchema.parse(formData);
@@ -91,8 +92,19 @@ export async function deletePatient(id: string) {
 
 export async function getPatientDetails(id: string) {
   try {
-    const patient = await prisma.patient.findUnique({
-      where: { id },
+    // ✅ SECURITY: Ownership check — un médico solo ve sus propios pacientes
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, error: 'No autorizado' };
+    }
+
+    // ADMIN ve todos, MEDICO/COACH solo los suyos
+    const whereClause = session.user.role === 'ADMIN'
+      ? { id }
+      : { id, userId: session.user.id };
+
+    const patient = await prisma.patient.findFirst({
+      where: whereClause,
       include: {
         biophysicsTests: {
           orderBy: { testDate: 'desc' },
@@ -151,8 +163,6 @@ export async function getPatientBiophysicsTrends(id: string) {
   }
 }
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 
 export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { page?: number; limit?: number; userId?: string } = {}) {
   try {

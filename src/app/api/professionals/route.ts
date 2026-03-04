@@ -1,32 +1,32 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import * as z from 'zod';
 import bcrypt from 'bcryptjs';
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
-const professionalSchema = z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
-    role: z.enum(['ADMIN', 'MEDICO', 'COACH']),
-    status: z.enum(['ACTIVO', 'INACTIVO']),
-    cedula: z.string().optional(),
-});
+// ─── Auth helper ─────────────────────────────────────────────────────────────
+
+async function requireAdmin() {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+    return null; // null = autorizado
+}
+
+// ─── GET — Listar profesionales ───────────────────────────────────────────────
 
 export async function GET() {
+    // ✅ FIX: Protegido. Antes: cualquier request podía listar todos los médicos.
+    const authError = await requireAdmin();
+    if (authError) return authError;
+
     try {
         const professionals = await prisma.user.findMany({
             orderBy: { name: 'asc' },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                status: true,
-            }
+            select: { id: true, name: true, email: true, role: true, status: true },
         });
 
-        // Calcular balances del Ledger para cada profesional
         const professionalsWithBalances = await Promise.all(
             professionals.map(async (prof) => {
                 const aggregations = await prisma.creditTransaction.groupBy({
@@ -35,13 +35,7 @@ export async function GET() {
                     _sum: { amount: true },
                 });
 
-                const balances = {
-                    BIOFISICA: 0,
-                    BIOQUIMICA: 0,
-                    ORTOMOLECULAR: 0,
-                    GENETICA: 0,
-                };
-
+                const balances = { BIOFISICA: 0, BIOQUIMICA: 0, ORTOMOLECULAR: 0, GENETICA: 0 };
                 for (const agg of aggregations) {
                     balances[agg.testType] = agg._sum.amount ?? 0;
                 }
@@ -53,18 +47,23 @@ export async function GET() {
         return NextResponse.json(professionalsWithBalances);
     } catch (error) {
         console.error('Error fetching professionals:', error);
-        return NextResponse.json({ error: 'Error fetching professionals' }, { status: 500 });
+        return NextResponse.json({ error: 'Error al obtener profesionales' }, { status: 500 });
     }
 }
 
+// ─── POST — Crear profesional ─────────────────────────────────────────────────
+
 export async function POST(req: Request) {
+    // ✅ POST también requiere ADMIN
+    const authError = await requireAdmin();
+    if (authError) return authError;
+
     try {
         const body = await req.json();
         const { name, email, password, role, status } = body;
 
-        // 1. VALIDATION: Check if email exists before creating
         const existing = await prisma.user.findUnique({
-            where: { email: email.toLowerCase().trim() }
+            where: { email: email.toLowerCase().trim() },
         });
 
         if (existing) {
@@ -76,61 +75,72 @@ export async function POST(req: Request) {
 
         const hashedPassword = await bcrypt.hash(password || '123456', 10);
 
-        // 2. CREATE user — sin quotaMax/quotaUsed (ahora usa Ledger)
-        try {
-            const newUser = await prisma.user.create({
-                data: {
-                    name,
-                    email: email.toLowerCase().trim(),
-                    password: hashedPassword,
-                    role: role || 'MEDICO',
-                    status: status || 'ACTIVO',
-                }
-            });
+        const newUser = await prisma.user.create({
+            data: {
+                name,
+                email: email.toLowerCase().trim(),
+                password: hashedPassword,
+                role: role || 'MEDICO',
+                status: status || 'ACTIVO',
+            },
+        });
 
-            return NextResponse.json(newUser);
-        } catch (prismaError) {
-            console.error('🔥 PRISMA ERROR:', prismaError);
-            return NextResponse.json(
-                { error: 'Error de base de datos al crear el usuario. Verifique los campos obligatorios.' },
-                { status: 500 }
-            );
-        }
+        return NextResponse.json(newUser);
     } catch (error) {
-        console.error('🔥 SERVER ERROR:', error);
-        return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+        console.error('Error creating professional:', error);
+        return NextResponse.json(
+            { error: 'Error al crear el profesional' },
+            { status: 500 }
+        );
     }
 }
 
+// ─── PUT — Actualizar profesional ─────────────────────────────────────────────
+
 export async function PUT(req: Request) {
+    // ✅ FIX: Protegido. Antes: cualquier request podía editar roles y datos.
+    const authError = await requireAdmin();
+    if (authError) return authError;
+
     try {
         const body = await req.json();
-        const { id, ...data } = body;
+        const { id, name, email, role, status } = body;
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
+        }
 
         const updatedUser = await prisma.user.update({
             where: { id },
-            data: {
-                name: data.name,
-                email: data.email,
-                role: data.role,
-                status: data.status,
-            }
+            data: { name, email, role, status },
         });
+
         return NextResponse.json(updatedUser);
     } catch (error) {
-        return NextResponse.json({ error: 'Error updating professional' }, { status: 500 });
+        console.error('Error updating professional:', error);
+        return NextResponse.json({ error: 'Error al actualizar el profesional' }, { status: 500 });
     }
 }
 
+// ─── DELETE — Eliminar profesional ────────────────────────────────────────────
+
 export async function DELETE(req: Request) {
+    // ✅ FIX: Protegido. Antes: cualquier request podía eliminar usuarios.
+    const authError = await requireAdmin();
+    if (authError) return authError;
+
     try {
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
-        if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
+        }
 
         await prisma.user.delete({ where: { id } });
         return NextResponse.json({ success: true });
     } catch (error) {
-        return NextResponse.json({ error: 'Error deleting professional' }, { status: 500 });
+        console.error('Error deleting professional:', error);
+        return NextResponse.json({ error: 'Error al eliminar el profesional' }, { status: 500 });
     }
 }
