@@ -19,10 +19,15 @@ const nextConfig = {
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   },
 
-  // ===== REWRITES: /api/mobile-* → /mobile-* =====
-  // La PWA llama a /api/mobile-profile-v1, /api/mobile-adherence-v1, etc.
-  // pero los route.ts viven sin prefijo /api/ en el App Router.
-  // Este rewrite es transparente (no cambia la URL del cliente) y resuelve el 404.
+  // ═══════════════════════════════════════════════════════════════════
+  // REWRITES: mapea /api/mobile-* → /mobile-* de forma transparente
+  //
+  // Por qué es necesario:
+  // La PWA llama a /api/mobile-profile-v1 (convención REST estándar).
+  // Los route.ts viven en src/app/mobile-profile-v1/ (sin /api/).
+  // Este rewrite hace que ambas URLs sean equivalentes sin mover archivos.
+  // Aplica a TODOS los endpoints móviles actuales y futuros.
+  // ═══════════════════════════════════════════════════════════════════
   async rewrites() {
     return [
       {
@@ -32,34 +37,34 @@ const nextConfig = {
     ];
   },
 
-  // ===== CORS PARA ENDPOINTS MÓVILES (PWA) =====
-  // Belt-and-suspenders: headers a nivel de framework + handlers en route.ts
+  // ═══════════════════════════════════════════════════════════════════
+  // HEADERS CORS: solo para endpoints móviles
+  //
+  // Origen exacto confirmado en los logs del error CORS:
+  // 'https://doctorantivejez-patients.onrender.com'
+  //
+  // Se aplica ANTES del rewrite (source usa la URL que llega del browser).
+  // Si la PWA tiene dominio personalizado en el futuro, agregar aquí.
+  // ═══════════════════════════════════════════════════════════════════
   async headers() {
-    const pwaOrigin = process.env.PWA_ORIGIN || 'https://doctorantivejez-patients.onrender.com';
+    const PWA_ORIGIN = process.env.PWA_ORIGIN || 'https://doctorantivejez-patients.onrender.com';
 
     const corsHeaders = [
-      { key: 'Access-Control-Allow-Origin', value: pwaOrigin },
-      { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, PATCH, DELETE, OPTIONS' },
-      { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Requested-With' },
-      { key: 'Access-Control-Allow-Credentials', value: 'true' },
+      { key: 'Access-Control-Allow-Origin', value: PWA_ORIGIN },
+      { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, PATCH, OPTIONS' },
+      { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
       { key: 'Access-Control-Max-Age', value: '86400' },
     ];
 
     return [
-      // Endpoints móviles bajo /mobile-* (App Router raíz — ruta real)
-      { source: '/mobile-:path*', headers: corsHeaders },
-      // Endpoints móviles bajo /api/mobile-* (alias usado por la PWA)
+      // Cubrir la URL que llama la PWA (/api/mobile-*)
       { source: '/api/mobile-:path*', headers: corsHeaders },
-      // Refresh token (usado por interceptor PWA)
+      // Cubrir también la URL real del route.ts (/mobile-*) por si hay llamadas directas
+      { source: '/mobile-:path*', headers: corsHeaders },
+      // Cubrir el endpoint de refresh de tokens
       { source: '/api/auth/refresh', headers: corsHeaders },
-      // Genomic extract
-      { source: '/api/genomic-extract', headers: corsHeaders },
-      // Clinical NLR
-      { source: '/clinical-nlr-v1/:path*', headers: corsHeaders },
-      // VCoach chat
-      { source: '/api/vcoach/:path*', headers: corsHeaders },
     ];
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
