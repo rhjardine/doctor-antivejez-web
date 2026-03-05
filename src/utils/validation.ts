@@ -20,6 +20,18 @@ export const patientSchema = z.object({
   bloodType: z.string().min(1, 'El grupo sanguíneo es requerido'),
   email: z.string().email('Email inválido'),
   observations: z.string().optional(),
+
+  // Contraseña de acceso PWA (texto plano temporal → se hashea en server action)
+  // Opcional en creación y edición. String vacío = no cambiar contraseña
+  pwaPassword: z.string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .max(72, 'La contraseña no puede superar 72 caracteres')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      'Debe contener al menos una mayúscula, una minúscula y un número'
+    )
+    .optional()
+    .or(z.literal('')),
 });
 
 export const biophysicsTestSchema = z.object({

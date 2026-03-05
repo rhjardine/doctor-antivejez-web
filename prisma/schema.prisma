@@ -224,6 +224,11 @@ model Patient {
   bloodType           String
   email               String
   observations        String?
+
+  // Contraseña de acceso a la PWA Mobile (hash bcrypt)
+  // Nullable: pacientes existentes sin contraseña asignada aún
+  passwordHash        String?
+
   shareDataConsent    Boolean              @default(false)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

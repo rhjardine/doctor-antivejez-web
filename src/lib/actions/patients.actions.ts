@@ -7,20 +7,33 @@ import { calculateAge } from '@/utils/date';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import bcrypt from 'bcryptjs';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
 
   try {
+    // Extraer pwaPassword antes de enviar a Prisma (no es campo de BD)
+    const { pwaPassword, ...restFormData } = formData;
     const validatedData = patientSchema.parse(formData);
     const chronologicalAge = calculateAge(validatedData.birthDate);
 
+    // ✅ SEGURIDAD: hashear la contraseña antes de persistir
+    let passwordHash: string | undefined = undefined;
+    if (pwaPassword && pwaPassword.trim() !== '') {
+      passwordHash = await bcrypt.hash(pwaPassword.trim(), 12);
+    }
+
+    // Desestructurar para excluir pwaPassword del objeto que va a Prisma
+    const { pwaPassword: _pw, ...prismaFields } = validatedData;
+
     const patient = await prisma.patient.create({
       data: {
-        ...validatedData,
+        ...prismaFields,
         userId: formData.userId,
         historyDate: new Date(validatedData.historyDate),
         birthDate: new Date(validatedData.birthDate),
         chronologicalAge,
+        ...(passwordHash ? { passwordHash } : {}),
       },
     });
 
@@ -50,14 +63,21 @@ export async function createPatient(formData: PatientFormData & { userId: string
 
 export async function updatePatient(id: string, formData: Partial<PatientFormData>) {
   try {
-    let updateData: any = { ...formData };
+    // Extraer pwaPassword del formData antes de pasar a Prisma
+    const { pwaPassword, ...restFormData } = formData;
+    let updateData: any = { ...restFormData };
 
-    if (formData.birthDate) {
-      updateData.birthDate = new Date(formData.birthDate);
-      updateData.chronologicalAge = calculateAge(formData.birthDate);
+    if (restFormData.birthDate) {
+      updateData.birthDate = new Date(restFormData.birthDate);
+      updateData.chronologicalAge = calculateAge(restFormData.birthDate);
     }
-    if (formData.historyDate) {
-      updateData.historyDate = new Date(formData.historyDate);
+    if (restFormData.historyDate) {
+      updateData.historyDate = new Date(restFormData.historyDate);
+    }
+
+    // ✅ SEGURIDAD: solo actualizar passwordHash si el médico ingresó nueva contraseña
+    if (pwaPassword && pwaPassword.trim() !== '') {
+      updateData.passwordHash = await bcrypt.hash(pwaPassword.trim(), 12);
     }
 
     const patient = await prisma.patient.update({
@@ -137,7 +157,9 @@ export async function getPatientDetails(id: string) {
       patient.chronologicalAge = calculateAge(patient.birthDate);
     }
 
-    return { success: true, patient };
+    // ✅ SEGURIDAD: excluir passwordHash antes de retornar al cliente
+    const { passwordHash: _ph, ...safePatient } = patient as any;
+    return { success: true, patient: safePatient };
   } catch (error) {
     console.error('Error obteniendo paciente:', error);
     return { success: false, error: 'Error al obtener el paciente' };
@@ -215,8 +237,10 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
       prisma.patient.count({ where }),
     ]);
 
+    // ✅ SEGURIDAD: excluir passwordHash de cada paciente
+    const safePatients = patients.map(({ passwordHash, ...rest }: any) => rest);
     const totalPages = Math.ceil(totalPatients / limit);
-    return { success: true, patients, totalPages, currentPage: page };
+    return { success: true, patients: safePatients, totalPages, currentPage: page };
   } catch (error) {
     console.error('Error obteniendo pacientes:', error);
     return { success: false, error: 'Error al obtener los pacientes', patients: [], totalPages: 0, currentPage: 1 };
@@ -296,8 +320,10 @@ export async function searchPatients({ query, userId, page = 1, limit = 10 }: { 
       prisma.patient.count({ where: whereClause })
     ]);
 
+    // ✅ SEGURIDAD: excluir passwordHash de cada paciente
+    const safePatients = patients.map(({ passwordHash, ...rest }: any) => rest);
     const totalPages = Math.ceil(totalPatients / limit);
-    return { success: true, patients, totalPages, currentPage: page };
+    return { success: true, patients: safePatients, totalPages, currentPage: page };
   } catch (error) {
     console.error('Error buscando pacientes:', error);
     return { success: false, error: 'Error al buscar pacientes', patients: [], totalPages: 0, currentPage: 1 };

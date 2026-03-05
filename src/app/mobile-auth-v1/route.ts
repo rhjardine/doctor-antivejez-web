@@ -31,15 +31,15 @@ export async function POST(req: Request) {
                     { identification: identification }
                 ]
             },
-            include: { user: true }
+            // No incluir user.password — ahora usamos patient.passwordHash
         });
 
-        if (!patient || !patient.user || !patient.user.password) {
+        if (!patient || !patient.passwordHash) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401, headers: corsHeaders });
         }
 
-        // ✅ SECURITY: bcrypt comparison only, no bypass
-        const isMatch = await bcrypt.compare(password, patient.user.password);
+        // ✅ SECURITY: bcrypt comparison con passwordHash del paciente (no del médico)
+        const isMatch = await bcrypt.compare(password, patient.passwordHash);
 
         if (!isMatch) {
             return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401, headers: corsHeaders });
@@ -79,12 +79,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Error al recuperar datos del paciente" }, { status: 500, headers: corsHeaders });
         }
 
+        // ✅ SEGURIDAD: excluir passwordHash del response
+        const { passwordHash: _ph, ...safePatient } = fullPatient as any;
+
         const responseData = {
             success: true,
             token,           // accessToken — retrocompatible con authService.ts
             refreshToken,    // NUEVO — apiClient.ts ya lo guarda en sessionStorage
             patient: {
-                ...fullPatient,
+                ...safePatient,
                 name: `${fullPatient.firstName} ${fullPatient.lastName}`.trim()
             }
         };
