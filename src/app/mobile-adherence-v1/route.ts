@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyToken } from '@/lib/jwt';
+import { getCorsHeaders, handleCorsPreflightOrReject } from '@/lib/cors';
+
+// Responder al preflight CORS
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
+}
 
 export async function POST(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
+
     try {
         const authHeader = req.headers.get("Authorization");
         const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
 
         if (!token) {
-            return NextResponse.json({ error: "Token missing" }, { status: 401 });
+            return NextResponse.json({ error: "Token missing" }, { status: 401, headers: corsHeaders });
         }
 
         // Security: Verify token and extract ID from payload, NOT body
@@ -16,14 +24,14 @@ export async function POST(req: Request) {
 
         if (!payload || !payload.id || payload.role !== 'PATIENT') {
             // Strict Role Check: Only PATIENT role can submit adherence
-            return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+            return NextResponse.json({ error: "Unauthorized access" }, { status: 403, headers: corsHeaders });
         }
 
         // Extract data from body, but ignore any patientId passed manually
         const { type, points, notes, metadata } = await req.json();
 
         if (!type || !points) {
-            return NextResponse.json({ error: "Invalid data structure" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid data structure" }, { status: 400, headers: corsHeaders });
         }
 
         // Clinical Rigor: Create transaction tied strictly to the authenticated user ID
@@ -33,7 +41,7 @@ export async function POST(req: Request) {
         });
 
         if (!patient) {
-            return NextResponse.json({ error: "Patient profile not found" }, { status: 404 });
+            return NextResponse.json({ error: "Patient profile not found" }, { status: 404, headers: corsHeaders });
         }
 
         const transaction = await db.omicTransaction.create({
@@ -48,9 +56,9 @@ export async function POST(req: Request) {
             }
         });
 
-        return NextResponse.json({ success: true, transactionId: transaction.id });
+        return NextResponse.json({ success: true, transactionId: transaction.id }, { headers: corsHeaders });
     } catch (error) {
         console.error("Adherence Sync Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: corsHeaders });
     }
 }

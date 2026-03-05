@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { signMobileAccessToken, verifyMobileRefreshToken } from "@/lib/jwt";
+import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
+
+// Responder al preflight CORS (interceptor PWA envía OPTIONS antes del POST)
+export async function OPTIONS(req: Request) {
+    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
+}
 
 /**
  * POST /api/auth/refresh
@@ -7,6 +13,8 @@ import { signMobileAccessToken, verifyMobileRefreshToken } from "@/lib/jwt";
  * Llamado automáticamente por el interceptor 401 de apiClient.ts en la PWA.
  */
 export async function POST(req: Request) {
+    const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
+
     try {
         const body = await req.json();
         const { refreshToken } = body;
@@ -14,7 +22,7 @@ export async function POST(req: Request) {
         if (!refreshToken) {
             return NextResponse.json(
                 { error: "Token requerido" },
-                { status: 401 }
+                { status: 401, headers: corsHeaders }
             );
         }
 
@@ -28,12 +36,12 @@ export async function POST(req: Request) {
         });
 
         // ✅ apiClient.ts:46 lee `data.accessToken` — usar ese nombre exacto
-        return NextResponse.json({ accessToken: newAccessToken });
+        return NextResponse.json({ accessToken: newAccessToken }, { headers: corsHeaders });
 
     } catch {
         return NextResponse.json(
             { error: "Token expirado o inválido" },
-            { status: 401 }
+            { status: 401, headers: corsHeaders }
         );
     }
 }
