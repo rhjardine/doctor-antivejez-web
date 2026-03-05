@@ -19,6 +19,19 @@ const nextConfig = {
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   },
 
+  // ===== REWRITES: /api/mobile-* → /mobile-* =====
+  // La PWA llama a /api/mobile-profile-v1, /api/mobile-adherence-v1, etc.
+  // pero los route.ts viven sin prefijo /api/ en el App Router.
+  // Este rewrite es transparente (no cambia la URL del cliente) y resuelve el 404.
+  async rewrites() {
+    return [
+      {
+        source: '/api/mobile-:segment*',
+        destination: '/mobile-:segment*',
+      },
+    ];
+  },
+
   // ===== CORS PARA ENDPOINTS MÓVILES (PWA) =====
   // Belt-and-suspenders: headers a nivel de framework + handlers en route.ts
   async headers() {
@@ -33,17 +46,17 @@ const nextConfig = {
     ];
 
     return [
-      // Endpoints móviles bajo /mobile-* (App Router raíz)
+      // Endpoints móviles bajo /mobile-* (App Router raíz — ruta real)
       { source: '/mobile-:path*', headers: corsHeaders },
-      // Endpoints móviles bajo /api/mobile-* (por si hubiera)
+      // Endpoints móviles bajo /api/mobile-* (alias usado por la PWA)
       { source: '/api/mobile-:path*', headers: corsHeaders },
       // Refresh token (usado por interceptor PWA)
       { source: '/api/auth/refresh', headers: corsHeaders },
-      // Genomic extract (usado desde PWA)
+      // Genomic extract
       { source: '/api/genomic-extract', headers: corsHeaders },
-      // Clinical NLR (usado desde PWA)
+      // Clinical NLR
       { source: '/clinical-nlr-v1/:path*', headers: corsHeaders },
-      // VCoach chat (usado desde PWA)
+      // VCoach chat
       { source: '/api/vcoach/:path*', headers: corsHeaders },
     ];
   },
