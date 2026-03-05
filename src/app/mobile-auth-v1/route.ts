@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { signToken } from "@/lib/jwt";
+import { signMobileAccessToken, signMobileRefreshToken } from "@/lib/jwt";
 import bcrypt from "bcryptjs";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -45,7 +45,9 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401, headers: corsHeaders });
         }
 
-        const token = await signToken({ id: patient.id, role: "PATIENT" });
+        // ✅ SECURITY: Dual token — access (15min) + refresh (7d)
+        const token = await signMobileAccessToken({ id: patient.id, role: "PATIENT" });
+        const refreshToken = await signMobileRefreshToken({ id: patient.id });
 
         // Consolidamos el objeto paciente — con fallback si la BD tiene drift
         let fullPatient;
@@ -79,7 +81,8 @@ export async function POST(req: Request) {
 
         const responseData = {
             success: true,
-            token,
+            token,           // accessToken — retrocompatible con authService.ts
+            refreshToken,    // NUEVO — apiClient.ts ya lo guarda en sessionStorage
             patient: {
                 ...fullPatient,
                 name: `${fullPatient.firstName} ${fullPatient.lastName}`.trim()
