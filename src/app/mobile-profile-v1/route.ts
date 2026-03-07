@@ -132,9 +132,19 @@ export async function GET(req: Request) {
         }
 
         const latestGuide = patient.guides[0];
+        const protocolItems = latestGuide
+            ? serializeForPWA(latestGuide.selections as any)
+            : [];
         const serializedGuide = latestGuide
-            ? { ...latestGuide, selections: serializeForPWA(latestGuide.selections as any) }
+            ? {
+                ...latestGuide,
+                // `protocol` is what the PWA's fetchActiveProtocol reads first (Path 1):
+                // if (r.protocol && Array.isArray(r.protocol)) → use it directly
+                protocol: protocolItems,
+                // keep original `selections` (raw DB data) in case Path 2 fallback is used
+            }
             : null;
+
 
         return NextResponse.json({
             id: patient.id,
