@@ -1,34 +1,47 @@
 /**
  * src/app/api/mobile-profile-v1/route.ts
  *
- * Punto de entrada /api/mobile-profile-v1 para la PWA.
+ * CORS bridge para la PWA Rejuvenate.
  *
- * POR QUÉ EXISTE ESTE ARCHIVO:
- * La PWA llama a /api/mobile-profile-v1 (convención REST estándar).
- * El route.ts real vive en /mobile-profile-v1 (sin /api/).
- * Next.js 14 App Router evalúa existencia de ruta ANTES de aplicar rewrites,
- * por lo que el preflight OPTIONS llegaba a un 404 antes de que el rewrite
- * pudiera actuar — el browser bloqueaba toda comunicación CORS.
+ * Este archivo:
+ * 1. Responde OPTIONS con 204 + CORS headers (preflight CORS ✅)
+ * 2. Re-exporta los handlers GET/PATCH del route.ts real CON CORS headers inyectados
  *
- * SOLUCIÓN:
- * Este archivo existe en /api/mobile-profile-v1/ para capturar las llamadas
- * de la PWA, responder el preflight con 204 + CORS headers, y delegar
- * el GET/PATCH al handler real.
+ * Se usa importación directa (Plan A) en lugar de fetch interno (Plan B)
+ * porque en Render el fetch interno a https://sí-mismo falla con ERR_SSL_WRONG_VERSION_NUMBER.
  */
 
-import { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { GET as RealGET, PATCH as RealPATCH } from '../../mobile-profile-v1/route';
+
+export const dynamic = 'force-dynamic';
+
+const PWA_ORIGIN = 'https://doctorantivejez-patients.onrender.com';
 
 const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': 'https://doctorantivejez-patients.onrender.com',
+    'Access-Control-Allow-Origin': PWA_ORIGIN,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
-};
+} as const;
 
 /**
- * Preflight CORS — responde con 204 No Content + headers CORS.
- * Sin este handler, Next.js devuelve 404 para OPTIONS y el browser
- * bloquea toda comunicación con la PWA (Isabel Padrino CI 798386).
+ * Inyecta headers CORS en cualquier respuesta del handler real.
+ */
+function withCORS(response: Response | NextResponse): NextResponse {
+    const headers = new Headers(response.headers);
+    Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+        headers.set(key, value);
+    });
+    return new NextResponse(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+    });
+}
+
+/**
+ * OPTIONS — Preflight CORS (ya funcionando ✅)
  */
 export async function OPTIONS() {
     return new Response(null, {
@@ -38,57 +51,17 @@ export async function OPTIONS() {
 }
 
 /**
- * GET — proxy interno al handler real en /mobile-profile-v1
+ * GET — Delega al handler real e inyecta CORS headers
  */
-export async function GET(request: NextRequest) {
-    const url = new URL(request.url);
-    url.pathname = '/mobile-profile-v1';
-
-    const proxiedResponse = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-            'Authorization': request.headers.get('Authorization') || '',
-            'Content-Type': 'application/json',
-        },
-    });
-
-    const data = await proxiedResponse.json();
-
-    return new Response(JSON.stringify(data), {
-        status: proxiedResponse.status,
-        headers: {
-            'Content-Type': 'application/json',
-            ...CORS_HEADERS,
-        },
-    });
+export async function GET(request: Request) {
+    const response = await RealGET(request);
+    return withCORS(response);
 }
 
 /**
- * PATCH — proxy interno al handler real en /mobile-profile-v1
- * (usado para actualizar shareDataConsent desde la PWA)
+ * PATCH — Delega al handler real (shareDataConsent) e inyecta CORS headers
  */
-export async function PATCH(request: NextRequest) {
-    const url = new URL(request.url);
-    url.pathname = '/mobile-profile-v1';
-
-    const body = await request.text();
-
-    const proxiedResponse = await fetch(url.toString(), {
-        method: 'PATCH',
-        headers: {
-            'Authorization': request.headers.get('Authorization') || '',
-            'Content-Type': 'application/json',
-        },
-        body,
-    });
-
-    const data = await proxiedResponse.json();
-
-    return new Response(JSON.stringify(data), {
-        status: proxiedResponse.status,
-        headers: {
-            'Content-Type': 'application/json',
-            ...CORS_HEADERS,
-        },
-    });
+export async function PATCH(request: Request) {
+    const response = await RealPATCH(request);
+    return withCORS(response);
 }
