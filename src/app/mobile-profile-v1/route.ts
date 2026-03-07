@@ -5,8 +5,23 @@ import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
 export const dynamic = 'force-dynamic';
 
-export async function OPTIONS(req: Request) {
-    return handleCorsPreflightOrReject(req, "GET, PATCH, OPTIONS");
+const PWA_CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://doctorantivejez-patients.onrender.com',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+};
+
+/**
+ * Handler para preflight CORS (OPTIONS)
+ *
+ * Retorna 204 con headers CORS explícitos.
+ * IMPORTANTE: Usar new Response nativo (no NextResponse) para garantizar status 204 exacto.
+ * handleCorsPreflightOrReject fue reemplazado porque retornaba 403 o 200-JSON
+ * — ambos rechazados por el browser como respuesta inválida del preflight.
+ */
+export async function OPTIONS() {
+    return new Response(null, { status: 204, headers: PWA_CORS_HEADERS });
 }
 
 export async function GET(req: Request) {

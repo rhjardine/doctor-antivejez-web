@@ -5,8 +5,16 @@ import bcrypt from "bcryptjs";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-export async function OPTIONS(req: Request) {
-    return handleCorsPreflightOrReject(req, "POST, OPTIONS");
+const PWA_CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://doctorantivejez-patients.onrender.com',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+};
+
+/** Preflight CORS para el login de la PWA */
+export async function OPTIONS() {
+    return new Response(null, { status: 204, headers: PWA_CORS_HEADERS });
 }
 
 export async function POST(req: Request) {
