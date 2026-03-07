@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyToken } from "@/lib/jwt";
+import { verifyMobileAccessToken } from "@/lib/jwt";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
 export const dynamic = 'force-dynamic';
@@ -34,14 +34,14 @@ export async function GET(req: Request) {
         }
 
         const token = authHeader.split(" ")[1];
-        const payload = await verifyToken(token);
+        const payload = await verifyMobileAccessToken(token);
 
         if (!payload) {
             return NextResponse.json({ error: "Token inválido o expirado" }, { status: 401, headers: corsHeaders });
         }
 
         const patient = await db.patient.findUnique({
-            where: { id: payload.id },
+            where: { id: payload.sub },
             include: {
                 biophysicsTests: { orderBy: { createdAt: 'desc' }, take: 1 },
                 biochemistryTests: { orderBy: { createdAt: 'desc' }, take: 1 },
@@ -176,7 +176,7 @@ export async function PATCH(req: Request) {
         }
 
         const token = authHeader.split(" ")[1];
-        const payload = await verifyToken(token);
+        const payload = await verifyMobileAccessToken(token);
 
         if (!payload) {
             return NextResponse.json({ error: "Token inválido" }, { status: 401, headers: corsHeaders });
@@ -184,8 +184,8 @@ export async function PATCH(req: Request) {
 
         const { shareDataConsent } = await req.json();
 
-        const patient = await db.patient.findFirst({
-            where: { userId: payload.id }
+        const patient = await db.patient.findUnique({
+            where: { id: payload.sub }
         });
 
         if (!patient) {

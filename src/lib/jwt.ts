@@ -60,3 +60,15 @@ export async function verifyMobileRefreshToken(token: string) {
     return payload as { sub: string; type: string };
 }
 
+/** Verifica un access token de la PWA — usa MOBILE_JWT_SECRET (NO NEXTAUTH_SECRET) */
+export async function verifyMobileAccessToken(token: string | undefined) {
+    if (!token) return null;
+    try {
+        const { payload } = await jwtVerify(token, getMobileAccessSecret());
+        if (payload.type !== 'access') return null;
+        return payload as { sub: string; role: string; type: string };
+    } catch (error) {
+        console.error('JWT Verification Error:', error);
+        return null;
+    }
+}
