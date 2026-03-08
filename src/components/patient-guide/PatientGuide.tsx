@@ -470,6 +470,21 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
                 </select>
               </div>
             )}
+            {/* Campo Observación — opcional */}
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Observación adicional
+                <span className="ml-1 text-gray-400 font-normal normal-case">(opcional)</span>
+              </label>
+              <textarea
+                name="observacion"
+                value={sel.observacion ?? ''}
+                onChange={(e) => handleSelectionChange(item.id, 'observacion', e.target.value)}
+                placeholder="Ej: Instrucciones específicas para el paciente..."
+                rows={2}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder:text-gray-300 resize-none text-gray-700 transition-all duration-200"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -528,6 +543,21 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
                 className="input text-sm py-1 w-24" />
               <span className="text-sm text-gray-500">dosis</span>
             </div>
+            {/* Campo Observación — opcional */}
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Observación adicional
+                <span className="ml-1 text-gray-400 font-normal normal-case">(opcional)</span>
+              </label>
+              <textarea
+                name="observacion"
+                value={sel.observacion ?? ''}
+                onChange={(e) => handleSelectionChange(item.id, 'observacion', e.target.value)}
+                placeholder="Ej: Instrucciones específicas para el paciente..."
+                rows={2}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder:text-gray-300 resize-none text-gray-700 transition-all duration-200"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -564,6 +594,21 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
                     </label>
                   ))}
                 </div>
+              </div>
+              {/* Campo Observación — opcional */}
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Observación adicional
+                  <span className="ml-1 text-gray-400 font-normal normal-case">(opcional)</span>
+                </label>
+                <textarea
+                  name="observacion"
+                  value={sel.observacion ?? ''}
+                  onChange={(e) => handleSelectionChange('am_bioterapico', 'observacion', e.target.value)}
+                  placeholder="Ej: Conservar el frasco lejos de aparatos electrónicos..."
+                  rows={2}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder:text-gray-300 resize-none text-gray-700 transition-all duration-200"
+                />
               </div>
             </div>
           )}
@@ -610,6 +655,20 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
                 </button>
               ))}
             </div>
+            <div className="w-full mt-3">
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Observación adicional
+                <span className="ml-1 text-gray-400 font-normal normal-case">(opcional)</span>
+              </label>
+              <textarea
+                name="observacion"
+                value={sel.observacion ?? ''}
+                onChange={(e) => handleSelectionChange(item.id, 'observacion', e.target.value)}
+                placeholder="Ej: Recomendaciones pre o post suero..."
+                rows={1}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder:text-gray-300 resize-none text-gray-700 transition-all duration-200"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -625,9 +684,14 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
           className="w-5 h-5 accent-primary" />
         <label htmlFor={item.id} className="flex-grow font-medium text-gray-800 text-sm">{item.name}</label>
         {sel.selected && (
-          <input type="text" placeholder="Dosis" value={sel.dosis ?? ''}
-            onChange={e => handleSelectionChange(item.id, 'dosis', e.target.value)}
-            className="input text-sm py-1 w-28" />
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+            <input type="text" placeholder="Dosis" value={sel.dosis ?? ''}
+              onChange={e => handleSelectionChange(item.id, 'dosis', e.target.value)}
+              className="input text-sm py-1 w-28" />
+            <input type="text" placeholder="Observación..." value={sel.observacion ?? ''}
+              onChange={e => handleSelectionChange(item.id, 'observacion', e.target.value)}
+              className="input text-sm py-1 flex-1 min-w-[200px]" />
+          </div>
         )}
       </div>
     );
@@ -675,6 +739,21 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
                 <input type="text" placeholder="Nota adicional" value={sel.custom ?? ''} onChange={e => handleSelectionChange(item.id, 'custom', e.target.value)} className="input text-sm py-1" />
               </div>
             ) : null}
+            {/* Campo Observación — opcional */}
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                Observación adicional
+                <span className="ml-1 text-gray-400 font-normal normal-case">(opcional)</span>
+              </label>
+              <textarea
+                name="observacion"
+                value={sel.observacion ?? ''}
+                onChange={(e) => handleSelectionChange(item.id, 'observacion', e.target.value)}
+                placeholder="Ej: Preferiblemente con agua fría. Evitar con lácteos..."
+                rows={2}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder:text-gray-300 resize-none text-gray-700 transition-all duration-200"
+              />
+            </div>
           </div>
         )}
       </div>

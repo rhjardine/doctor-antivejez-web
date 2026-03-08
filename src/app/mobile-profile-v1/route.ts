@@ -127,6 +127,11 @@ export async function GET(req: Request) {
                     schedule = sel.horario || sel.tacita || '';
                 }
                 else { dose = sel.qty || sel.dosis || ''; schedule = sel.freq || sel.frecuencia || ''; }
+
+                if (sel.observacion) {
+                    observations = observations ? `${observations} | ${sel.observacion}` : sel.observacion;
+                }
+
                 protocols.push({
                     id: itemId,
                     category,

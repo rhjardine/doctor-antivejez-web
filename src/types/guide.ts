@@ -61,6 +61,7 @@ export interface StandardFormItem {
   custom?: string;
   personalizacion?: string; // ej: "(5HTP o Ashwaganda)"
   isClinicalPriority?: boolean;
+  observacion?: string;
 }
 
 export interface RevitalizationFormItem {
@@ -71,6 +72,7 @@ export interface RevitalizationFormItem {
   otro_cc?: string;
   vecesXSemana?: number;
   totalDosis?: number;
+  observacion?: string;
 }
 
 export interface MetabolicFormItem {
@@ -78,6 +80,7 @@ export interface MetabolicFormItem {
   gotas?: number;
   vecesAlDia?: number;
   horario?: MetabolicHorario[];
+  observacion?: string;
 }
 
 export interface RemocionFormItem {
@@ -89,17 +92,20 @@ export interface RemocionFormItem {
   tacita_qty?: number;
   tacita?: NoniAloeVeraTime;
   frascos?: number;
+  observacion?: string;
 }
 
 export interface SueroFormItem {
   selected?: boolean;
   dosis?: string;
   frecuencia?: SueroFrecuencia;
+  observacion?: string;
 }
 
 export interface BioNeuralFormItem {
   selected?: boolean;
   dosis?: string;
+  observacion?: string;
 }
 
 export type Selections = Record<string, StandardFormItem | RevitalizationFormItem | MetabolicFormItem | RemocionFormItem | SueroFormItem | BioNeuralFormItem>;

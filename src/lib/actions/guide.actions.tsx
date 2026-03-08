@@ -138,6 +138,10 @@ function serializeGuideToProtocol(selections: Selections, guideData: GuideCatego
       timeSlot = deriveTimeSlot(schedule);
     }
 
+    if (sel.observacion) {
+      observations = observations ? `${observations} | ${sel.observacion}` : sel.observacion;
+    }
+
     protocols.push({
       id: itemId,
       category,
