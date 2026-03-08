@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { verifyMobileAccessToken } from "@/lib/jwt";
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { verifyMobileAccessToken } from '@/lib/jwt';
+import { calculateAge } from '@/utils/date';
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 
 export const dynamic = 'force-dynamic';
@@ -149,6 +150,13 @@ export async function GET(req: Request) {
             return protocols;
         }
 
+        const latestBiophysics = patient.biophysicsTests[0] || null;
+        const currentChronologicalAge = patient.birthDate ? calculateAge(patient.birthDate) : patient.chronologicalAge;
+        const bioAge = latestBiophysics?.biologicalAge ?? null;
+
+        // Debug log to trace why age might be missing for some patients
+        console.log(`[mobile-profile] Patient: ${patient.id}, ChronologicalAge: ${currentChronologicalAge}, BiologicalAge: ${bioAge}`);
+
         const latestGuide = patient.guides[0];
         const protocolItems = latestGuide
             ? serializeForPWA(latestGuide.selections as any)
@@ -171,9 +179,9 @@ export async function GET(req: Request) {
             email: patient.email,
             bloodType: patient.bloodType,
             identification: patient.identification,
-            biologicalAge: patient.biophysicsTests[0]?.biologicalAge || null,
-            chronologicalAge: patient.chronologicalAge,
-            biophysics: patient.biophysicsTests[0] || null,
+            biologicalAge: bioAge,
+            chronologicalAge: currentChronologicalAge,
+            biophysics: latestBiophysics,
             biochemistry: patient.biochemistryTests[0] || null,
             latestNlr: patient.nlrTests[0] || null,
             geneticSummary: patient.geneticTests[0] ? {

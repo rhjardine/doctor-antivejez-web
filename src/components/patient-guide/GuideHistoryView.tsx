@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 // ===== INICIO DE LA CORRECCIÓN =====
 import { FaHistory, FaEye, FaTrash } from 'react-icons/fa';
 import { Loader2 } from 'lucide-react'; // Se importa Loader2 desde lucide-react
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 // ===== FIN DE LA CORRECCIÓN =====
 import { Button } from '@/components/ui/button';
 import type { PatientGuide } from '@prisma/client';
@@ -22,15 +23,25 @@ export default function GuideHistoryView({ patientId, onViewGuide, onBack }: Gui
   const [history, setHistory] = useState<GuideHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [targetGuideId, setTargetGuideId] = useState<string | null>(null);
 
-  const handleDelete = async (guideId: string) => {
-    if (!confirm('¿Eliminar esta guía archivada? Esta acción no se puede deshacer.')) return;
-    setDeletingId(guideId);
+  const handleDeleteClick = (guideId: string) => {
+    setTargetGuideId(guideId);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!targetGuideId) return;
+
+    setDeletingId(targetGuideId);
+    setConfirmDialogOpen(false);
+
     try {
-      const res = await deletePatientGuide(guideId, patientId);
+      const res = await deletePatientGuide(targetGuideId, patientId);
       if (res.success) {
         toast.success(res.message);
-        setHistory(prev => prev.filter(g => g.id !== guideId));
+        setHistory(prev => prev.filter(g => g.id !== targetGuideId));
       } else {
         toast.error(res.error || 'Error al eliminar la guía');
       }
@@ -38,6 +49,7 @@ export default function GuideHistoryView({ patientId, onViewGuide, onBack }: Gui
       toast.error('Error de red al intentar eliminar la guía');
     } finally {
       setDeletingId(null);
+      setTargetGuideId(null);
     }
   };
 
@@ -87,7 +99,7 @@ export default function GuideHistoryView({ patientId, onViewGuide, onBack }: Gui
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() => handleDelete(guide.id)}
+                  onClick={() => handleDeleteClick(guide.id)}
                   disabled={deletingId === guide.id}
                   className="w-full sm:w-auto bg-red-100 text-red-700 hover:bg-red-200 border-0"
                 >
@@ -104,6 +116,15 @@ export default function GuideHistoryView({ patientId, onViewGuide, onBack }: Gui
           <p className="text-sm text-gray-400 mt-1">Cree y guarde una nueva guía para verla aquí.</p>
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        isOpen={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isLoading={deletingId !== null}
+        title="Confirmar eliminación"
+        description="¿Eliminar esta guía archivada? Esta acción no se puede deshacer."
+      />
     </div>
   );
 }
