@@ -126,7 +126,25 @@ export async function GET(req: Request) {
                     schedule = sel.horario || sel.tacita || '';
                 }
                 else { dose = sel.qty || sel.dosis || ''; schedule = sel.freq || sel.frecuencia || ''; }
-                protocols.push({ id: itemId, category, itemName: mapped?.name || itemId, dose, schedule, timeSlot, observations, status: 'pending', prescribedAt: now, updatedAt: now });
+                protocols.push({
+                    id: itemId,
+                    category,
+                    itemName: mapped?.name || itemId,
+                    dose,
+                    schedule,
+                    timeSlot,
+                    observations,
+                    status: 'pending',
+                    prescribedAt: now,
+                    updatedAt: now,
+                    // Alias fields in case the PWA code expects different names
+                    dosage: dose,
+                    timing: schedule,
+                    dosis: dose,
+                    frecuencia: schedule,
+                    description: sel.custom || mapped?.name || '',
+                    notas: observations
+                });
             }
             return protocols;
         }
