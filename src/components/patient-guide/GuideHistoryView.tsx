@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getPatientGuideHistory } from '@/lib/actions/guide.actions';
+import { getPatientGuideHistory, deletePatientGuide } from '@/lib/actions/guide.actions';
 import { toast } from 'sonner';
 // ===== INICIO DE LA CORRECCIÓN =====
-import { FaHistory, FaEye } from 'react-icons/fa';
+import { FaHistory, FaEye, FaTrash } from 'react-icons/fa';
 import { Loader2 } from 'lucide-react'; // Se importa Loader2 desde lucide-react
 // ===== FIN DE LA CORRECCIÓN =====
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,25 @@ interface GuideHistoryViewProps {
 export default function GuideHistoryView({ patientId, onViewGuide, onBack }: GuideHistoryViewProps) {
   const [history, setHistory] = useState<GuideHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (guideId: string) => {
+    if (!confirm('¿Eliminar esta guía archivada? Esta acción no se puede deshacer.')) return;
+    setDeletingId(guideId);
+    try {
+      const res = await deletePatientGuide(guideId, patientId);
+      if (res.success) {
+        toast.success(res.message);
+        setHistory(prev => prev.filter(g => g.id !== guideId));
+      } else {
+        toast.error(res.error || 'Error al eliminar la guía');
+      }
+    } catch (e) {
+      toast.error('Error de red al intentar eliminar la guía');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -61,9 +80,21 @@ export default function GuideHistoryView({ patientId, onViewGuide, onBack }: Gui
                   {guide.observations || 'Sin observaciones adicionales.'}
                 </p>
               </div>
-              <Button size="sm" onClick={() => onViewGuide(guide.id)} className="w-full sm:w-auto">
-                <FaEye className="mr-2 h-4 w-4" /> Ver Guía
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-0">
+                <Button size="sm" onClick={() => onViewGuide(guide.id)} className="w-full sm:w-auto">
+                  <FaEye className="mr-2 h-4 w-4" /> Ver Guía
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => handleDelete(guide.id)}
+                  disabled={deletingId === guide.id}
+                  className="w-full sm:w-auto bg-red-100 text-red-700 hover:bg-red-200 border-0"
+                >
+                  {deletingId === guide.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FaTrash className="mr-2 h-4 w-4" />}
+                  {deletingId === guide.id ? 'Eliminando...' : 'Eliminar'}
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
