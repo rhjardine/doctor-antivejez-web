@@ -134,23 +134,43 @@ const CurrentTreatmentCard = ({ medications, patientGuide, onNavigate }: { medic
   let guiaMasReciente = null;
 
   if (patientGuide && patientGuide.selections) {
-    const selectionsArray = Array.isArray(patientGuide.selections)
-      ? patientGuide.selections
-      : Object.values(patientGuide.selections);
+    const selections = patientGuide.selections;
+    const mappedItems: any[] = [];
 
-    const items = selectionsArray.map((sel: any) => ({
-      id: sel.id || Math.random().toString(),
-      category: sel.categoryName || sel.category || 'General',
-      title: sel.name || sel.itemName || 'Tratamiento',
-      dosage: sel.dose || sel.dosis || sel.qty || '',
-      timing: sel.schedule || sel.freq || sel.frecuencia || sel.horario || '',
-      notes: sel.notes || sel.personalizacion || '',
-      observacion: sel.observacion || ''
-    }));
+    if (typeof selections === 'object' && !Array.isArray(selections)) {
+      Object.keys(selections).forEach(category => {
+        const categoryItems = (selections as any)[category];
+        if (Array.isArray(categoryItems)) {
+          categoryItems.forEach((sel: any) => {
+            mappedItems.push({
+              id: sel.id || Math.random().toString(),
+              category: category, // Usar la clave del objeto como categoría
+              title: sel.name || sel.itemName || 'Tratamiento',
+              dosage: sel.dose || sel.dosis || sel.qty || '',
+              timing: sel.schedule || sel.freq || sel.frecuencia || sel.horario || '',
+              notes: sel.notes || sel.personalizacion || '',
+              observacion: sel.observacion || ''
+            });
+          });
+        }
+      });
+    } else if (Array.isArray(selections)) {
+      selections.forEach((sel: any) => {
+        mappedItems.push({
+          id: sel.id || Math.random().toString(),
+          category: sel.categoryName || sel.category || 'General',
+          title: sel.name || sel.itemName || 'Tratamiento',
+          dosage: sel.dose || sel.dosis || sel.qty || '',
+          timing: sel.schedule || sel.freq || sel.frecuencia || sel.horario || '',
+          notes: sel.notes || sel.personalizacion || '',
+          observacion: sel.observacion || ''
+        });
+      });
+    }
 
     guiaMasReciente = {
       createdAt: patientGuide.createdAt,
-      items: items.filter((i: any) => i.title && i.title !== 'Tratamiento')
+      items: mappedItems.filter((i: any) => i.title && i.title !== 'Tratamiento')
     };
   }
 
