@@ -32,13 +32,14 @@ export default function HistoriasPage() {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.id) {
-      loadPatients(currentPage, session.user.id);
+      const fetchUserId = session.user.role === 'ADMIN' ? undefined : session.user.id;
+      loadPatients(currentPage, fetchUserId);
     } else if (status === 'unauthenticated') {
       setLoading(false);
     }
   }, [currentPage, session, status]);
 
-  const loadPatients = async (page: number, userId: string) => {
+  const loadPatients = async (page: number, userId?: string) => {
     setLoading(true);
     try {
       const result = await getPaginatedPatients({ page, limit: ITEMS_PER_PAGE, userId });
@@ -54,13 +55,14 @@ export default function HistoriasPage() {
   };
 
   const handleSearch = async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user) return;
+    const fetchUserId = session.user.role === 'ADMIN' ? undefined : session.user.id;
     setCurrentPage(1);
     setLoading(true);
     try {
       const result = searchQuery.trim()
-        ? await searchPatients({ query: searchQuery, page: 1, limit: ITEMS_PER_PAGE, userId: session.user.id })
-        : await getPaginatedPatients({ page: 1, limit: ITEMS_PER_PAGE, userId: session.user.id });
+        ? await searchPatients({ query: searchQuery, page: 1, limit: ITEMS_PER_PAGE, userId: fetchUserId })
+        : await getPaginatedPatients({ page: 1, limit: ITEMS_PER_PAGE, userId: fetchUserId });
 
       if (result.success && result.patients) {
         setPatients(result.patients as Patient[]);
@@ -80,7 +82,8 @@ export default function HistoriasPage() {
       const result = await deletePatient(patientToDelete);
       if (result.success) {
         toast.success('Paciente eliminado exitosamente');
-        loadPatients(currentPage, session.user.id);
+        const fetchUserId = session.user.role === 'ADMIN' ? undefined : session.user.id;
+        loadPatients(currentPage, fetchUserId);
       } else {
         toast.error(result.error || 'Error al eliminar paciente');
       }
