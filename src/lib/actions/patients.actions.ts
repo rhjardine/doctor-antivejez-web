@@ -144,6 +144,10 @@ export async function getPatientDetails(id: string) {
         },
         appointments: {
           orderBy: { date: 'asc' },
+        },
+        guides: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
         }
       },
     });

@@ -121,12 +121,11 @@ export default function PatientDetailPage() {
     return <div className="text-center py-12"><p className="text-gray-500">Paciente no encontrado. Redirigiendo...</p></div>;
   }
 
-  // ✅ Se actualiza el array de pestañas
+  // ✅ Se actualiza el array de pestañas (Tab "Tendencias" eliminado según Tarea 1)
   const tabs = [
     { id: 'resumen', label: 'Resumen Clínico', icon: FaFileMedicalAlt },
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
-    { id: 'tendencias', label: 'Tendencias', icon: FaChartLine }, // ✅ Nueva pestaña
     { id: 'biomarcadores', label: 'Biomarcadores', icon: FaVial },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },

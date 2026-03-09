@@ -9,16 +9,8 @@ import {
   FaEdit,
   FaPlus,
 } from 'react-icons/fa';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import { GuiaModal } from '@/components/patient/GuiaModal';
+import EdadBiologicaChart from '@/components/patient/EdadBiologicaChart';
 import { formatDate } from '@/utils/date';
 
 // --- TIPOS Y DATOS DE EJEMPLO (MOCK DATA) ---
@@ -103,19 +95,7 @@ const BiologicalAgeCard = ({ patient }: { patient: PatientWithDetails }) => {
           </p>
         </div>
       </div>
-      <div className="h-60">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="Edad Biológica" stroke="#23bcef" strokeWidth={2} />
-            <Line type="monotone" dataKey="Edad Cronológica" stroke="#343a40" strokeWidth={2} strokeDasharray="5 5" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <EdadBiologicaChart data={chartData} />
     </div>
   );
 };
@@ -149,32 +129,60 @@ const NextAppointmentCard = ({ appointment }: { appointment: Appointment }) => (
   </div>
 );
 
-const CurrentTreatmentCard = ({ medications, onNavigate }: { medications: Medication[], onNavigate: (tab: TabId) => void }) => (
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <div className="flex justify-between items-center mb-4">
-      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
-        <FaPills className="text-primary" /> Tratamiento Actual
-      </h3>
-      <button onClick={() => onNavigate('guia')} className="text-xs font-bold text-primary hover:underline uppercase">Ver todos</button>
-    </div>
-    <div className="space-y-3">
-      {medications.map(med => (
-        <div key={med.id} className="flex justify-between items-center bg-slate-50/50 p-3 rounded-xl border border-slate-100">
-          <div>
-            <p className="font-bold text-slate-800">{med.name}</p>
-            <p className="text-sm text-slate-500 font-medium">{med.dosage}</p>
-          </div>
-          <button className="text-slate-400 hover:text-primary transition-colors"><FaEdit /></button>
-        </div>
-      ))}
-    </div>
-    <button className="w-full mt-4 text-sm text-primary border-2 border-dashed border-gray-300 rounded-lg py-2 hover:bg-primary/10 hover:border-primary transition-colors flex items-center justify-center gap-2">
-      <FaPlus /> Añadir medicación
-    </button>
-  </div>
-);
+const CurrentTreatmentCard = ({ medications, patientGuide, onNavigate }: { medications: Medication[], patientGuide: any, onNavigate: (tab: TabId) => void }) => {
+  // Convertir el JSON de selections al formato esperado por el Modal
+  let guiaMasReciente = null;
 
-const RecentHistoryCard = ({ history, onNavigate }: { history: HistoryEvent[], onNavigate: (tab: TabId) => void }) => (
+  if (patientGuide && patientGuide.selections) {
+    const selectionsArray = Array.isArray(patientGuide.selections)
+      ? patientGuide.selections
+      : Object.values(patientGuide.selections);
+
+    const items = selectionsArray.map((sel: any) => ({
+      id: sel.id || Math.random().toString(),
+      category: sel.categoryName || sel.category || 'General',
+      title: sel.name || sel.itemName || 'Tratamiento',
+      dosage: sel.dose || sel.dosis || sel.qty || '',
+      timing: sel.schedule || sel.freq || sel.frecuencia || sel.horario || '',
+      notes: sel.notes || sel.personalizacion || '',
+      observacion: sel.observacion || ''
+    }));
+
+    guiaMasReciente = {
+      createdAt: patientGuide.createdAt,
+      items: items.filter((i: any) => i.title && i.title !== 'Tratamiento')
+    };
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
+          <FaPills className="text-primary" /> Tratamiento Actual
+        </h3>
+        <GuiaModal guia={guiaMasReciente} />
+      </div>
+
+      {/* Lista estática solicitada que NO debe eliminarse */}
+      <div className="space-y-3">
+        {medications.map(med => (
+          <div key={med.id} className="flex justify-between items-center bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+            <div>
+              <p className="font-bold text-slate-800">{med.name}</p>
+              <p className="text-sm text-slate-500 font-medium">{med.dosage}</p>
+            </div>
+            <button className="text-slate-400 hover:text-primary transition-colors"><FaEdit /></button>
+          </div>
+        ))}
+      </div>
+      <button className="w-full mt-4 text-sm text-primary border-2 border-dashed border-gray-300 rounded-lg py-2 hover:bg-primary/10 hover:border-primary transition-colors flex items-center justify-center gap-2">
+        <FaPlus /> Añadir medicación
+      </button>
+    </div>
+  );
+};
+
+const RecentHistoryCard = ({ appointments, onNavigate }: { appointments: any[], onNavigate: (tab: TabId) => void }) => (
   <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
@@ -182,14 +190,33 @@ const RecentHistoryCard = ({ history, onNavigate }: { history: HistoryEvent[], o
       </h3>
       <button onClick={() => onNavigate('historia')} className="text-xs font-bold text-primary hover:underline uppercase">Ver todos</button>
     </div>
-    <div className="space-y-4">
-      {history.map(event => (
-        <div key={event.id} className="border-l-4 border-primary/30 pl-4 py-1">
-          <p className="font-bold text-slate-800">{event.title}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{event.date}</p>
-          <p className="text-sm text-slate-600 leading-relaxed font-medium">{event.description}</p>
-        </div>
-      ))}
+    <div className="space-y-3">
+      {appointments.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">
+          Sin consultas registradas
+        </p>
+      ) : (
+        appointments.map((cita) => (
+          <div key={cita.id}
+            className="border-l-2 border-teal-400 pl-3 py-1">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-bold text-gray-700">
+                {cita.reason || cita.title || cita.type || 'Consulta'}
+              </p>
+              <span className="text-xs text-gray-400">
+                {new Date(cita.date).toLocaleDateString('es-ES', {
+                  day: '2-digit', month: 'short', year: 'numeric'
+                })}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              {cita.notes?.trim()
+                ? cita.notes
+                : 'Sin comentarios del médico'}
+            </p>
+          </div>
+        ))
+      )}
     </div>
   </div>
 );
@@ -206,6 +233,9 @@ interface ClinicalSummaryProps {
 // ===== FIN DE LA MODIFICACIÓN =====
 
 export default function ClinicalSummary({ patient, onNavigateToTab }: ClinicalSummaryProps) {
+  const latestGuide = patient.guides?.[0];
+  const recentAppointments = patient.appointments ? [...patient.appointments].reverse().slice(0, 5) : [];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
       {/* Columna Izquierda */}
@@ -217,8 +247,8 @@ export default function ClinicalSummary({ patient, onNavigateToTab }: ClinicalSu
       {/* Columna Derecha */}
       <div className="lg:col-span-1 space-y-6">
         <NextAppointmentCard appointment={mockAppointment} />
-        <CurrentTreatmentCard medications={mockMedications} onNavigate={onNavigateToTab} />
-        <RecentHistoryCard history={mockHistory} onNavigate={onNavigateToTab} />
+        <CurrentTreatmentCard medications={mockMedications} patientGuide={latestGuide} onNavigate={onNavigateToTab} />
+        <RecentHistoryCard appointments={recentAppointments} onNavigate={onNavigateToTab} />
       </div>
     </div>
   );
