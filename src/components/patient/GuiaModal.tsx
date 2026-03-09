@@ -22,7 +22,7 @@ interface GuiaModalProps {
 export function GuiaModal({ guia }: GuiaModalProps) {
     const [open, setOpen] = useState(false);
 
-    if (!guia || guia.items.length === 0) return null;
+    if (!guia) return null;
 
     // Agrupar items por categoría
     const itemsByCategory = guia.items.reduce((acc, item) => {
