@@ -49,7 +49,8 @@ export async function GET(req: Request) {
                 guides: { orderBy: { createdAt: 'desc' }, take: 1 },
                 foodPlans: { orderBy: { createdAt: 'desc' }, take: 1, include: { items: true } },
                 nlrTests: { orderBy: { createdAt: 'desc' }, take: 1 },
-                geneticTests: { orderBy: { testDate: 'desc' }, take: 1 }
+                geneticTests: { orderBy: { testDate: 'desc' }, take: 1 },
+                alimentacion: true
             }
         });
 
@@ -198,7 +199,8 @@ export async function GET(req: Request) {
                 lastTestDate: patient.geneticTests[0].testDate?.toISOString() || null,
             } : null,
             guides: serializedGuide ? [serializedGuide] : [],
-            foodPlans: patient.foodPlans
+            foodPlans: patient.foodPlans,
+            alimentacion: patient.alimentacion?.enviada ? patient.alimentacion : null
         }, { headers: corsHeaders });
 
     } catch (error) {

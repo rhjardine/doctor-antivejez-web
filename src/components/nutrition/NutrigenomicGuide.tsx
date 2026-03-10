@@ -1,301 +1,523 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { PatientWithDetails } from '@/types';
-// ===== ANÁLISIS Y CORRECCIÓN ESTRATÉGICA =====
-// La importación se simplifica. 'DietType' ahora es el enum oficial de Prisma.
-// Ya no se necesita un 'DietTypeEnum' separado.
-import {
-    FoodPlanTemplate,
-    FoodItem,
-    MealType,
-    BloodTypeGroup,
-    DietType, // Se utiliza el enum unificado.
-    GeneralGuideItem,
-    WellnessKey,
-    FoodCategory
-} from '@/types/nutrition';
-// ===========================================
-import { getFullNutritionData, savePatientNutritionPlan } from '@/lib/actions/nutrition.actions';
+import { useState } from 'react';
+import { DEFAULTS_O_B, DEFAULTS_A_AB, DEFAULTS_COMUNES } from '@/lib/nutrigenomica-defaults';
+import { saveAlimentacion, sendAlimentacionToPWA } from '@/app/(dashboard)/historias/[id]/actions';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Save, Mail, Printer, History, CheckCircle, XCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import MealSection from './MealSection';
-import NutritionPlanPreview from './NutritionPlanPreview';
-import FoodCombinationsGuide from './FoodCombinationsGuide';
-import ActivityGuide from './ActivityGuide';
 
-export default function NutrigenomicGuide({ patient }: { patient: PatientWithDetails }) {
-    const [activeTab, setActiveTab] = useState('plan');
-    // Mapeo lógico de Grupo Sanguíneo a Categoría Nutrigenómica
-    const getInitialBloodGroup = (bt: string): BloodTypeGroup => {
-        const type = bt.toUpperCase();
-        if (type.includes('O') || type.includes('B')) return 'O_B';
-        if (type.includes('A')) return 'A_AB'; // A y AB
-        return 'ALL';
-    };
+// Para simplificar, obtenemos los tipos necesarios directamente
+type GrupoSanguineo = 'O_B' | 'A_AB';
+type Tab = 'plan' | 'guia' | 'claves';
 
-    const [bloodType, setBloodType] = useState<BloodTypeGroup>(getInitialBloodGroup(patient.bloodType || 'O'));
-    // ===== ANÁLISIS Y CORRECCIÓN ESTRATÉGICA =====
-    // El estado se tipa directamente con el enum 'DietType'.
-    // El error de tipo desaparece porque `patient.selectedDiets` (que es DietType[]
-    // desde la base de datos) es 100% compatible con `Set<DietType>`.
-    const [selectedDiets, setSelectedDiets] = useState<Set<DietType>>(new Set(patient.selectedDiets || []));
-    // ===========================================
-    const [foodData, setFoodData] = useState<FoodPlanTemplate | null>(null);
-    const [generalGuide, setGeneralGuide] = useState<{ AVOID: GeneralGuideItem[], SUBSTITUTE: GeneralGuideItem[] }>({ AVOID: [], SUBSTITUTE: [] });
-    const [wellnessKeys, setWellnessKeys] = useState<WellnessKey[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const hasSavedPlans = useMemo(() => patient.foodPlans && patient.foodPlans.length > 0, [patient.foodPlans]);
+interface Props {
+    patient: any; // El objeto del paciente completo ya viene pasado
+}
 
-    const loadInitialData = useCallback(async () => {
-        setLoading(true);
-        const result = await getFullNutritionData();
-        if (result.success && result.data) {
-            const initialTemplate = result.data.foodTemplate;
-            const patientPlan = patient.foodPlans?.[0];
+export default function NutrigenomicGuide({ patient }: Props) {
+    // Inicializamos basados en la info previa del paciente si existe
+    const initialData = patient.alimentacion;
+    const initialBlood = (initialData?.grupoSanguineo as GrupoSanguineo) ||
+        (patient.bloodType?.includes('A') ? 'A_AB' : 'O_B');
 
-            if (patientPlan && patientPlan.items) {
-                const patientItems = patientPlan.items;
-                patientItems.forEach(item => {
-                    if (!initialTemplate[item.mealType].some(tItem => tItem.name === item.name)) {
-                        initialTemplate[item.mealType].push(item as FoodItem);
-                    }
-                });
-            }
-            setFoodData(initialTemplate);
-            setGeneralGuide(result.data.generalGuide);
-            setWellnessKeys(result.data.wellnessKeys);
-        } else {
-            toast.error(result.error || 'Error al cargar los datos de la guía.');
-        }
-        setLoading(false);
-    }, [patient.foodPlans]);
+    const [activeTab, setActiveTab] = useState<Tab>('plan');
+    const [grupo, setGrupo] = useState<GrupoSanguineo>(initialBlood);
+    const [tipos, setTipos] = useState({
+        nino: initialData?.tipoNino ?? false,
+        metabolica: initialData?.tipoMetabolica ?? false,
+        antidiabetica: initialData?.tipoAntidiabetica ?? false,
+        citostatica: initialData?.tipoCitostatica ?? false,
+        renal: initialData?.tipoRenal ?? false,
+    });
 
-    useEffect(() => {
-        loadInitialData();
-    }, [loadInitialData]);
+    const [saving, setSaving] = useState(false);
+    const [sending, setSending] = useState(false);
+    const [showSavingSuccess, setShowSavingSuccess] = useState(false);
 
-    const handleDietToggle = (diet: DietType) => {
-        setSelectedDiets(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(diet)) newSet.delete(diet);
-            else newSet.add(diet);
-            return newSet;
-        });
-    };
+    const grupoData = grupo === 'O_B' ? DEFAULTS_O_B : DEFAULTS_A_AB;
 
-    const handleAddItem = (mealType: MealType, name: string) => {
-        if (!foodData) return;
-        const newItem: FoodItem = {
-            id: `temp_${Date.now()}`,
-            name,
-            mealType,
-            bloodTypeGroup: 'ALL',
-            category: 'BENEFICIAL',
-            isDefault: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            foodPlanId: null
-        };
-        const updatedMeal = [...foodData[mealType], newItem];
-        setFoodData({ ...foodData, [mealType]: updatedMeal });
-    };
+    // ─── HANDLERS ───────────────────────────────────────────────────────────────
 
-    const handleEditItem = (mealType: MealType, index: number, currentName: string) => {
-        if (!foodData) return;
-        const newName = prompt('Editar alimento:', currentName);
-        if (newName && newName.trim() && newName.trim() !== currentName) {
-            const updatedMeal = [...foodData[mealType]];
-            updatedMeal[index] = { ...updatedMeal[index], name: newName.trim() };
-            setFoodData({ ...foodData, [mealType]: updatedMeal });
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await saveAlimentacion({
+                patientId: patient.id,
+                grupoSanguineo: grupo,
+                ...tipos,
+            });
+            setShowSavingSuccess(true);
+            toast.success('Plan alimentario guardado correctamente');
+            setTimeout(() => setShowSavingSuccess(false), 3000);
+        } catch (error) {
+            toast.error('Ocurrió un error al guardar el plan');
+            console.error(error);
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleDeleteItem = (mealType: MealType, index: number) => {
-        if (!foodData) return;
-        if (window.confirm('¿Estás seguro de que quieres eliminar este alimento?')) {
-            const updatedMeal = foodData[mealType].filter((_, i) => i !== index);
-            setFoodData({ ...foodData, [mealType]: updatedMeal });
+    const handleSend = async () => {
+        setSending(true);
+        try {
+            await sendAlimentacionToPWA({ patientId: patient.id });
+            toast.success('Plan enviado a la App Móvil del paciente');
+        } catch (error) {
+            toast.error('Error al notificar a la PWA');
+            console.error(error);
+        } finally {
+            setSending(false);
         }
     };
 
-    const handleSavePlan = async () => {
-        if (!foodData) return;
-        setIsSaving(true);
-        const result = await savePatientNutritionPlan(patient.id, foodData, Array.from(selectedDiets));
-        if (result.success) {
-            toast.success('Plan de bienestar guardado exitosamente.');
-        } else {
-            toast.error(result.error || 'No se pudo guardar el plan.');
-        }
-        setIsSaving(false);
-    };
-
-    const filteredFoodData = useMemo(() => {
-        const emptyPlan: FoodPlanTemplate = {
-            DESAYUNO: [], ALMUERZO: [], CENA: [], MERIENDAS_POSTRES: []
-        };
-        if (!foodData) return emptyPlan;
-        const filtered = { ...emptyPlan };
-        for (const key in foodData) {
-            const mealType = key as MealType;
-            if (Object.prototype.hasOwnProperty.call(filtered, mealType)) {
-                filtered[mealType] = (foodData[mealType] || []).filter(item =>
-                    item.bloodTypeGroup === 'ALL' || item.bloodTypeGroup === bloodType
-                );
-            }
-        }
-        return filtered;
-    }, [foodData, bloodType]);
-
-    const TabButton = ({ id, label }: { id: string, label: string }) => (
-        <button onClick={() => setActiveTab(id)} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === id ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-200'}`}>
-            {label}
-        </button>
-    );
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-12 bg-primary-dark rounded-xl">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-12 h-12 border-4 border-sky-400 border-t-transparent rounded-full"
-                />
-            </div>
-        );
-    }
-
+    // ─── RENDER ─────────────────────────────────────────────────────────────────
     return (
-        <>
-            {isPreviewOpen && foodData && (
-                <NutritionPlanPreview
-                    patient={patient}
-                    planData={{
-                        bloodType,
-                        selectedDiets: Array.from(selectedDiets),
-                        foodPlan: filteredFoodData,
-                        generalGuide,
-                        wellnessKeys
-                    }}
-                    onClose={() => setIsPreviewOpen(false)}
-                />
+        <div className="space-y-4 pb-20 relative min-h-screen">
+            {/* ── PERFIL DEL PACIENTE ─────────────────────────── */}
+            <div className="bg-[#1a3a5c] rounded-2xl p-6 text-white shadow-lg">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-[#23bcef] mb-6 flex items-center gap-2">
+                    <span>🍏</span> Perfil Nutrigenómico
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Grupo Sanguíneo */}
+                    <div>
+                        <label className="block text-xs uppercase tracking-wide opacity-60 mb-3">
+                            Grupo Sanguíneo Base
+                        </label>
+                        <div className="flex gap-3">
+                            {(['O_B', 'A_AB'] as const).map((g) => (
+                                <button
+                                    key={g}
+                                    onClick={() => setGrupo(g)}
+                                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold
+                    transition-all duration-300 border-2
+                    ${grupo === g
+                                            ? 'bg-[#23bcef] text-white border-[#23bcef] shadow-[0_0_15px_rgba(35,188,239,0.4)] scale-[1.02]'
+                                            : 'bg-[#0f243d] text-white/70 border-white/5 hover:border-white/20'
+                                        }`}
+                                >
+                                    {g === 'O_B' ? 'Grupo O y B' : 'Grupo A y AB'}
+                                </button>
+                            ))}
+                        </div>
+                        {/* Aviso por inferencia */}
+                        <p className="mt-2 text-[10px] text-white/40 italic">
+                            Predeterminado según ficha: {patient.bloodType || 'No registrado'}
+                        </p>
+                    </div>
+
+                    {/* Tipos de Alimentación */}
+                    <div>
+                        <label className="block text-xs uppercase tracking-wide opacity-60 mb-3">
+                            Enfoques Clínicos Específicos
+                        </label>
+                        <div className="flex flex-wrap gap-2.5">
+                            {[
+                                { key: 'nino', label: 'Niño' },
+                                { key: 'metabolica', label: 'Metabólica' },
+                                { key: 'antidiabetica', label: 'Antidiabética' },
+                                { key: 'citostatica', label: 'Citostática' },
+                                { key: 'renal', label: 'Renal' },
+                            ].map(({ key, label }) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setTipos(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
+                                    className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all border
+                    ${tipos[key as keyof typeof tipos]
+                                            ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                                            : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/15'
+                                        }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── TABS ───────────────────────────────────────── */}
+            <div className="flex border-b border-gray-200 mt-4 overflow-x-auto custom-scrollbar-tabs">
+                {[
+                    { id: 'plan', label: '📅 Plan Alimentario' },
+                    { id: 'guia', label: '📖 Guía General' },
+                    { id: 'claves', label: '🧬 Claves 5A' },
+                ].map(({ id, label }) => (
+                    <button
+                        key={id}
+                        onClick={() => setActiveTab(id as Tab)}
+                        className={`px-6 py-4 text-sm font-bold transition-all border-b-[3px] flex-shrink-0
+              ${activeTab === id
+                                ? 'text-[#23bcef] border-[#23bcef] bg-sky-50/30'
+                                : 'text-gray-400 border-transparent hover:text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            {/* ── CONTENIDO DE TABS ──────────────────────────── */}
+
+            {/* TAB 1: PLAN ALIMENTARIO — diferenciado por grupo sanguíneo */}
+            {activeTab === 'plan' && (
+                <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                            Mostrando pauta oficial para:
+                        </span>
+                        <span className="bg-[#23bcef]/10 text-[#0c7092] text-xs font-black px-3 py-1 rounded-full border border-[#23bcef]/20">
+                            {grupo === 'O_B' ? 'Grupo O y B' : 'Grupo A y AB'}
+                        </span>
+                    </div>
+
+                    <SectionCard icon="🌅" title="Desayuno" color="amber" items={grupoData.desayuno} />
+                    <SectionCard icon="☀️" title="Almuerzo" color="green" items={grupoData.almuerzo} />
+
+                    <SectionCard
+                        icon="🌙"
+                        title="Cena"
+                        color="blue"
+                        items={[
+                            ...grupoData.cena.comunes,
+                            `Tendencia prioritaria: ${grupoData.cena.especifico}`,
+                        ]}
+                    />
+
+                    <SectionCard
+                        icon="🌿"
+                        title="Meriendas y Variantes"
+                        color="purple"
+                        items={DEFAULTS_COMUNES.meriendas}
+                        extraContent={
+                            <div className="mt-4 pt-4 border-t border-purple-100/50 space-y-3">
+                                <DetailRow label="Ensaladas libres" items={DEFAULTS_COMUNES.ensaladasLibres} color="purple-700" />
+                                <DetailRow label="Aderezos" items={DEFAULTS_COMUNES.aderezos} color="purple-700" />
+                                <DetailRow label="Bebidas recomendadas" items={DEFAULTS_COMUNES.bebidas} color="purple-700" />
+                            </div>
+                        }
+                    />
+
+                    {/* Actividad Física */}
+                    <div className="bg-orange-50 border border-orange-100 rounded-2xl p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-5">
+                            <span className="text-2xl drop-shadow-sm">🏃</span>
+                            <h4 className="font-extrabold text-orange-800 text-lg">Rutina de Actividad Física Regular</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            {Object.values(DEFAULTS_COMUNES.actividadFisica).map((turno) => (
+                                <div key={turno.titulo} className="bg-white/80 rounded-xl p-4 border border-orange-100 shadow-sm relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-orange-300" />
+                                    <p className="text-[11px] font-black text-orange-600 uppercase tracking-wider mb-3">
+                                        {turno.titulo}
+                                    </p>
+                                    <ul className="space-y-2">
+                                        {turno.items.map((item, i) => (
+                                            <li key={i} className="text-sm text-slate-700 flex items-start gap-2 font-medium">
+                                                <span className="text-orange-400 mt-0.5">•</span>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             )}
 
-            <div className="bg-slate-50 p-4 sm:p-6 rounded-xl shadow-sm">
-                <section className="bg-primary-dark rounded-xl p-6 mb-6 shadow-lg border border-white/20">
-                    <h2 className="text-2xl font-bold mb-4 text-white">Perfil del Paciente</h2>
+            {/* TAB 2: GUÍA GENERAL */}
+            {activeTab === 'guia' && (
+                <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Grupo Sanguíneo</label>
-                            <Select value={bloodType} onValueChange={(value: BloodTypeGroup) => setBloodType(value)}>
-                                <SelectTrigger className="bg-white/10 border-white/30 text-white">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="O_B">Grupo O y B</SelectItem>
-                                    <SelectItem value="A_AB">Grupo A y AB</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        {/* Alimentos a Evitar */}
+                        <div className="bg-red-50 border border-red-100 rounded-2xl p-6 shadow-sm">
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="text-2xl drop-shadow-sm">🚫</span>
+                                <h4 className="font-extrabold text-red-800 text-lg">Alimentos a Evitar</h4>
+                            </div>
+                            <p className="text-sm text-red-900 leading-loose whitespace-pre-line font-medium opacity-90">
+                                {DEFAULTS_COMUNES.alimentosEvitar}
+                            </p>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Tipos de Alimentación</label>
-                            <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                {Object.values(DietType).map(diet => (
-                                    <label key={diet} className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={selectedDiets.has(diet)} onChange={() => handleDietToggle(diet)} className="w-4 h-4 text-sky-400 bg-white/20 border-gray-500 rounded focus:ring-sky-500" />
-                                        <span className="text-sm text-gray-200 font-medium capitalize">{diet.toLowerCase().replace('_', ' ')}</span>
-                                    </label>
-                                ))}
+
+                        {/* Sustitutos Recomendados */}
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 shadow-sm">
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="text-2xl drop-shadow-sm">✅</span>
+                                <h4 className="font-extrabold text-emerald-800 text-lg">Sustitutos Recomendados</h4>
+                            </div>
+                            <p className="text-sm text-emerald-900 leading-loose whitespace-pre-line font-medium opacity-90">
+                                {DEFAULTS_COMUNES.sustitutos}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Combinaciones de Alimentos */}
+                    <div className="bg-white border text-center border-slate-200/60 rounded-2xl p-8 shadow-sm">
+                        <div className="inline-flex items-center justify-center gap-3 mb-8 bg-slate-100 px-6 py-2 rounded-full">
+                            <span className="text-xl">🔗</span>
+                            <h4 className="font-bold text-slate-800 tracking-wide uppercase text-sm">Reglas de Combinación de Alimentos</h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 text-left">
+                            {/* Desayuno */}
+                            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full -z-10" />
+                                <p className="text-xs font-black uppercase tracking-widest text-amber-600 mb-4">
+                                    Desayuno
+                                </p>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {DEFAULTS_COMUNES.combinaciones.desayuno.alimentos.map((a) => (
+                                        <span key={a} className="bg-white border border-amber-100 text-slate-700 text-[11px] font-bold px-2 py-1 rounded-md shadow-sm">
+                                            {a}
+                                        </span>
+                                    ))}
+                                </div>
+                                <div className="bg-amber-100/50 p-3 rounded-xl border border-amber-100/50">
+                                    <span className="text-[10px] text-amber-800 font-extrabold uppercase block mb-2">Semillas activadoras:</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {DEFAULTS_COMUNES.combinaciones.desayuno.semillas.map((s) => (
+                                            <span key={s} className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+                                                {s}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Almuerzo */}
+                            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 col-span-1 xl:col-span-2 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-green-50 rounded-bl-full -z-10" />
+                                <p className="text-xs font-black uppercase tracking-widest text-emerald-600 mb-3 block">
+                                    Almuerzo
+                                </p>
+                                {/* Alerta Roja */}
+                                <div className="bg-rose-100 border-l-4 border-rose-500 rounded-r-xl p-3 mb-5 inline-block w-full">
+                                    <p className="text-[11px] font-black text-rose-800 text-center tracking-widest uppercase flex items-center justify-center gap-2">
+                                        <span>⚠️</span> Proteínas <span>→</span> <span className="underline decoration-2 underline-offset-2">Evitar mezclar con</span> <span>←</span> Carbohidratos Integrales
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                    <div className="bg-white border-2 border-dashed border-sky-100 rounded-xl p-4">
+                                        <p className="text-[10px] font-black uppercase text-sky-500 mb-2">Grupo Proteico</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {DEFAULTS_COMUNES.combinaciones.almuerzo.proteinas.map((p) => (
+                                                <span key={p} className="text-xs text-sky-900 bg-sky-50 px-2 py-1 rounded font-medium">{p}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="bg-white border-2 border-dashed border-orange-100 rounded-xl p-4">
+                                        <p className="text-[10px] font-black uppercase text-orange-500 mb-2">Gpo. Carbohidratos</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {DEFAULTS_COMUNES.combinaciones.almuerzo.carbohidratos.map((c) => (
+                                                <span key={c} className="text-xs text-orange-900 bg-orange-50 px-2 py-1 rounded font-medium">{c}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+                                        <p className="text-[10px] font-black text-emerald-700 mb-2 uppercase">Lípidos (combinar con ambos):</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {DEFAULTS_COMUNES.combinaciones.almuerzo.grasasBuenas.map((g) => (
+                                                <span key={g} className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+                                                    {g}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
+                                        <p className="text-[10px] font-black text-violet-700 mb-2 uppercase">Combinar cualquier grupo con:</p>
+                                        <p className="text-xs text-violet-900 font-bold mb-1">Granos y Vegetales Frescos</p>
+                                        <p className="text-[10px] text-violet-600/80 font-medium">
+                                            <span className="font-bold text-violet-600">Sin gluten:</span> {DEFAULTS_COMUNES.combinaciones.almuerzo.sinGluten.join(', ')}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Cena */}
+                            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 relative overflow-hidden xl:col-span-3">
+                                <p className="text-xs font-black uppercase tracking-widest text-[#1a3a5c] mb-2">
+                                    Cena Nocturna
+                                </p>
+                                <p className="text-sm font-medium text-slate-500 mb-4 opacity-80">
+                                    {DEFAULTS_COMUNES.combinaciones.cena.descripcion}:
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {DEFAULTS_COMUNES.combinaciones.cena.opciones.map((o) => (
+                                        <span key={o} className="bg-white border border-[#1a3a5c]/20 text-[#1a3a5c] text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                                            {o}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </section>
 
-                <nav className="flex gap-2 mb-6 overflow-x-auto">
-                    <TabButton id="plan" label="Plan Alimentario" />
-                    <TabButton id="guide" label="Guía General" />
-                    <TabButton id="wellness" label="Claves de Bienestar" />
-                </nav>
+                </div>
+            )}
 
-                <main>
-                    <AnimatePresence mode="wait">
-                        {activeTab === 'plan' && (
-                            <motion.div key="plan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-                                {Object.entries(filteredFoodData).map(([meal, foods]) => (
-                                    <MealSection key={meal} title={meal} items={foods || []} mealType={meal as MealType} onAddItem={handleAddItem} onEditItem={handleEditItem} onDeleteItem={handleDeleteItem} />
-                                ))}
-                            </motion.div>
-                        )}
-                        {activeTab === 'guide' && (
-                            <motion.div key="guide" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
-                                <Card className="shadow-lg">
-                                    <CardHeader><CardTitle className="text-2xl text-gray-800">Guía General de Alimentación</CardTitle></CardHeader>
-                                    <CardContent className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                        <div>
-                                            <h3 className="text-xl font-bold text-red-600 flex items-center gap-2 mb-4"><XCircle className="w-5 h-5" />Alimentos a Evitar</h3>
-                                            <ul className="space-y-2 pl-5 list-disc text-gray-700">
-                                                {generalGuide.AVOID.map((item) => <li key={item.id}>{item.text}</li>)}
-                                            </ul>
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-green-600 flex items-center gap-2 mb-4"><CheckCircle className="w-5 h-5" />Sustitutos Recomendados</h3>
-                                            <ul className="space-y-2 pl-5 list-disc text-gray-700">
-                                                {generalGuide.SUBSTITUTE.map((item) => <li key={item.id}>{item.text}</li>)}
-                                            </ul>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <FoodCombinationsGuide />
-                                <ActivityGuide />
-                            </motion.div>
-                        )}
-                        {activeTab === 'wellness' && (
-                            <motion.div key="wellness" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                <Card className="shadow-lg">
-                                    <CardHeader><CardTitle className="text-2xl text-gray-800">Claves de la Longevidad 5A</CardTitle></CardHeader>
-                                    <CardContent className="space-y-6 p-6">
-                                        {wellnessKeys.map((key, index) => (
-                                            <div key={key.id} className="border-l-4 border-sky-500 pl-6 py-2">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <div className="text-sky-600 border-sky-200 border rounded px-2 py-1 text-xs">{index + 1}</div>
-                                                    <h4 className="font-semibold text-lg text-gray-800">{key.title}</h4>
-                                                </div>
-                                                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{key.description}</p>
-                                            </div>
-                                        ))}
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </main>
+            {/* TAB 3: CLAVES 5A */}
+            {activeTab === 'claves' && (
+                <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-4xl mx-auto">
 
-                <motion.footer initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8 pt-6 border-t border-slate-200 flex flex-wrap items-center justify-end gap-4">
-                    <Button variant="outline" disabled={!hasSavedPlans} className={!hasSavedPlans ? 'opacity-50 cursor-not-allowed' : ''}>
-                        <History className="w-4 h-4 mr-2" />
-                        Histórico
-                    </Button>
-                    <Button onClick={handleSavePlan} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white">
-                        <Save className="w-4 h-4 mr-2" />
-                        {isSaving ? 'Guardando...' : 'Guardar Plan'}
-                    </Button>
-                    <Button className="bg-sky-500 hover:bg-sky-600 text-white">
-                        <Mail className="w-4 h-4 mr-2" />
-                        Enviar al Paciente
-                    </Button>
-                    <Button onClick={() => setIsPreviewOpen(true)} className="bg-primary-dark hover:bg-gray-800 text-white">
-                        <Printer className="w-4 h-4 mr-2" />
-                        Vista Previa / Imprimir
-                    </Button>
-                </motion.footer>
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-black text-slate-800 mb-2">Las Claves de la Longevidad 5A</h2>
+                        <p className="text-sm text-slate-500 font-medium pb-2 border-b border-slate-200 inline-block">
+                            La guía definitiva para mantenerse joven, saludable y en forma
+                        </p>
+                    </div>
+
+                    <div className="grid gap-5">
+                        {DEFAULTS_COMUNES.claves5a.map((clave, index) => (
+                            <div key={clave.clave}
+                                className="bg-white border border-slate-100/80 rounded-2xl p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-10px_rgba(35,188,239,0.15)] transition-all duration-300 group">
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-12 h-12 rounded-full bg-[#23bcef]/10 flex items-center justify-center
+                                    text-[#23bcef] font-black text-lg flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                        {index + 1}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-3xl drop-shadow-sm group-hover:-rotate-6 transition-transform">{clave.icono}</span>
+                                        <h4 className="font-extrabold text-slate-800 text-lg uppercase tracking-wide">{clave.clave}</h4>
+                                    </div>
+                                </div>
+                                <ul className="space-y-3 pl-[4.5rem]">
+                                    {clave.items.map((item, i) => (
+                                        <li key={i} className="text-sm text-slate-600 font-medium leading-relaxed flex items-start gap-3">
+                                            <span className="text-slate-300 font-black mt-0.5 flex-shrink-0 select-none">
+                                                {String.fromCharCode(97 + i)}.
+                                            </span>
+                                            <span>{item}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Frase final */}
+                    <div className="mt-12 bg-gradient-to-r from-[#23bcef]/10 to-[#1a3a5c]/5 rounded-2xl p-8
+                          border border-[#23bcef]/20 text-center shadow-inner relative overflow-hidden">
+                        {/* Elemento decorativo */}
+                        <div className="absolute -top-4 -left-4 font-serif text-[#23bcef]/20 text-8xl">"</div>
+                        <p className="text-lg text-[#1a3a5c] italic font-semibold relative z-10 font-serif">
+                            {DEFAULTS_COMUNES.frase}
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* ── BARRA DE ACCIONES FLOTANTE ── */}
+            <div className="fixed bottom-0 left-[250px] right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/60
+                      px-8 py-5 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.04)] z-40
+                      transition-all duration-300">
+                {/* Sidebar width compensator en la clase left-[250px] asumiendo layout de dashboard */}
+
+                <div className="flex items-center gap-3">
+                    <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-slate-100">
+                        {saving || sending ? (
+                            <div className="w-4 h-4 rounded-full border-2 border-[#23bcef] border-t-transparent animate-spin" />
+                        ) : showSavingSuccess ? (
+                            <span className="text-emerald-500 font-black animate-in zoom-in">✓</span>
+                        ) : (
+                            <div className="w-2 h-2 rounded-full bg-slate-300" />
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Estado de la Guía
+                        </span>
+                        <span className="text-xs font-semibold text-slate-700">
+                            {saving ? 'Procesando cambios...' : sending ? 'Notificando paciente...' : showSavingSuccess ? 'Cambios sincronizados' : initialData?.enviada ? 'Enviada al paciente' : 'Borrador editable'}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+
+                    {/* Guardar */}
+                    <button
+                        onClick={handleSave}
+                        disabled={saving || sending}
+                        className="px-6 py-3 text-sm font-bold text-[#1a3a5c] bg-slate-100 border border-slate-200 outline-none
+                       hover:bg-slate-200 hover:border-slate-300 rounded-xl transition-all shadow-sm
+                       flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                    >
+                        {saving ? 'Guardando...' : '💾 Guardar Cambios'}
+                    </button>
+
+                    {/* Enviar a PWA */}
+                    <button
+                        onClick={handleSend}
+                        disabled={saving || sending}
+                        className="px-6 py-3 text-sm font-bold text-white shadow-xl shadow-[#23bcef]/20
+                       bg-gradient-to-r from-[#23bcef] to-[#1a3a5c] hover:from-[#1da7d6] hover:to-[#15305a] 
+                       rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95 border border-[#23bcef]/50"
+                    >
+                        {sending ? 'Enviando...' : '📱 Sincronizar con App'}
+                    </button>
+                </div>
             </div>
-        </>
+
+        </div>
+    );
+}
+
+// ── COMPONENTES INTERNOS ───
+
+function SectionCard({ icon, title, color, items, extraContent }: {
+    icon: string;
+    title: string;
+    color: 'amber' | 'green' | 'blue' | 'purple';
+    items: string[];
+    extraContent?: React.ReactNode;
+}) {
+    const colors = {
+        amber: 'bg-amber-50/50 border-amber-100/60 text-amber-900 border-l-4 border-l-amber-400',
+        green: 'bg-emerald-50/50 border-emerald-100/60 text-emerald-900 border-l-4 border-l-emerald-400',
+        blue: 'bg-sky-50/50 border-sky-100/60 text-sky-900 border-l-4 border-l-sky-400',
+        purple: 'bg-purple-50/50 border-purple-100/60 text-purple-900 border-l-4 border-l-purple-400',
+    };
+
+    const titleColors = {
+        amber: 'text-amber-700',
+        green: 'text-emerald-700',
+        blue: 'text-sky-700',
+        purple: 'text-purple-700',
+    };
+
+    return (
+        <div className={`${colors[color]} border-y border-r rounded-r-2xl rounded-l-md p-6 shadow-sm`}>
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <span className="text-2xl drop-shadow-sm">{icon}</span>
+                    <h4 className={`font-extrabold text-lg uppercase tracking-wide ${titleColors[color]}`}>{title}</h4>
+                </div>
+            </div>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5">
+                {items.map((item, i) => (
+                    <li key={i} className={`text-sm font-medium flex items-start gap-2.5 opacity-90 leading-snug`}>
+                        <span className="mt-1 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-40"></span>
+                        {item}
+                    </li>
+                ))}
+            </ul>
+            {extraContent}
+        </div>
+    );
+}
+
+function DetailRow({ label, items, color }: { label: string; items: string[], color: string }) {
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 text-sm">
+            <span className={`font-extrabold uppercase text-[10px] tracking-widest text-${color} flex-shrink-0 sm:w-36 pt-0.5`}>{label}</span>
+            <span className="font-medium text-slate-600 leading-relaxed">{items.join(', ')}</span>
+        </div>
     );
 }

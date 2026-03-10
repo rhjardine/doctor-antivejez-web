@@ -153,13 +153,13 @@ model User {
   image         String?
   password      String?
   role          Role      @default(MEDICO)
-  status        String     @default("ACTIVO")
+  status        String    @default("ACTIVO")
   accounts      Account[]
   sessions      Session[]
   patients      Patient[]
 
   // Ledger Pattern: Créditos por tipo de test
-  creditTransactions       CreditTransaction[]
+  creditTransactions CreditTransaction[]
 
   // Relaciones inversas: Tests realizados por este médico
   conductedBiophysicsTests     BiophysicsTest[]     @relation("DoctorBiophysics")
@@ -186,8 +186,8 @@ model CreditTransaction {
   id          String   @id @default(cuid())
   userId      String
   testType    TestType
-  amount      Int      // Positivo = recarga, Negativo = consumo
-  description String?  // Ej. "Recarga Admin", "Test Biofísica consumido"
+  amount      Int // Positivo = recarga, Negativo = consumo
+  description String? // Ej. "Recarga Admin", "Test Biofísica consumido"
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -201,39 +201,39 @@ model CreditTransaction {
 // Modelos de la Aplicación
 // =================================================================
 model Patient {
-  id                  String               @id @default(cuid())
-  controlNumber       Int                  @default(autoincrement())
-  userId              String
-  photo               String?
-  nationality         String
-  identification      String               @unique
-  historyDate         DateTime
-  lastName            String
-  firstName           String
-  birthDate           DateTime
-  chronologicalAge    Int
-  gender              Gender
-  birthPlace          String
-  phone               String
-  maritalStatus       String
-  profession          String
-  country             String
-  state               String
-  city                String
-  address             String
-  bloodType           String
-  email               String
-  observations        String?
+  id               String   @id @default(cuid())
+  controlNumber    Int      @default(autoincrement())
+  userId           String
+  photo            String?
+  nationality      String
+  identification   String   @unique
+  historyDate      DateTime
+  lastName         String
+  firstName        String
+  birthDate        DateTime
+  chronologicalAge Int
+  gender           Gender
+  birthPlace       String
+  phone            String
+  maritalStatus    String
+  profession       String
+  country          String
+  state            String
+  city             String
+  address          String
+  bloodType        String
+  email            String
+  observations     String?
 
   // Contraseña de acceso a la PWA Mobile (hash bcrypt)
   // Nullable: pacientes existentes sin contraseña asignada aún
-  passwordHash        String?
+  passwordHash String?
 
-  shareDataConsent    Boolean              @default(false)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  shareDataConsent Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   biophysicsTests     BiophysicsTest[]
   biochemistryTests   BiochemistryTest[]
   orthomolecularTests OrthomolecularTest[]
@@ -243,11 +243,12 @@ model Patient {
   foodPlans           FoodPlan[]
   selectedDiets       DietType[]
   aiAnalyses          AIAnalysis[]
+  alimentacion        AlimentacionNutrigenomica?
 
   // ✅ ADICIÓN 2/3: Nueva relación para los tests de NLR
-  nlrTests            NlrTest[]
-  omicTransactions    OmicTransaction[]
-  labReports          LabReport[]
+  nlrTests         NlrTest[]
+  omicTransactions OmicTransaction[]
+  labReports       LabReport[]
 
   @@map("patients")
 }
@@ -275,15 +276,15 @@ model OmicTransaction {
   type            OmicType
   pointsEarned    Int
   pointsPotential Int      @default(100)
-  
+
   // ✅ MEJORAS 2026:
-  source          DataSource @default(MANUAL) // MANUAL o SYNC (wearables)
-  metadata        Json?      // Para guardar detalles: { "stepCount": 10000, "fastingHours": 16 }
-  notes           String?    // Comentario breve del paciente
-  
-  date            DateTime @default(now())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt // Crucial para auditoría médica
+  source   DataSource @default(MANUAL) // MANUAL o SYNC (wearables)
+  metadata Json? // Para guardar detalles: { "stepCount": 10000, "fastingHours": 16 }
+  notes    String? // Comentario breve del paciente
+
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // Crucial para auditoría médica
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
@@ -331,8 +332,8 @@ model BiophysicsTest {
   systolicAge         Float?
   diastolicPressure   Float?
   diastolicAge        Float?
-  recordedBy          String?  // ID del Profesional que realizó el test (legacy)
-  doctorId            String?  // Médico que consumió el crédito
+  recordedBy          String? // ID del Profesional que realizó el test (legacy)
+  doctorId            String? // Médico que consumió el crédito
   testDate            DateTime @default(now())
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -369,7 +370,7 @@ model BiochemistryTest {
   fshAge              Float?
   boneDensitometry    Float?
   boneDensitometryAge Float?
-  doctorId            String?  // Médico que consumió el crédito
+  doctorId            String? // Médico que consumió el crédito
   testDate            DateTime @default(now())
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -386,7 +387,7 @@ model OrthomolecularTest {
   chronologicalAge  Float
   orthomolecularAge Float
   differentialAge   Float
-  doctorId          String?  // Médico que consumió el crédito
+  doctorId          String? // Médico que consumió el crédito
   testDate          DateTime @default(now())
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -521,10 +522,10 @@ model Board {
 // Modelos para la Guía del Paciente
 // =================================================================
 model GuideCategory {
-  id    String      @id @default(cuid())
+  id    String        @id @default(cuid())
   title String
   type  GuideItemType
-  order Int         @default(0)
+  order Int           @default(0)
   items GuideItem[]
 
   @@map("guide_categories")
@@ -544,15 +545,15 @@ model GuideItem {
 }
 
 model PatientGuide {
-  id           String    @id @default(cuid())
-  patientId    String
-  patient      Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(cuid())
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
   selections   Json
   observations String?
-  
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("patient_guides")
 }
@@ -560,6 +561,51 @@ model PatientGuide {
 // =================================================================
 // Modelos para la Guía de Alimentación
 // =================================================================
+model AlimentacionNutrigenomica {
+  id        String   @id @default(cuid())
+  patientId String   @unique
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // === PERFIL DEL PACIENTE ===
+  grupoSanguineo String @default("O_B") // Valores: "O_B" | "A_AB"
+
+  // === TIPOS DE ALIMENTACIÓN ===
+  tipoNino          Boolean @default(false)
+  tipoMetabolica    Boolean @default(false)
+  tipoAntidiabetica Boolean @default(false)
+  tipoCitostatica   Boolean @default(false)
+  tipoRenal         Boolean @default(false)
+
+  // === ALIMENTOS A EVITAR ===
+  alimentosEvitar String? @db.Text
+
+  // === SUSTITUTOS RECOMENDADOS ===
+  sustitutos String? @db.Text
+
+  // === PLAN ALIMENTARIO POR COMIDA (JSON) ===
+  planAlimentario Json?
+
+  // === COMBINACIONES DE ALIMENTOS ===
+  combinaciones Json?
+
+  // === ACTIVIDAD FÍSICA ===
+  actividadFisica Json?
+
+  // === CLAVES 5A ===
+  claves5a Json?
+
+  // === NOTAS DEL MÉDICO ===
+  notasMedico String? @db.Text
+
+  // === ESTADO ===
+  enviada   Boolean   @default(false)
+  enviadaAt DateTime?
+
+  @@map("alimentacion_nutrigenomica")
+}
+
 model FoodItem {
   id             String         @id @default(cuid())
   name           String
@@ -622,26 +668,26 @@ model AIAnalysis {
   responseTime     Float // en segundos
   prompt           String   @db.Text
   response         String   @db.Text
-  modelUsed        String   // ej. "gemini-1.5-flash"
-  
+  modelUsed        String // ej. "gemini-1.5-flash"
+
   patientId String
   patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  
+
   @@index([patientId])
   @@map("ai_analyses")
 }
 
 // ✅ ADICIÓN 3/3: Nuevo modelo para el test de NLR
 model NlrTest {
-  id           String       @id @default(cuid())
-  patientId    String
-  neutrophils  Float // Valor absoluto de neutrófilos
-  lymphocytes  Float // Valor absoluto de linfocitos
-  nlrValue     Float // El resultado del cálculo (neutrophils / lymphocytes)
-  riskLevel    NlrRiskLevel
-  recordedBy   String?      // ID del Profesional que realizó el test
-  testDate     DateTime     @default(now())
-  createdAt    DateTime     @default(now())
+  id          String       @id @default(cuid())
+  patientId   String
+  neutrophils Float // Valor absoluto de neutrófilos
+  lymphocytes Float // Valor absoluto de linfocitos
+  nlrValue    Float // El resultado del cálculo (neutrophils / lymphocytes)
+  riskLevel   NlrRiskLevel
+  recordedBy  String? // ID del Profesional que realizó el test
+  testDate    DateTime     @default(now())
+  createdAt   DateTime     @default(now())
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
@@ -657,9 +703,9 @@ model GeneticTest {
   biologicalAge         Float
   differentialAge       Float
   interpretation        String?  @db.Text
-  therapeuticResults    Json?    // Array de objetos category/items
-  recommendations       Json?    // Array de objetos category/points
-  doctorId              String?  // Médico que consumió el crédito
+  therapeuticResults    Json? // Array de objetos category/items
+  recommendations       Json? // Array de objetos category/points
+  doctorId              String? // Médico que consumió el crédito
   testDate              DateTime @default(now())
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -671,19 +717,19 @@ model GeneticTest {
 }
 
 model LabReport {
-  id                String                 @id @default(cuid())
-  patientId         String
-  reportType        LabReportType          // TELOTEST or NUTRIGEN
-  fileName          String                 // Original PDF filename
-  fileUrl           String?                // Optional: stored PDF URL
-  processingStatus  ReportProcessingStatus @default(PENDING)
-  extractedData     Json?                  // Flexible JSON with summary field for PWA
-  validatedData     Json?                  // Doctor-confirmed data
-  isValidated       Boolean                @default(false)
-  errorMessage      String?                @db.Text
-  testDate          DateTime               @default(now())
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  id               String                 @id @default(cuid())
+  patientId        String
+  reportType       LabReportType // TELOTEST or NUTRIGEN
+  fileName         String // Original PDF filename
+  fileUrl          String? // Optional: stored PDF URL
+  processingStatus ReportProcessingStatus @default(PENDING)
+  extractedData    Json? // Flexible JSON with summary field for PWA
+  validatedData    Json? // Doctor-confirmed data
+  isValidated      Boolean                @default(false)
+  errorMessage     String?                @db.Text
+  testDate         DateTime               @default(now())
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
@@ -695,17 +741,17 @@ model LabReport {
 // Modelos para el Historial de Campañas
 // =================================================================
 model Campaign {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String
-  messageBody   String    @db.Text
+  messageBody   String   @db.Text
   status        String
   channels      String[]
   totalContacts Int
-  sentCount     Int       @default(0)
-  failedCount   Int       @default(0)
-  createdAt     DateTime  @default(now())
+  sentCount     Int      @default(0)
+  failedCount   Int      @default(0)
+  createdAt     DateTime @default(now())
 
-  messages      CampaignMessage[]
+  messages CampaignMessage[]
 
   @@map("campaigns")
 }
