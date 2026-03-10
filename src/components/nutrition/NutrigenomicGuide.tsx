@@ -32,6 +32,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
     const [saving, setSaving] = useState(false);
     const [sending, setSending] = useState(false);
     const [showSavingSuccess, setShowSavingSuccess] = useState(false);
+    const [notasMedico, setNotasMedico] = useState<string>(initialData?.notasMedico || '');
 
     const grupoData = grupo === 'O_B' ? DEFAULTS_O_B : DEFAULTS_A_AB;
 
@@ -43,6 +44,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
             await saveAlimentacion({
                 patientId: patient.id,
                 grupoSanguineo: grupo,
+                notasMedico: notasMedico,
                 ...tipos,
             });
             setShowSavingSuccess(true);
@@ -133,6 +135,19 @@ export default function NutrigenomicGuide({ patient }: Props) {
                             ))}
                         </div>
                     </div>
+                </div>
+
+                {/* Notas del Médico Libre */}
+                <div className="mt-8 border-t border-white/10 pt-6">
+                    <label className="block text-xs uppercase tracking-wide opacity-60 mb-3 flex items-center gap-2">
+                        <span className="text-amber-400">📝</span> Observaciones Exclusivas del Médico
+                    </label>
+                    <textarea
+                        value={notasMedico}
+                        onChange={(e) => setNotasMedico(e.target.value)}
+                        placeholder="Las indicaciones alimentarias libres, ajustes de dosis, o consideraciones escritas aquí, se mostrarán destacadas como una Nota del Dr. Antivejez directo en la App del Paciente..."
+                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white/90 placeholder:text-white/30 focus:outline-none focus:border-[#23bcef] focus:ring-1 focus:ring-[#23bcef] resize-y min-h-[100px] shadow-inner font-medium leading-relaxed"
+                    />
                 </div>
             </div>
 

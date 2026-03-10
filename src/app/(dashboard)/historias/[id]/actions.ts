@@ -13,6 +13,7 @@ export async function saveAlimentacion(data: {
     antidiabetica: boolean;
     citostatica: boolean;
     renal: boolean;
+    notasMedico?: string;
 }) {
     const session = await getServerSession(authOptions);
     if (!session) throw new Error('No autorizado');
@@ -27,6 +28,7 @@ export async function saveAlimentacion(data: {
             tipoAntidiabetica: data.antidiabetica,
             tipoCitostatica: data.citostatica,
             tipoRenal: data.renal,
+            notasMedico: data.notasMedico || null,
         },
         update: {
             grupoSanguineo: data.grupoSanguineo,
@@ -35,6 +37,7 @@ export async function saveAlimentacion(data: {
             tipoAntidiabetica: data.antidiabetica,
             tipoCitostatica: data.citostatica,
             tipoRenal: data.renal,
+            notasMedico: data.notasMedico || null,
             updatedAt: new Date(),
         },
     });
