@@ -5,14 +5,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { 
-  FaHome, 
-  FaHistory, 
-  FaUserMd, 
-  FaRobot, 
-  FaHeartbeat, 
-  FaChartBar, 
-  FaCog, 
+import {
+  FaHome,
+  FaHistory,
+  FaUserMd,
+  FaRobot,
+  FaHeartbeat,
+  FaChartBar,
+  FaCog,
   FaSignOutAlt,
   FaChevronDown,
   FaChevronUp,
@@ -21,39 +21,39 @@ import {
 } from 'react-icons/fa';
 
 const menuItems = [
-  { 
-    name: 'Dashboard', 
-    icon: FaHome, 
+  {
+    name: 'Dashboard',
+    icon: FaHome,
     href: '/dashboard',
     color: 'text-primary'
   },
-  { 
-    name: 'Historias', 
-    icon: FaHistory, 
+  {
+    name: 'Historias',
+    icon: FaHistory,
     href: '/historias',
     color: 'text-blue-500'
   },
-  { 
-    name: 'Citas', 
-    icon: FaCalendarAlt, 
+  {
+    name: 'Citas',
+    icon: FaCalendarAlt,
     href: '/citas',
     color: 'text-teal-500'
   },
-  { 
-    name: 'Profesionales', 
-    icon: FaUserMd, 
+  {
+    name: 'Profesionales',
+    icon: FaUserMd,
     href: '/profesionales',
     color: 'text-green-500'
   },
-  { 
-    name: 'Agente IA', 
-    icon: FaRobot, 
+  {
+    name: 'Agente IA',
+    icon: FaRobot,
     href: '/agente-ia',
     color: 'text-purple-500'
   },
-  { 
-    name: 'Edad Biológica', 
-    icon: FaHeartbeat, 
+  {
+    name: 'Edad Biológica',
+    icon: FaHeartbeat,
     href: '/edad-biologica',
     color: 'text-red-500'
   },
@@ -65,15 +65,15 @@ const menuItems = [
     color: 'text-orange-500'
   },
   // ===================================
-  { 
-    name: 'Reportes', 
-    icon: FaChartBar, 
+  {
+    name: 'Reportes',
+    icon: FaChartBar,
     href: '/reportes',
     color: 'text-yellow-500'
   },
-  { 
-    name: 'Ajustes', 
-    icon: FaCog, 
+  {
+    name: 'Ajustes',
+    icon: FaCog,
     href: '/ajustes',
     color: 'text-gray-500'
   },
@@ -95,10 +95,11 @@ export function Sidebar() {
       <div className="p-6 border-b border-gray-700 flex justify-center items-center">
         <Link href="/dashboard" passHref>
           <Image
-            src="/images/logo.png"
+            src="/images/Logoico.jpeg"
             alt="Doctor AntiVejez Logo"
             width={180}
             height={40}
+            style={{ objectFit: 'contain' }}
             priority
           />
         </Link>
@@ -116,11 +117,10 @@ export function Sidebar() {
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
-                    isActive
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${isActive
                       ? 'bg-white/10 border-l-4 border-primary'
                       : 'hover:bg-white/5'
-                  }`}
+                    }`}
                 >
                   <Icon className={`text-xl ${isActive ? 'text-primary' : item.color}`} />
                   <span className={`font-medium ${isActive ? 'text-white' : 'text-gray-300'}`}>
@@ -135,7 +135,7 @@ export function Sidebar() {
 
       {/* User Profile */}
       <div className="border-t border-gray-700 p-4">
-        <div 
+        <div
           className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 cursor-pointer"
           onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
         >
