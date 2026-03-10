@@ -35,12 +35,58 @@ export async function GET() {
         // 3. Optional: Verify alignment for other potential missing fields in relevant tables
         // For now, focusing on the blocker identified: food_items.category
 
+        // 3. Create alimentacion_nutrigenomica table
+        await db.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "alimentacion_nutrigenomica" (
+                "id" TEXT NOT NULL,
+                "patientId" TEXT NOT NULL,
+                "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "grupoSanguineo" TEXT NOT NULL DEFAULT 'O_B',
+                "tipoNino" BOOLEAN NOT NULL DEFAULT false,
+                "tipoMetabolica" BOOLEAN NOT NULL DEFAULT false,
+                "tipoAntidiabetica" BOOLEAN NOT NULL DEFAULT false,
+                "tipoCitostatica" BOOLEAN NOT NULL DEFAULT false,
+                "tipoRenal" BOOLEAN NOT NULL DEFAULT false,
+                "alimentosEvitar" TEXT,
+                "sustitutos" TEXT,
+                "planAlimentario" JSONB,
+                "combinaciones" JSONB,
+                "actividadFisica" JSONB,
+                "claves5a" JSONB,
+                "notasMedico" TEXT,
+                "enviada" BOOLEAN NOT NULL DEFAULT false,
+                "enviadaAt" TIMESTAMP(3),
+
+                CONSTRAINT "alimentacion_nutrigenomica_pkey" PRIMARY KEY ("id")
+            );
+        `);
+        console.log("✅ [DB-Repair] Table 'alimentacion_nutrigenomica' verified/created.");
+
+        await db.$executeRawUnsafe(`
+            CREATE UNIQUE INDEX IF NOT EXISTS "alimentacion_nutrigenomica_patientId_key" ON "alimentacion_nutrigenomica"("patientId");
+        `);
+
+        await db.$executeRawUnsafe(`
+            DO $$ BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM information_schema.table_constraints
+                    WHERE constraint_name = 'alimentacion_nutrigenomica_patientId_fkey'
+                ) THEN
+                    ALTER TABLE "alimentacion_nutrigenomica" ADD CONSTRAINT "alimentacion_nutrigenomica_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "patients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+                END IF;
+            END $$;
+        `);
+        console.log("✅ [DB-Repair] Foreign keys for 'alimentacion_nutrigenomica' verified/created.");
+
         return NextResponse.json({
             success: true,
             message: "Database schema repaired successfully.",
             applied_actions: [
                 "Created/Verified ENUM 'FoodCategory'",
-                "Added column 'category' to 'food_items' table"
+                "Added column 'category' to 'food_items' table",
+                "Created table 'alimentacion_nutrigenomica' and relations"
             ]
         });
     } catch (error) {
