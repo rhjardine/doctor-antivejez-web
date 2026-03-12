@@ -95,7 +95,7 @@ export function Sidebar() {
       <div className="p-6 border-b border-gray-700 flex justify-center items-center">
         <Link href="/dashboard" passHref>
           <Image
-            src="/images/Logo_transparente.svg"
+            src="/images/Logoico.jpeg"
             alt="Doctor AntiVejez Logo"
             width={180}
             height={40}
