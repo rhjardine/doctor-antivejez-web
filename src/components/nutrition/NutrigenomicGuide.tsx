@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { DEFAULTS_O_B, DEFAULTS_A_AB, DEFAULTS_COMUNES } from '@/lib/nutrigenomica-defaults';
 import { saveAlimentacion, sendAlimentacionToPWA } from '@/app/(dashboard)/historias/[id]/actions';
 import { toast } from 'sonner';
+import { X } from 'lucide-react';
 
 // Para simplificar, obtenemos los tipos necesarios directamente
 type GrupoSanguineo = 'O_B' | 'A_AB';
@@ -34,6 +35,23 @@ export default function NutrigenomicGuide({ patient }: Props) {
     const [showSavingSuccess, setShowSavingSuccess] = useState(false);
     const [notasMedico, setNotasMedico] = useState<string>(initialData?.notasMedico || '');
 
+    // dynamic lists for Plan Alimentario
+    const defaultData = grupo === 'O_B' ? DEFAULTS_O_B : DEFAULTS_A_AB;
+    const [desayuno, setDesayuno] = useState<string[]>(initialData?.planAlimentario?.desayuno || defaultData.desayuno);
+    const [almuerzo, setAlmuerzo] = useState<string[]>(initialData?.planAlimentario?.almuerzo || defaultData.almuerzo);
+    const [cenaComunes, setCenaComunes] = useState<string[]>(initialData?.planAlimentario?.cenaComunes || defaultData.cena.comunes);
+    const [meriendas, setMeriendas] = useState<string[]>(initialData?.planAlimentario?.meriendas || DEFAULTS_COMUNES.meriendas);
+
+    // Dynamic field handlers
+    const addItem = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
+        const newItem = prompt('Añadir nuevo registro:');
+        if (newItem) setList([...list, newItem]);
+    };
+
+    const removeItem = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, index: number) => {
+        setList(list.filter((_, i) => i !== index));
+    };
+
     const grupoData = grupo === 'O_B' ? DEFAULTS_O_B : DEFAULTS_A_AB;
 
     // ─── HANDLERS ───────────────────────────────────────────────────────────────
@@ -46,6 +64,16 @@ export default function NutrigenomicGuide({ patient }: Props) {
                 grupoSanguineo: grupo,
                 notasMedico: notasMedico,
                 ...tipos,
+                planAlimentario: {
+                    desayuno,
+                    almuerzo,
+                    cenaComunes,
+                    meriendas
+                },
+                // For now we keep default structured data for the rest unless edited via JSON in future steps
+                combinaciones: initialData?.combinaciones || DEFAULTS_COMUNES.combinaciones,
+                actividadFisica: initialData?.actividadFisica || DEFAULTS_COMUNES.actividadFisica,
+                claves5a: initialData?.claves5a || DEFAULTS_COMUNES.claves5a
             });
             setShowSavingSuccess(true);
             toast.success('Plan alimentario guardado correctamente');
@@ -186,24 +214,40 @@ export default function NutrigenomicGuide({ patient }: Props) {
                         </span>
                     </div>
 
-                    <SectionCard icon="🌅" title="Desayuno" color="amber" items={grupoData.desayuno} />
-                    <SectionCard icon="☀️" title="Almuerzo" color="green" items={grupoData.almuerzo} />
+                    <SectionCard
+                        icon="🌅"
+                        title="Desayuno"
+                        color="amber"
+                        items={desayuno}
+                        onAdd={() => addItem(desayuno, setDesayuno)}
+                        onRemove={(i) => removeItem(desayuno, setDesayuno, i)}
+                    />
+                    <SectionCard
+                        icon="☀️"
+                        title="Almuerzo"
+                        color="green"
+                        items={almuerzo}
+                        onAdd={() => addItem(almuerzo, setAlmuerzo)}
+                        onRemove={(i) => removeItem(almuerzo, setAlmuerzo, i)}
+                    />
 
                     <SectionCard
                         icon="🌙"
                         title="Cena"
                         color="blue"
-                        items={[
-                            ...grupoData.cena.comunes,
-                            `Tendencia prioritaria: ${grupoData.cena.especifico}`,
-                        ]}
+                        items={cenaComunes}
+                        onAdd={() => addItem(cenaComunes, setCenaComunes)}
+                        onRemove={(i) => removeItem(cenaComunes, setCenaComunes, i)}
+                        extraFooter={`Tendencia prioritaria: ${grupoData.cena.especifico}`}
                     />
 
                     <SectionCard
                         icon="🌿"
                         title="Meriendas y Variantes"
                         color="purple"
-                        items={DEFAULTS_COMUNES.meriendas}
+                        items={meriendas}
+                        onAdd={() => addItem(meriendas, setMeriendas)}
+                        onRemove={(i) => removeItem(meriendas, setMeriendas, i)}
                         extraContent={
                             <div className="mt-4 pt-4 border-t border-purple-100/50 space-y-3">
                                 <DetailRow label="Ensaladas libres" items={DEFAULTS_COMUNES.ensaladasLibres} color="purple-700" />
@@ -486,12 +530,15 @@ export default function NutrigenomicGuide({ patient }: Props) {
 
 // ── COMPONENTES INTERNOS ───
 
-function SectionCard({ icon, title, color, items, extraContent }: {
+function SectionCard({ icon, title, color, items, extraContent, extraFooter, onAdd, onRemove }: {
     icon: string;
     title: string;
     color: 'amber' | 'green' | 'blue' | 'purple';
     items: string[];
     extraContent?: React.ReactNode;
+    extraFooter?: string;
+    onAdd?: () => void;
+    onRemove?: (index: number) => void;
 }) {
     const colors = {
         amber: 'bg-amber-50/50 border-amber-100/60 text-amber-900 border-l-4 border-l-amber-400',
@@ -508,21 +555,44 @@ function SectionCard({ icon, title, color, items, extraContent }: {
     };
 
     return (
-        <div className={`${colors[color]} border-y border-r rounded-r-2xl rounded-l-md p-6 shadow-sm`}>
+        <div className={`${colors[color]} border-y border-r rounded-r-2xl rounded-l-md p-6 shadow-sm group/card`}>
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <span className="text-2xl drop-shadow-sm">{icon}</span>
                     <h4 className={`font-extrabold text-lg uppercase tracking-wide ${titleColors[color]}`}>{title}</h4>
                 </div>
+                {onAdd && (
+                    <button
+                        onClick={onAdd}
+                        className="bg-white/80 hover:bg-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border border-current transition-all active:scale-95 flex items-center gap-1 group-hover/card:scale-110"
+                    >
+                        <span>+</span> Añadir
+                    </button>
+                )}
             </div>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5 mb-4">
                 {items.map((item, i) => (
-                    <li key={i} className={`text-sm font-medium flex items-start gap-2.5 opacity-90 leading-snug`}>
+                    <li key={i} className={`text-sm font-medium flex items-start gap-2.5 opacity-90 leading-snug group/item`}>
                         <span className="mt-1 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-40"></span>
-                        {item}
+                        <span className="flex-1">{item}</span>
+                        {onRemove && (
+                            <button
+                                onClick={() => onRemove(i)}
+                                className="opacity-0 group-hover/item:opacity-100 text-red-500 hover:text-red-700 transition-all p-1"
+                                title="Eliminar"
+                            >
+                                <X size={14} strokeWidth={3} />
+                            </button>
+                        )}
                     </li>
                 ))}
             </ul>
+            {extraFooter && (
+                <div className="mt-2 text-xs font-black italic opacity-60 flex items-center gap-2">
+                    <span className="w-1 h-1 bg-current rounded-full"></span>
+                    {extraFooter}
+                </div>
+            )}
             {extraContent}
         </div>
     );

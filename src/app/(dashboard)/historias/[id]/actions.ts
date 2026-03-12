@@ -14,6 +14,10 @@ export async function saveAlimentacion(data: {
     citostatica: boolean;
     renal: boolean;
     notasMedico?: string;
+    planAlimentario?: any;
+    combinaciones?: any;
+    actividadFisica?: any;
+    claves5a?: any;
 }) {
     const session = await getServerSession(authOptions);
     if (!session) throw new Error('No autorizado');
@@ -29,6 +33,10 @@ export async function saveAlimentacion(data: {
             tipoCitostatica: data.citostatica,
             tipoRenal: data.renal,
             notasMedico: data.notasMedico || null,
+            planAlimentario: data.planAlimentario || null,
+            combinaciones: data.combinaciones || null,
+            actividadFisica: data.actividadFisica || null,
+            claves5a: data.claves5a || null,
         },
         update: {
             grupoSanguineo: data.grupoSanguineo,
@@ -38,6 +46,10 @@ export async function saveAlimentacion(data: {
             tipoCitostatica: data.citostatica,
             tipoRenal: data.renal,
             notasMedico: data.notasMedico || null,
+            planAlimentario: data.planAlimentario || null,
+            combinaciones: data.combinaciones || null,
+            actividadFisica: data.actividadFisica || null,
+            claves5a: data.claves5a || null,
             updatedAt: new Date(),
         },
     });
