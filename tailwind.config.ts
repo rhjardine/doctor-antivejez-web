@@ -60,7 +60,7 @@ const config: Config = {
         'status-yellow': 'hsl(var(--status-yellow))',
         'status-red': 'hsl(var(--status-red))',
         // Mantenemos tu color 'primary-dark' original como una utilidad por si se usa en algún lugar
-        'primary-dark': '#0B2135',
+        'primary-dark': '#293b64',
         'text-primary': '#343A40', // Se preserva tu color de texto original
       },
       fontFamily: {
