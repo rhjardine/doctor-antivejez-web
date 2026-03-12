@@ -126,7 +126,7 @@ export default function PatientDetailPage() {
     { id: 'resumen', label: 'Resumen Clínico', icon: FaFileMedicalAlt },
     { id: 'historia', label: 'Historia Médica', icon: FaUser },
     { id: 'biofisica', label: 'Edad Biológica', icon: FaHeartbeat },
-    { id: 'biomarcadores', label: 'Biomarcadores', icon: FaVial },
+    // { id: 'biomarcadores', label: 'Biomarcadores', icon: FaVial },
     { id: 'guia', label: 'Guía del Paciente', icon: FaBook },
     { id: 'alimentacion', label: 'Alimentación Nutrigenómica', icon: FaAppleAlt },
     { id: 'omicas', label: 'Programa OMICS', icon: FaDna },
