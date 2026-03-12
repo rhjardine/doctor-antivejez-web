@@ -1,0 +1,17 @@
+<svg width="180" height="40" viewBox="0 0 180 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- DNA Helix Icon -->
+  <g transform="translate(0, 4)">
+    <path d="M12 4C14.2091 4 16 5.79086 16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8C8 5.79086 9.79086 4 12 4Z" fill="#23BCEF"/>
+    <path d="M12 14C14.2091 14 16 15.7909 16 18C16 20.2091 14.2091 22 12 22C9.79086 22 8 20.2091 8 18C8 15.7909 9.79086 14 12 14Z" fill="#23BCEF" opacity="0.8"/>
+    <path d="M12 24C14.2091 24 16 25.7909 16 28C16 30.2091 14.2091 32 12 32C9.79086 32 8 30.2091 8 28C8 25.7909 9.79086 24 12 24Z" fill="#23BCEF" opacity="0.6"/>
+    
+    <!-- Spiral connections -->
+    <path d="M6 8C6 8 8 10 12 10C16 10 18 8 18 8" stroke="#23BCEF" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M6 18C6 18 8 20 12 20C16 20 18 18 18 18" stroke="#23BCEF" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M6 28C6 28 8 30 12 30C16 30 18 28 18 28" stroke="#23BCEF" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="35" y="18" fill="#23BCEF" font-family="Arial, sans-serif" font-weight="900" font-size="14" style="text-transform: uppercase; letter-spacing: 1px;">DOCTOR</text>
+  <text x="35" y="34" fill="#23BCEF" font-family="Arial, sans-serif" font-weight="700" font-size="20">Antivejez</text>
+</svg>
