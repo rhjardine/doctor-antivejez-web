@@ -119,11 +119,11 @@ export default function NutrigenomicGuide({ patient }: Props) {
                                 <button
                                     key={g}
                                     onClick={() => setGrupo(g)}
-                                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold
+                                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-black uppercase tracking-tight
                     transition-all duration-300 border-2
                     ${grupo === g
                                             ? 'bg-[#23bcef] text-white border-[#23bcef] shadow-[0_0_15px_rgba(35,188,239,0.4)] scale-[1.02]'
-                                            : 'bg-[#0f243d] text-white/70 border-white/5 hover:border-white/20'
+                                            : 'bg-white text-slate-900 border-slate-200 hover:border-[#23bcef]/30'
                                         }`}
                                 >
                                     {g === 'O_B' ? 'Grupo O y B' : 'Grupo A y AB'}
@@ -173,8 +173,8 @@ export default function NutrigenomicGuide({ patient }: Props) {
                     <textarea
                         value={notasMedico}
                         onChange={(e) => setNotasMedico(e.target.value)}
-                        placeholder="Las indicaciones alimentarias libres, ajustes de dosis, o consideraciones escritas aquí, se mostrarán destacadas como una Nota del Dr. Antivejez directo en la App del Paciente..."
-                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white/90 placeholder:text-white/30 focus:outline-none focus:border-[#23bcef] focus:ring-1 focus:ring-[#23bcef] resize-y min-h-[100px] shadow-inner font-medium leading-relaxed"
+                        placeholder="Escriba aquí las indicaciones personalizadas..."
+                        className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm text-black placeholder:text-slate-400 focus:outline-none focus:border-[#23bcef] focus:ring-2 focus:ring-[#23bcef]/20 resize-y min-h-[120px] shadow-sm font-medium leading-relaxed"
                     />
                 </div>
             </div>
