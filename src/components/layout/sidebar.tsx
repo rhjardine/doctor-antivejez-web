@@ -95,7 +95,7 @@ export function Sidebar() {
       <div className="p-6 border-b border-gray-700 flex justify-center items-center">
         <Link href="/dashboard" passHref>
           <Image
-            src="/images/Logoico.jpeg"
+            src="/images/Logo_transparente.png"
             alt="Doctor AntiVejez Logo"
             width={180}
             height={40}
@@ -118,8 +118,8 @@ export function Sidebar() {
                 <Link
                   href={item.href}
                   className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${isActive
-                      ? 'bg-white/10 border-l-4 border-primary'
-                      : 'hover:bg-white/5'
+                    ? 'bg-white/10 border-l-4 border-primary'
+                    : 'hover:bg-white/5'
                     }`}
                 >
                   <Icon className={`text-xl ${isActive ? 'text-primary' : item.color}`} />
