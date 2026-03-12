@@ -2,8 +2,8 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-    darkMode: ['class'],
-    content: [
+  darkMode: ['class'],
+  content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
@@ -17,8 +17,8 @@ const config: Config = {
         "2xl": "1400px",
       },
     },
-  	extend: {
-  		colors: {
+    extend: {
+      colors: {
         // ===== CORRECCIÓN DE TEMA =====
         // Los colores base ahora son controlados por las variables CSS en globals.css
         // y consumidos por las definiciones de shadcn.
@@ -60,25 +60,25 @@ const config: Config = {
         'status-yellow': 'hsl(var(--status-yellow))',
         'status-red': 'hsl(var(--status-red))',
         // Mantenemos tu color 'primary-dark' original como una utilidad por si se usa en algún lugar
-        'primary-dark': '#293B64',
+        'primary-dark': '#0B2135',
         'text-primary': '#343A40', // Se preserva tu color de texto original
-  		},
-  		fontFamily: {
-  			sans: [
-  				'Inter',
-  				'system-ui',
-  				'sans-serif'
-  			]
-  		},
-  		borderRadius: {
-  			lg: "var(--radius)",
+      },
+      fontFamily: {
+        sans: [
+          'Inter',
+          'system-ui',
+          'sans-serif'
+        ]
+      },
+      borderRadius: {
+        lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-  		},
-  		boxShadow: {
-  			card: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-  			'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-  		},
+      },
+      boxShadow: {
+        card: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -93,7 +93,7 @@ const config: Config = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
-  	}
+    }
   },
   plugins: [require("tailwindcss-animate")],
 }
