@@ -596,6 +596,9 @@ model AlimentacionNutrigenomica {
   // === CLAVES 5A ===
   claves5a Json?
 
+  // === TERAPIAS 4R ===
+  terapias4r Json?
+
   // === NOTAS DEL MÉDICO ===
   notasMedico String? @db.Text
 

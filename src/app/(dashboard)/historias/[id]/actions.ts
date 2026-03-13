@@ -18,6 +18,9 @@ export async function saveAlimentacion(data: {
     combinaciones?: any;
     actividadFisica?: any;
     claves5a?: any;
+    terapias4r?: any;
+    alimentosEvitar?: string;
+    sustitutos?: string;
 }) {
     const session = await getServerSession(authOptions);
     if (!session) throw new Error('No autorizado');
@@ -37,6 +40,9 @@ export async function saveAlimentacion(data: {
             combinaciones: data.combinaciones || null,
             actividadFisica: data.actividadFisica || null,
             claves5a: data.claves5a || null,
+            terapias4r: data.terapias4r || null,
+            alimentosEvitar: data.alimentosEvitar || null,
+            sustitutos: data.sustitutos || null,
         },
         update: {
             grupoSanguineo: data.grupoSanguineo,
@@ -50,6 +56,9 @@ export async function saveAlimentacion(data: {
             combinaciones: data.combinaciones || null,
             actividadFisica: data.actividadFisica || null,
             claves5a: data.claves5a || null,
+            terapias4r: data.terapias4r || null,
+            alimentosEvitar: data.alimentosEvitar || null,
+            sustitutos: data.sustitutos || null,
             updatedAt: new Date(),
         },
     });

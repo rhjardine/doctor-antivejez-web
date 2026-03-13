@@ -4,18 +4,17 @@ import { useState } from 'react';
 import { DEFAULTS_O_B, DEFAULTS_A_AB, DEFAULTS_COMUNES } from '@/lib/nutrigenomica-defaults';
 import { saveAlimentacion, sendAlimentacionToPWA } from '@/app/(dashboard)/historias/[id]/actions';
 import { toast } from 'sonner';
-import { X } from 'lucide-react';
+import { X, Edit2 } from 'lucide-react';
 
 // Para simplificar, obtenemos los tipos necesarios directamente
 type GrupoSanguineo = 'O_B' | 'A_AB';
-type Tab = 'plan' | 'guia' | 'claves';
+type Tab = 'plan' | 'guia' | 'claves' | 'terapias';
 
 interface Props {
-    patient: any; // El objeto del paciente completo ya viene pasado
+    patient: any;
 }
 
 export default function NutrigenomicGuide({ patient }: Props) {
-    // Inicializamos basados en la info previa del paciente si existe
     const initialData = patient.alimentacion;
     const initialBlood = (initialData?.grupoSanguineo as GrupoSanguineo) ||
         (patient.bloodType?.includes('A') ? 'A_AB' : 'O_B');
@@ -35,12 +34,27 @@ export default function NutrigenomicGuide({ patient }: Props) {
     const [showSavingSuccess, setShowSavingSuccess] = useState(false);
     const [notasMedico, setNotasMedico] = useState<string>(initialData?.notasMedico || '');
 
-    // dynamic lists for Plan Alimentario
     const defaultData = grupo === 'O_B' ? DEFAULTS_O_B : DEFAULTS_A_AB;
+
+    // --- Plan Alimentario ---
     const [desayuno, setDesayuno] = useState<string[]>(initialData?.planAlimentario?.desayuno || defaultData.desayuno);
     const [almuerzo, setAlmuerzo] = useState<string[]>(initialData?.planAlimentario?.almuerzo || defaultData.almuerzo);
     const [cenaComunes, setCenaComunes] = useState<string[]>(initialData?.planAlimentario?.cenaComunes || defaultData.cena.comunes);
     const [meriendas, setMeriendas] = useState<string[]>(initialData?.planAlimentario?.meriendas || DEFAULTS_COMUNES.meriendas);
+
+    // --- Guía General (Editable Lists) ---
+    const [alimentosEvitar, setAlimentosEvitar] = useState<string[]>(
+        initialData?.alimentosEvitar ? initialData.alimentosEvitar.split('\n') : DEFAULTS_COMUNES.alimentosEvitar.split('\n')
+    );
+    const [sustitutos, setSustitutos] = useState<string[]>(
+        initialData?.sustitutos ? initialData.sustitutos.split('\n') : DEFAULTS_COMUNES.sustitutos.split('\n')
+    );
+
+    // --- Claves 5A ---
+    const [claves5a, setClaves5a] = useState<any[]>(initialData?.claves5a || DEFAULTS_COMUNES.claves5a);
+
+    // --- Terapias 4R ---
+    const [terapias4r, setTerapias4r] = useState<any[]>(initialData?.terapias4r || DEFAULTS_COMUNES.terapias4r);
 
     // Dynamic field handlers
     const addItem = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
@@ -50,6 +64,31 @@ export default function NutrigenomicGuide({ patient }: Props) {
 
     const removeItem = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, index: number) => {
         setList(list.filter((_, i) => i !== index));
+    };
+
+    const editItem = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, index: number) => {
+        const newValue = prompt('Editar registro:', list[index]);
+        if (newValue !== null) {
+            const newList = [...list];
+            newList[index] = newValue;
+            setList(newList);
+        }
+    };
+
+    // Sub-item handlers for nested arrays (like in 5A or 4R)
+    const addSubItem = (catIndex: number, list: any[], setList: React.Dispatch<React.SetStateAction<any[]>>) => {
+        const newItem = prompt('Añadir nuevo elemento:');
+        if (newItem) {
+            const newList = JSON.parse(JSON.stringify(list));
+            newList[catIndex].items.push(newItem);
+            setList(newList);
+        }
+    };
+
+    const removeSubItem = (catIndex: number, itemIndex: number, list: any[], setList: React.Dispatch<React.SetStateAction<any[]>>) => {
+        const newList = JSON.parse(JSON.stringify(list));
+        newList[catIndex].items.splice(itemIndex, 1);
+        setList(newList);
     };
 
     const grupoData = grupo === 'O_B' ? DEFAULTS_O_B : DEFAULTS_A_AB;
@@ -70,10 +109,12 @@ export default function NutrigenomicGuide({ patient }: Props) {
                     cenaComunes,
                     meriendas
                 },
-                // For now we keep default structured data for the rest unless edited via JSON in future steps
+                alimentosEvitar: alimentosEvitar.join('\n'),
+                sustitutos: sustitutos.join('\n'),
                 combinaciones: initialData?.combinaciones || DEFAULTS_COMUNES.combinaciones,
                 actividadFisica: initialData?.actividadFisica || DEFAULTS_COMUNES.actividadFisica,
-                claves5a: initialData?.claves5a || DEFAULTS_COMUNES.claves5a
+                claves5a: claves5a,
+                terapias4r: terapias4r
             });
             setShowSavingSuccess(true);
             toast.success('Plan alimentario guardado correctamente');
@@ -101,7 +142,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
 
     // ─── RENDER ─────────────────────────────────────────────────────────────────
     return (
-        <div className="space-y-4 pb-20 relative min-h-screen">
+        <div className="space-y-4 pb-32 relative min-h-screen">
             {/* ── PERFIL DEL PACIENTE ─────────────────────────── */}
             <div className="bg-[#1a3a5c] rounded-2xl p-6 text-white shadow-lg">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-[#23bcef] mb-6 flex items-center gap-2">
@@ -185,6 +226,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
                     { id: 'plan', label: '📅 Plan Alimentario' },
                     { id: 'guia', label: '📖 Guía General' },
                     { id: 'claves', label: '🧬 Claves 5A' },
+                    { id: 'terapias', label: '💉 Terapias 4R' },
                 ].map(({ id, label }) => (
                     <button
                         key={id}
@@ -202,7 +244,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
 
             {/* ── CONTENIDO DE TABS ──────────────────────────── */}
 
-            {/* TAB 1: PLAN ALIMENTARIO — diferenciado por grupo sanguíneo */}
+            {/* TAB 1: PLAN ALIMENTARIO */}
             {activeTab === 'plan' && (
                 <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
                     <div className="flex items-center gap-2 mb-2">
@@ -221,6 +263,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
                         items={desayuno}
                         onAdd={() => addItem(desayuno, setDesayuno)}
                         onRemove={(i) => removeItem(desayuno, setDesayuno, i)}
+                        onEdit={(i) => editItem(desayuno, setDesayuno, i)}
                     />
                     <SectionCard
                         icon="☀️"
@@ -229,6 +272,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
                         items={almuerzo}
                         onAdd={() => addItem(almuerzo, setAlmuerzo)}
                         onRemove={(i) => removeItem(almuerzo, setAlmuerzo, i)}
+                        onEdit={(i) => editItem(almuerzo, setAlmuerzo, i)}
                     />
 
                     <SectionCard
@@ -238,6 +282,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
                         items={cenaComunes}
                         onAdd={() => addItem(cenaComunes, setCenaComunes)}
                         onRemove={(i) => removeItem(cenaComunes, setCenaComunes, i)}
+                        onEdit={(i) => editItem(cenaComunes, setCenaComunes, i)}
                         extraFooter={`Tendencia prioritaria: ${grupoData.cena.especifico}`}
                     />
 
@@ -248,6 +293,7 @@ export default function NutrigenomicGuide({ patient }: Props) {
                         items={meriendas}
                         onAdd={() => addItem(meriendas, setMeriendas)}
                         onRemove={(i) => removeItem(meriendas, setMeriendas, i)}
+                        onEdit={(i) => editItem(meriendas, setMeriendas, i)}
                         extraContent={
                             <div className="mt-4 pt-4 border-t border-purple-100/50 space-y-3">
                                 <DetailRow label="Ensaladas libres" items={DEFAULTS_COMUNES.ensaladasLibres} color="purple-700" />
@@ -256,110 +302,63 @@ export default function NutrigenomicGuide({ patient }: Props) {
                             </div>
                         }
                     />
-
-                    {/* Actividad Física */}
-                    <div className="bg-orange-50 border border-orange-100 rounded-2xl p-6 shadow-sm">
-                        <div className="flex items-center gap-3 mb-5">
-                            <span className="text-2xl drop-shadow-sm">🏃</span>
-                            <h4 className="font-extrabold text-orange-800 text-lg">Rutina de Actividad Física Regular</h4>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            {Object.values(DEFAULTS_COMUNES.actividadFisica).map((turno) => (
-                                <div key={turno.titulo} className="bg-white/80 rounded-xl p-4 border border-orange-100 shadow-sm relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-orange-300" />
-                                    <p className="text-[11px] font-black text-orange-600 uppercase tracking-wider mb-3">
-                                        {turno.titulo}
-                                    </p>
-                                    <ul className="space-y-2">
-                                        {turno.items.map((item, i) => (
-                                            <li key={i} className="text-sm text-slate-700 flex items-start gap-2 font-medium">
-                                                <span className="text-orange-400 mt-0.5">•</span>
-                                                {item}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
                 </div>
             )}
 
             {/* TAB 2: GUÍA GENERAL */}
             {activeTab === 'guia' && (
                 <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Alimentos a Evitar */}
-                        <div className="bg-red-50 border border-red-100 rounded-2xl p-6 shadow-sm">
-                            <div className="flex items-center gap-2 mb-4">
-                                <span className="text-2xl drop-shadow-sm">🚫</span>
-                                <h4 className="font-extrabold text-red-800 text-lg">Alimentos a Evitar</h4>
-                            </div>
-                            <p className="text-sm text-red-900 leading-loose whitespace-pre-line font-medium opacity-90">
-                                {DEFAULTS_COMUNES.alimentosEvitar}
-                            </p>
-                        </div>
-
-                        {/* Sustitutos Recomendados */}
-                        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 shadow-sm">
-                            <div className="flex items-center gap-2 mb-4">
-                                <span className="text-2xl drop-shadow-sm">✅</span>
-                                <h4 className="font-extrabold text-emerald-800 text-lg">Sustitutos Recomendados</h4>
-                            </div>
-                            <p className="text-sm text-emerald-900 leading-loose whitespace-pre-line font-medium opacity-90">
-                                {DEFAULTS_COMUNES.sustitutos}
-                            </p>
-                        </div>
+                        <SectionCard
+                            icon="🚫"
+                            title="Alimentos a Evitar"
+                            color="red"
+                            items={alimentosEvitar}
+                            onAdd={() => addItem(alimentosEvitar, setAlimentosEvitar)}
+                            onRemove={(i) => removeItem(alimentosEvitar, setAlimentosEvitar, i)}
+                            onEdit={(i) => editItem(alimentosEvitar, setAlimentosEvitar, i)}
+                        />
+                        <SectionCard
+                            icon="✅"
+                            title="Sustitutos Recomendados"
+                            color="green"
+                            items={sustitutos}
+                            onAdd={() => addItem(sustitutos, setSustitutos)}
+                            onRemove={(i) => removeItem(sustitutos, setSustitutos, i)}
+                            onEdit={(i) => editItem(sustitutos, setSustitutos, i)}
+                        />
                     </div>
 
-                    {/* Combinaciones de Alimentos */}
                     <div className="bg-white border text-center border-slate-200/60 rounded-2xl p-8 shadow-sm">
                         <div className="inline-flex items-center justify-center gap-3 mb-8 bg-slate-100 px-6 py-2 rounded-full">
                             <span className="text-xl">🔗</span>
                             <h4 className="font-bold text-slate-800 tracking-wide uppercase text-sm">Reglas de Combinación de Alimentos</h4>
                         </div>
-
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 text-left">
-                            {/* Desayuno */}
                             <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full -z-10" />
-                                <p className="text-xs font-black uppercase tracking-widest text-amber-600 mb-4">
-                                    Desayuno
-                                </p>
+                                <p className="text-xs font-black uppercase tracking-widest text-amber-600 mb-4">Desayuno</p>
                                 <div className="flex flex-wrap gap-2 mb-4">
                                     {DEFAULTS_COMUNES.combinaciones.desayuno.alimentos.map((a) => (
-                                        <span key={a} className="bg-white border border-amber-100 text-slate-700 text-[11px] font-bold px-2 py-1 rounded-md shadow-sm">
-                                            {a}
-                                        </span>
+                                        <span key={a} className="bg-white border border-amber-100 text-slate-700 text-[11px] font-bold px-2 py-1 rounded-md shadow-sm">{a}</span>
                                     ))}
                                 </div>
                                 <div className="bg-amber-100/50 p-3 rounded-xl border border-amber-100/50">
                                     <span className="text-[10px] text-amber-800 font-extrabold uppercase block mb-2">Semillas activadoras:</span>
                                     <div className="flex flex-wrap gap-1.5">
                                         {DEFAULTS_COMUNES.combinaciones.desayuno.semillas.map((s) => (
-                                            <span key={s} className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
-                                                {s}
-                                            </span>
+                                            <span key={s} className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">{s}</span>
                                         ))}
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Almuerzo */}
                             <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 col-span-1 xl:col-span-2 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-16 h-16 bg-green-50 rounded-bl-full -z-10" />
-                                <p className="text-xs font-black uppercase tracking-widest text-emerald-600 mb-3 block">
-                                    Almuerzo
-                                </p>
-                                {/* Alerta Roja */}
-                                <div className="bg-rose-100 border-l-4 border-rose-500 rounded-r-xl p-3 mb-5 inline-block w-full">
-                                    <p className="text-[11px] font-black text-rose-800 text-center tracking-widest uppercase flex items-center justify-center gap-2">
+                                <p className="text-xs font-black uppercase tracking-widest text-emerald-600 mb-3 block">Almuerzo</p>
+                                <div className="bg-rose-100 border-l-4 border-rose-500 rounded-r-xl p-3 mb-5 inline-block w-full text-center">
+                                    <p className="text-[11px] font-black text-rose-800 tracking-widest uppercase flex items-center justify-center gap-2">
                                         <span>⚠️</span> Proteínas <span>→</span> <span className="underline decoration-2 underline-offset-2">Evitar mezclar con</span> <span>←</span> Carbohidratos Integrales
                                     </p>
                                 </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-left">
                                     <div className="bg-white border-2 border-dashed border-sky-100 rounded-xl p-4">
                                         <p className="text-[10px] font-black uppercase text-sky-500 mb-2">Grupo Proteico</p>
                                         <div className="flex flex-wrap gap-1">
@@ -377,54 +376,15 @@ export default function NutrigenomicGuide({ patient }: Props) {
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
-                                        <p className="text-[10px] font-black text-emerald-700 mb-2 uppercase">Lípidos (combinar con ambos):</p>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {DEFAULTS_COMUNES.combinaciones.almuerzo.grasasBuenas.map((g) => (
-                                                <span key={g} className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
-                                                    {g}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
-                                        <p className="text-[10px] font-black text-violet-700 mb-2 uppercase">Combinar cualquier grupo con:</p>
-                                        <p className="text-xs text-violet-900 font-bold mb-1">Granos y Vegetales Frescos</p>
-                                        <p className="text-[10px] text-violet-600/80 font-medium">
-                                            <span className="font-bold text-violet-600">Sin gluten:</span> {DEFAULTS_COMUNES.combinaciones.almuerzo.sinGluten.join(', ')}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Cena */}
-                            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 relative overflow-hidden xl:col-span-3">
-                                <p className="text-xs font-black uppercase tracking-widest text-[#1a3a5c] mb-2">
-                                    Cena Nocturna
-                                </p>
-                                <p className="text-sm font-medium text-slate-500 mb-4 opacity-80">
-                                    {DEFAULTS_COMUNES.combinaciones.cena.descripcion}:
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    {DEFAULTS_COMUNES.combinaciones.cena.opciones.map((o) => (
-                                        <span key={o} className="bg-white border border-[#1a3a5c]/20 text-[#1a3a5c] text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
-                                            {o}
-                                        </span>
-                                    ))}
-                                </div>
                             </div>
                         </div>
                     </div>
-
                 </div>
             )}
 
             {/* TAB 3: CLAVES 5A */}
             {activeTab === 'claves' && (
                 <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-4xl mx-auto">
-
                     <div className="text-center mb-8">
                         <h2 className="text-2xl font-black text-slate-800 mb-2">Las Claves de la Longevidad 5A</h2>
                         <p className="text-sm text-slate-500 font-medium pb-2 border-b border-slate-200 inline-block">
@@ -433,50 +393,118 @@ export default function NutrigenomicGuide({ patient }: Props) {
                     </div>
 
                     <div className="grid gap-5">
-                        {DEFAULTS_COMUNES.claves5a.map((clave, index) => (
+                        {claves5a.map((clave, index) => (
                             <div key={clave.clave}
-                                className="bg-white border border-slate-100/80 rounded-2xl p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-10px_rgba(35,188,239,0.15)] transition-all duration-300 group">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-full bg-[#23bcef]/10 flex items-center justify-center
-                                    text-[#23bcef] font-black text-lg flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                                        {index + 1}
+                                className="bg-white border border-slate-100/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-[#23bcef]/10 flex items-center justify-center text-[#23bcef] font-black text-sm">
+                                            {index + 1}
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl">{clave.icono}</span>
+                                            <h4 className="font-extrabold text-slate-800 text-base uppercase tracking-wide">{clave.clave}</h4>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-3xl drop-shadow-sm group-hover:-rotate-6 transition-transform">{clave.icono}</span>
-                                        <h4 className="font-extrabold text-slate-800 text-lg uppercase tracking-wide">{clave.clave}</h4>
-                                    </div>
+                                    <button
+                                        onClick={() => addSubItem(index, claves5a, setClaves5a)}
+                                        className="text-[10px] font-black bg-[#23bcef] text-white px-3 py-1.5 rounded-lg active:scale-95"
+                                    >
+                                        + Añadir
+                                    </button>
                                 </div>
-                                <ul className="space-y-3 pl-[4.5rem]">
-                                    {clave.items.map((item, i) => (
-                                        <li key={i} className="text-sm text-slate-600 font-medium leading-relaxed flex items-start gap-3">
-                                            <span className="text-slate-300 font-black mt-0.5 flex-shrink-0 select-none">
-                                                {String.fromCharCode(97 + i)}.
-                                            </span>
-                                            <span>{item}</span>
+                                <ul className="space-y-3 pl-14">
+                                    {clave.items.map((item: string, i: number) => (
+                                        <li key={i} className="text-sm text-slate-600 group/item flex items-start gap-3">
+                                            <span className="text-slate-400 mt-1.5 flex-shrink-0">🔸</span>
+                                            <span className="flex-1">{item}</span>
+                                            <button
+                                                onClick={() => removeSubItem(index, i, claves5a, setClaves5a)}
+                                                className="opacity-0 group-hover/item:opacity-100 text-red-400 p-1"
+                                            >
+                                                <X size={14} />
+                                            </button>
                                         </li>
                                     ))}
                                 </ul>
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
 
-                    {/* Frase final */}
-                    <div className="mt-12 bg-gradient-to-r from-[#23bcef]/10 to-[#1a3a5c]/5 rounded-2xl p-8
-                          border border-[#23bcef]/20 text-center shadow-inner relative overflow-hidden">
-                        {/* Elemento decorativo */}
-                        <div className="absolute -top-4 -left-4 font-serif text-[#23bcef]/20 text-8xl">"</div>
-                        <p className="text-lg text-[#1a3a5c] italic font-semibold relative z-10 font-serif">
-                            {DEFAULTS_COMUNES.frase}
-                        </p>
+            {/* TAB 4: TERAPIAS 4R */}
+            {activeTab === 'terapias' && (
+                <div className="space-y-8 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-5xl mx-auto pb-20">
+                    <div className="text-center mb-10">
+                        <h2 className="text-3xl font-black text-slate-800 mb-2">Terapias Proactivas 4R</h2>
+                        <div className="h-1.5 w-24 bg-gradient-to-r from-[#23bcef] to-[#1a3a5c] mx-auto rounded-full" />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-10">
+                        {terapias4r.map((terapia, index) => (
+                            <div key={terapia.nombre} className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm relative overflow-hidden group">
+                                <div className="absolute top-0 left-0 w-2 h-full bg-[#23bcef]" />
+                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-6">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <span className="bg-[#23bcef] text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+                                                {index + 1}
+                                            </span>
+                                            <h3 className="text-2xl font-black text-[#1a3a5c] uppercase tracking-tight">{terapia.nombre}</h3>
+                                        </div>
+                                        <p className="text-[#23bcef] font-bold text-lg italic pl-11">“{terapia.slogan}”</p>
+                                    </div>
+                                    <button
+                                        onClick={() => addSubItem(index, terapias4r, setTerapias4r)}
+                                        className="self-start px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-[#1a3a5c] transition-all active:scale-95"
+                                    >
+                                        + Añadir Detalle
+                                    </button>
+                                </div>
+
+                                <div className="pl-11 space-y-6">
+                                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 italic text-slate-600 text-sm leading-relaxed">
+                                        {terapia.descripcion}
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <p className="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2">{terapia.infoExtra}</p>
+                                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {terapia.items.map((item: string, i: number) => (
+                                                <li key={i} className="flex items-start gap-3 group/item p-3 rounded-xl hover:bg-sky-50 transition-colors">
+                                                    <span className="text-sky-400 mt-1">✔</span>
+                                                    <span className="text-sm text-slate-700 font-medium flex-1">{item}</span>
+                                                    <button
+                                                        onClick={() => removeSubItem(index, i, terapias4r, setTerapias4r)}
+                                                        className="opacity-0 group-hover/item:opacity-100 text-red-400 hover:text-red-600 transition-all"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
 
+            {/* Frase final */}
+            <div className="mt-12 bg-gradient-to-r from-[#23bcef]/10 to-[#1a3a5c]/5 rounded-2xl p-8
+                          border border-[#23bcef]/20 text-center shadow-inner relative overflow-hidden">
+                <div className="absolute -top-4 -left-4 font-serif text-[#23bcef]/20 text-8xl">"</div>
+                <p className="text-lg text-[#1a3a5c] italic font-semibold relative z-10 font-serif">
+                    {DEFAULTS_COMUNES.frase}
+                </p>
+            </div>
+
             {/* ── BARRA DE ACCIONES FLOTANTE ── */}
             <div className="fixed bottom-0 left-[250px] right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/60
-                      px-8 py-5 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.04)] z-40
-                      transition-all duration-300">
-                {/* Sidebar width compensator en la clase left-[250px] asumiendo layout de dashboard */}
+                          px-8 py-5 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.04)] z-40
+                          transition-all duration-300">
 
                 <div className="flex items-center gap-3">
                     <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-slate-100">
@@ -499,52 +527,50 @@ export default function NutrigenomicGuide({ patient }: Props) {
                 </div>
 
                 <div className="flex items-center gap-3">
-
-                    {/* Guardar */}
                     <button
                         onClick={handleSave}
                         disabled={saving || sending}
                         className="px-6 py-3 text-sm font-bold text-[#1a3a5c] bg-slate-100 border border-slate-200 outline-none
-                       hover:bg-slate-200 hover:border-slate-300 rounded-xl transition-all shadow-sm
-                       flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                                   hover:bg-slate-200 hover:border-slate-300 rounded-xl transition-all shadow-sm
+                                   flex items-center gap-2 disabled:opacity-50 active:scale-95"
                     >
                         {saving ? 'Guardando...' : '💾 Guardar Cambios'}
                     </button>
 
-                    {/* Enviar a PWA */}
                     <button
                         onClick={handleSend}
                         disabled={saving || sending}
                         className="px-6 py-3 text-sm font-bold text-white shadow-xl shadow-[#23bcef]/20
-                       bg-gradient-to-r from-[#23bcef] to-[#1a3a5c] hover:from-[#1da7d6] hover:to-[#15305a] 
-                       rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95 border border-[#23bcef]/50"
+                                   bg-gradient-to-r from-[#23bcef] to-[#1a3a5c] hover:from-[#1da7d6] hover:to-[#15305a] 
+                                   rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95 border border-[#23bcef]/50"
                     >
                         {sending ? 'Enviando...' : '📱 Sincronizar con App'}
                     </button>
                 </div>
             </div>
-
         </div>
     );
 }
 
 // ── COMPONENTES INTERNOS ───
 
-function SectionCard({ icon, title, color, items, extraContent, extraFooter, onAdd, onRemove }: {
+function SectionCard({ icon, title, color, items, extraContent, extraFooter, onAdd, onRemove, onEdit }: {
     icon: string;
     title: string;
-    color: 'amber' | 'green' | 'blue' | 'purple';
+    color: 'amber' | 'green' | 'blue' | 'purple' | 'red';
     items: string[];
     extraContent?: React.ReactNode;
     extraFooter?: string;
     onAdd?: () => void;
     onRemove?: (index: number) => void;
+    onEdit?: (index: number) => void;
 }) {
     const colors = {
         amber: 'bg-amber-50/50 border-amber-100/60 text-amber-900 border-l-4 border-l-amber-400',
         green: 'bg-emerald-50/50 border-emerald-100/60 text-emerald-900 border-l-4 border-l-emerald-400',
         blue: 'bg-sky-50/50 border-sky-100/60 text-sky-900 border-l-4 border-l-sky-400',
         purple: 'bg-purple-50/50 border-purple-100/60 text-purple-900 border-l-4 border-l-purple-400',
+        red: 'bg-red-50/50 border-red-100/60 text-red-900 border-l-4 border-l-red-400',
     };
 
     const titleColors = {
@@ -552,6 +578,7 @@ function SectionCard({ icon, title, color, items, extraContent, extraFooter, onA
         green: 'text-emerald-700',
         blue: 'text-sky-700',
         purple: 'text-purple-700',
+        red: 'text-red-700',
     };
 
     return (
@@ -575,15 +602,26 @@ function SectionCard({ icon, title, color, items, extraContent, extraFooter, onA
                     <li key={i} className={`text-sm font-medium flex items-start gap-2.5 opacity-90 leading-snug group/item`}>
                         <span className="mt-1 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-40"></span>
                         <span className="flex-1">{item}</span>
-                        {onRemove && (
-                            <button
-                                onClick={() => onRemove(i)}
-                                className="opacity-0 group-hover/item:opacity-100 text-red-500 hover:text-red-700 transition-all p-1"
-                                title="Eliminar"
-                            >
-                                <X size={14} strokeWidth={3} />
-                            </button>
-                        )}
+                        <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-all">
+                            {onEdit && (
+                                <button
+                                    onClick={() => onEdit(i)}
+                                    className="text-slate-400 hover:text-slate-600 p-1"
+                                    title="Editar"
+                                >
+                                    <Edit2 size={12} />
+                                </button>
+                            )}
+                            {onRemove && (
+                                <button
+                                    onClick={() => onRemove(i)}
+                                    className="text-red-400 hover:text-red-600 p-1"
+                                    title="Eliminar"
+                                >
+                                    <X size={14} strokeWidth={3} />
+                                </button>
+                            )}
+                        </div>
                     </li>
                 ))}
             </ul>
