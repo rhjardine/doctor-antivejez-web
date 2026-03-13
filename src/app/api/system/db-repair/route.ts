@@ -80,13 +80,38 @@ export async function GET() {
         `);
         console.log("✅ [DB-Repair] Foreign keys for 'alimentacion_nutrigenomica' verified/created.");
 
+        // 4. Safely add NEW columns to alimentacion_nutrigenomica (additive-only, IF NOT EXISTS)
+        // These were added in a recent schema update and may not exist in older DB instances.
+        const newColumns = [
+            { name: 'terapias4r', type: 'JSONB' },
+            { name: 'alimentosEvitar', type: 'TEXT' },
+            { name: 'sustitutos', type: 'TEXT' },
+        ];
+
+        for (const col of newColumns) {
+            await db.$executeRawUnsafe(`
+                DO $$ BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_name = 'alimentacion_nutrigenomica'
+                          AND column_name = '${col.name}'
+                    ) THEN
+                        ALTER TABLE "alimentacion_nutrigenomica" ADD COLUMN "${col.name}" ${col.type};
+                    END IF;
+                END $$;
+            `);
+            console.log(`✅ [DB-Repair] Column '${col.name}' verified/added to 'alimentacion_nutrigenomica'.`);
+        }
+
         return NextResponse.json({
             success: true,
             message: "Database schema repaired successfully.",
             applied_actions: [
                 "Created/Verified ENUM 'FoodCategory'",
-                "Added column 'category' to 'food_items' table",
-                "Created table 'alimentacion_nutrigenomica' and relations"
+                "Added column 'category' to 'food_items' table (if missing)",
+                "Created table 'alimentacion_nutrigenomica' and relations (if missing)",
+                "Added columns 'terapias4r', 'alimentosEvitar', 'sustitutos' (if missing)"
             ]
         });
     } catch (error) {
