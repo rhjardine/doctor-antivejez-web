@@ -200,7 +200,7 @@ export async function GET(req: Request) {
             } : null,
             guides: serializedGuide ? [serializedGuide] : [],
             foodPlans: patient.foodPlans,
-            alimentacion: patient.alimentacion?.enviada ? patient.alimentacion : null
+            alimentacion: patient.alimentacion ?? null
         }, { headers: corsHeaders });
 
     } catch (error) {
