@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyToken } from '@/lib/jwt';
 import { getCorsHeaders, handleCorsPreflightOrReject } from '@/lib/cors';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const PWA_CORS_HEADERS = {
     'Access-Control-Allow-Origin': 'https://doctorantivejez-patients.onrender.com',
@@ -16,6 +17,9 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: Request) {
+    const rateLimitResponse = await checkRateLimit(req);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
     try {

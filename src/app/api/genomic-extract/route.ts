@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { extractGenomicData } from "@/lib/ai/genomic-parser";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,9 @@ export async function OPTIONS(req: Request) {
 }
 
 export async function POST(req: Request) {
+    const rateLimitResponse = await checkRateLimit(req);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
     try {

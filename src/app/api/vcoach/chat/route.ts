@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,9 @@ export async function OPTIONS(req: Request) {
 }
 
 export async function POST(req: Request) {
+    const rateLimitResponse = await checkRateLimit(req, undefined, { limit: 20, window: '1 m', prefix: 'ratelimit:ai' });
+    if (rateLimitResponse) return rateLimitResponse;
+
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
     try {
