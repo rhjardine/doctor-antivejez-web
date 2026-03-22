@@ -774,3 +774,52 @@ model CampaignMessage {
 
   @@map("campaign_messages")
 }
+
+// =================================================================
+// Modelos para el Módulo de Captación Pública (Growth Engine)
+// =================================================================
+model PublicLead {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  phone        String?
+  country      String?
+  testScore    Int?
+  testCategory String?
+  ageBotAge    Int?
+  source       String   @default("FUNNEL")
+  utmSource    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  converted    Boolean  @default(false)
+  convertedAt  DateTime?
+
+  // Optional FK to Patient when lead converts to patient
+  patientId    String?
+
+  // Relation to booking requests
+  bookings BookingRequest[]
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("public_leads")
+}
+
+model BookingRequest {
+  id            String   @id @default(cuid())
+  leadId        String
+  bookingType   String   // 'basica' | 'profunda'
+  status        String   @default("PENDING")
+  amount        Float?
+  paymentStatus String   @default("PENDING")
+  schedulePref  String?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  lead PublicLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([status])
+  @@map("booking_requests")
+}
+
