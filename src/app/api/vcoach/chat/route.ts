@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { generateDualText } from "@/lib/ai/router";
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +10,11 @@ export async function OPTIONS(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const rateLimitResponse = await checkRateLimit(req, undefined, { limit: 20, window: '1 m', prefix: 'ratelimit:ai' });
+    const rateLimitResponse = await checkRateLimit(req, undefined, {
+        limit: 20,
+        window: '1 m',
+        prefix: 'ratelimit:ai'
+    });
     if (rateLimitResponse) return rateLimitResponse;
 
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
@@ -18,18 +22,7 @@ export async function POST(req: Request) {
     try {
         const { message, history, patientContext } = await req.json();
 
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            console.error("Missing GEMINI_API_KEY in server environment");
-            return NextResponse.json(
-                { error: "Server Configuration Error: API Key missing" },
-                { status: 500, headers: corsHeaders }
-            );
-        }
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-
-        const systemInstruction = `Eres el VCoach de Doctor Antivejez. 
+        const systemPrompt = `Eres el VCoach de Doctor Antivejez. 
     Paciente: ${patientContext?.name || 'Paciente'}. 
     Edad Bio: ${patientContext?.bioAge || '?'}. 
     Grupo Sanguíneo: ${patientContext?.bloodType || '?'}.
@@ -38,26 +31,27 @@ export async function POST(req: Request) {
     Usa el contexto del paciente para personalizar la respuesta.
     Si pregunta sobre alimentos, verifica compatibilidad con su grupo sanguíneo ${patientContext?.bloodType || '?'}.`;
 
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            systemInstruction: systemInstruction
+        // Convert history to CoreMessage format for AI SDK
+        const messages = [
+            ...history.map((h: any) => ({
+                role: h.role === 'model' ? 'assistant' : 'user',
+                content: h.parts?.[0]?.text || h.text || '',
+            })),
+            { role: 'user', content: message }
+        ];
+
+        const result = await generateDualText({
+            messages,
+            system: systemPrompt,
+            type: 'VCOACH',
         });
 
-        const validHistory = Array.isArray(history) ? history.map((h: any) => ({
-            role: h.role === 'user' || h.role === 'model' ? h.role : 'user',
-            parts: h.parts || [{ text: "" }]
-        })) : [];
-
-        const chat = model.startChat({ history: validHistory });
-        const result = await chat.sendMessage(message);
-        const responseText = result.response.text();
-
-        return NextResponse.json({ text: responseText }, { headers: corsHeaders });
+        return NextResponse.json({ text: result.text }, { headers: corsHeaders });
 
     } catch (error) {
-        console.error("VCoach Backend Error:", (error as Error).message);
+        console.error("VCoach API Error:", (error as Error).message);
         return NextResponse.json(
-            { error: "El servicio de IA está temporalmente no disponible." },
+            { error: "Servicio temporalmente no disponible. Reintentando vía gateway secundario..." },
             { status: 500, headers: corsHeaders }
         );
     }

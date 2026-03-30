@@ -14,6 +14,7 @@
     "seed": "prisma generate && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.48",
     "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^3.9.0",
     "@next-auth/prisma-adapter": "^1.0.7",
@@ -29,6 +30,7 @@
     "@types/nodemailer": "^7.0.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
+    "ai": "^6.0.141",
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
