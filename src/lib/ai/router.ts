@@ -1,4 +1,4 @@
-import { streamText, generateText, type CoreMessage } from 'ai';
+import { streamText, generateText, type ModelMessage } from 'ai';
 import { openrouter, siliconflow, MODELS } from './providers';
 
 /**
@@ -10,7 +10,7 @@ import { openrouter, siliconflow, MODELS } from './providers';
  */
 
 interface RouterOptions {
-    messages: CoreMessage[];
+    messages: ModelMessage[];
     system: string;
     type: keyof typeof MODELS; // 'ALMA' | 'VCOACH'
 }
@@ -25,7 +25,7 @@ export async function generateDualStream({ messages, system, type }: RouterOptio
             system,
             messages,
             temperature: 0.6,
-            maxTokens: 1000,
+            maxOutputTokens: 1000,
         });
     } catch (primaryError) {
         console.error(`[AI Router] Primary Gateway (${type}) failed:`, primaryError);
@@ -38,7 +38,7 @@ export async function generateDualStream({ messages, system, type }: RouterOptio
                 system,
                 messages,
                 temperature: 0.6,
-                maxTokens: 1000,
+                maxOutputTokens: 1000,
             });
         } catch (secondaryError) {
             console.error(`[AI Router] Secondary Gateway also failed:`, secondaryError);
@@ -61,7 +61,7 @@ export async function generateDualText({ messages, system, type }: RouterOptions
             system,
             messages,
             temperature: 0.6,
-            maxTokens: 1000,
+            maxOutputTokens: 1000,
         });
     } catch (primaryError) {
         console.error(`[AI Router] Primary Gateway (${type}) failed:`, primaryError);
@@ -74,7 +74,7 @@ export async function generateDualText({ messages, system, type }: RouterOptions
                 system,
                 messages,
                 temperature: 0.6,
-                maxTokens: 1000,
+                maxOutputTokens: 1000,
             });
         } catch (secondaryError) {
             console.error(`[AI Router] Secondary Gateway also failed:`, secondaryError);
