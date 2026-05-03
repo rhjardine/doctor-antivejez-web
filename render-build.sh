@@ -19,7 +19,11 @@
     echo "🔄 Aplicando migraciones de la base de datos..."
     npx prisma migrate deploy
 
-    # 4. Construir la aplicación de Next.js
+    # 4. Ejecutar pruebas clínicas obligatorias antes del build
+    echo "🧪 Ejecutando suite obligatoria de tests..."
+    npm run test:ci
+
+    # 5. Construir la aplicación de Next.js
     # Llama al script 'build' del package.json, que ahora solo ejecuta 'next build'.
     echo "🏗️ Ejecutando build de Next.js..."
     npm run build

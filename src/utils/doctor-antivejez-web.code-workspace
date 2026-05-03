@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../DoctorAntivejez_Patients"
+		}
+	],
+	"settings": {
+		"liveServer.settings.port": 5501,
+		"powershell.cwd": "doctor-antivejez-web"
+	}
+}

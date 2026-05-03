@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:ci": "vitest run",
     "db:import-legacy": "tsx prisma/import-legacy.ts",
     "db:fix-contacts": "tsx prisma/fix-legacy-contacts.ts"
   },
@@ -82,6 +85,8 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "@vitest/ui": "^3.2.4"
   }
 }
