@@ -180,6 +180,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             id: patient.id,
+            version: patient.version,               // ← OCC: la PWA debe almacenar y re-enviar este campo en PATCH
             firstName: patient.firstName,
             lastName: patient.lastName,
             email: patient.email,
@@ -225,25 +226,82 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "Token inválido" }, { status: 401, headers: corsHeaders });
         }
 
-        const { shareDataConsent } = await req.json();
+        // ================================================================
+        // PASO 3: Extraer version del body enviado por la PWA
+        // La PWA DEBE enviar la versión que leyó en su último GET/login.
+        // ================================================================
+        const { shareDataConsent, version } = await req.json();
 
-        const patient = await db.patient.findUnique({
-            where: { id: payload.sub }
-        });
-
-        if (!patient) {
-            return NextResponse.json({ error: "Perfil de paciente no encontrado" }, { status: 404, headers: corsHeaders });
+        if (version === undefined || version === null || typeof version !== "number") {
+            return NextResponse.json(
+                { error: "Campo 'version' requerido para sincronización segura." },
+                { status: 400, headers: corsHeaders }
+            );
         }
 
-        const updatedPatient = await db.patient.update({
-            where: { id: patient.id },
-            data: { shareDataConsent: !!shareDataConsent }
-        });
+        const incomingVersion = Number(version);
 
-        return NextResponse.json({
-            success: true,
-            consent: updatedPatient.shareDataConsent
-        }, { headers: corsHeaders });
+        if (!Number.isInteger(incomingVersion) || incomingVersion < 1) {
+            return NextResponse.json(
+                { error: "Campo 'version' inválido." },
+                { status: 400, headers: corsHeaders }
+            );
+        }
+
+        // ================================================================
+        // PASO 4: Actualización Atómica con OCC
+        // WHERE incluye version — si la versión en DB ya avanzó,
+        // la fila no será encontrada y Prisma lanzará P2025.
+        // ================================================================
+        try {
+            const updatedPatient = await db.patient.update({
+                where: {
+                    id: payload.sub,
+                    version: incomingVersion,         // ← OCC: debe coincidir con la versión en DB
+                },
+                data: {
+                    shareDataConsent: !!shareDataConsent,
+                    version: { increment: 1 },         // ← Avanza la versión atómicamente
+                },
+                select: {
+                    shareDataConsent: true,
+                    version: true,
+                },
+            });
+
+            return NextResponse.json(
+                {
+                    success: true,
+                    consent: updatedPatient.shareDataConsent,
+                    version: updatedPatient.version,   // ← Devolvemos la nueva versión para que la PWA actualice su caché
+                },
+                { headers: corsHeaders }
+            );
+
+        } catch (prismaError: any) {
+            // ================================================================
+            // PASO 5: Manejo de Conflictos (Fail Fast — HTTP 409)
+            // Prisma lanza P2025 ("Record to update not found") cuando el
+            // WHERE no encuentra ninguna fila — lo que significa que la versión
+            // en DB ya fue avanzada por otro actor (Admin web, otra sesión PWA).
+            // ================================================================
+            if (prismaError?.code === "P2025") {
+                console.warn(
+                    `[OCC] ⚡ Conflicto detectado para paciente ${payload.sub}: ` +
+                    `versión entrante=${incomingVersion} ya fue superada en DB.`
+                );
+                return NextResponse.json(
+                    {
+                        error: "Conflicto de sincronización. Los datos fueron modificados por otro usuario. Por favor, recarga y vuelve a intentarlo.",
+                        code: "OCC_CONFLICT",
+                    },
+                    { status: 409, headers: corsHeaders }
+                );
+            }
+
+            // Cualquier otro error de Prisma lo re-lanzamos para el catch externo
+            throw prismaError;
+        }
 
     } catch (error) {
         console.error("Consent update error:", (error as Error).message);

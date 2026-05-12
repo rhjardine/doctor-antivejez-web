@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
+import { checkAuthRateLimit } from "./rate-limit";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -24,7 +25,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         console.log("🔐 [Auth] Credentials received for:", credentials?.email);
 
         if (!credentials?.email || !credentials?.password) {
@@ -32,6 +33,52 @@ export const authOptions: NextAuthOptions = {
         }
 
         const normalizedEmail = credentials.email.toLowerCase().trim();
+
+        // ================================================================
+        // ⚡ FAIL FAST: Throttling — se ejecuta ANTES de Prisma y bcrypt
+        // ================================================================
+        const forwarded = req?.headers?.["x-forwarded-for"];
+        const rawIp = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+        const clientIp = rawIp?.split(",")[0]?.trim() ?? "unknown";
+
+        // Identificador dual: bloqueamos por email Y por IP de forma independiente.
+        // Esto cubre tanto "credential stuffing" (misma IP, distintos emails)
+        // como ataques dirigidos a una cuenta (misma cuenta, distintas IPs).
+        const [emailCheck, ipCheck] = await Promise.all([
+          checkAuthRateLimit(normalizedEmail, {
+            limit: 5,
+            window: "15 m",
+            prefix: "ratelimit:auth:email",
+          }),
+          checkAuthRateLimit(clientIp, {
+            limit: 20,
+            window: "15 m",
+            prefix: "ratelimit:auth:ip",
+          }),
+        ]);
+
+        if (emailCheck.blocked) {
+          console.warn(
+            `[SECURITY] 🚫 Throttling activado para EMAIL: ${normalizedEmail} — ` +
+            `Reintentar en ${emailCheck.retryAfterSeconds}s`
+          );
+          throw new Error(
+            "Demasiados intentos de inicio de sesión. Por favor, intente de nuevo en 15 minutos."
+          );
+        }
+
+        if (ipCheck.blocked) {
+          console.warn(
+            `[SECURITY] 🚫 Throttling activado para IP: ${clientIp} — ` +
+            `Reintentar en ${ipCheck.retryAfterSeconds}s`
+          );
+          throw new Error(
+            "Demasiados intentos de inicio de sesión. Por favor, intente de nuevo en 15 minutos."
+          );
+        }
+        // ================================================================
+        // ✅ Throttling superado — continúa con la autenticación estándar
+        // ================================================================
 
         try {
           const user = await db.user.findUnique({
@@ -77,7 +124,7 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error("🔥 [Auth] Error en proceso de autorización:", error);
-          return null;
+          throw error; // Re-lanzamos para que NextAuth propague el mensaje al cliente
         }
       },
     }),
@@ -90,14 +137,32 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email;
         session.user.role = token.role;
         session.user.image = token.picture;
+        session.user.permissions = token.permissions || null;
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
       }
+
+      // Si no tenemos los permisos cacheados en el token, o si forzamos una actualización (update)
+      if (!token.permissions || trigger === "update") {
+        try {
+          const dbUser = await db.user.findUnique({
+            where: { id: token.id },
+            select: { permissions: true }
+          });
+          
+          if (dbUser) {
+            token.permissions = dbUser.permissions as Record<string, boolean> | null;
+          }
+        } catch (error) {
+          console.error("🔥 [Auth] Error fetching user permissions for JWT:", error);
+        }
+      }
+
       return token;
     },
   },

@@ -1,4 +1,4 @@
-import { MoreHorizontal, CreditCard, Edit2, Trash2, History } from 'lucide-react';
+import { MoreHorizontal, CreditCard, Edit2, Trash2, History, ShieldCheck } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
@@ -22,6 +22,7 @@ interface ProfessionalRowProps {
     onEdit: () => void;
     onDelete: () => void;
     onRecharge: () => void;
+    onManagePermissions?: () => void;
 }
 
 const BADGE_CONFIG: Record<keyof TestBalances, { label: string; color: string }> = {
@@ -31,7 +32,7 @@ const BADGE_CONFIG: Record<keyof TestBalances, { label: string; color: string }>
     GENETICA: { label: 'Genética', color: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
 };
 
-export const ProfessionalRow = ({ prof, isAdmin, onEdit, onDelete, onRecharge }: ProfessionalRowProps) => {
+export const ProfessionalRow = ({ prof, isAdmin, onEdit, onDelete, onRecharge, onManagePermissions }: ProfessionalRowProps) => {
     return (
         <tr className="hover:bg-slate-50/50 transition-colors border-b border-slate-100">
             <td className="p-4">
@@ -89,6 +90,11 @@ export const ProfessionalRow = ({ prof, isAdmin, onEdit, onDelete, onRecharge }:
                         <DropdownMenuItem className="flex gap-2 p-3 font-bold text-xs uppercase text-slate-600 cursor-pointer hover:bg-slate-50">
                             <History size={16} /> Ver Consumo
                         </DropdownMenuItem>
+                        {isAdmin && onManagePermissions && (
+                            <DropdownMenuItem onClick={onManagePermissions} className="flex gap-2 p-3 font-bold text-xs uppercase text-amber-600 cursor-pointer hover:bg-slate-50">
+                                <ShieldCheck size={16} /> Accesos y Cuotas
+                            </DropdownMenuItem>
+                        )}
                         {isAdmin && (
                             <>
                                 <div className="h-[1px] bg-slate-100 my-1" />

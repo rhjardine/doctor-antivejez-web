@@ -158,8 +158,13 @@ model User {
   sessions      Session[]
   patients      Patient[]
 
+  // Campos de Control de Acceso y Cuotas (RBAC/ABAC)
+  permissions   Json?
+  availableTests Int      @default(0)
+
   // Ledger Pattern: Créditos por tipo de test
   creditTransactions CreditTransaction[]
+  permissionLogs     UserPermissionLog[]
 
   // Relaciones inversas: Tests realizados por este médico
   conductedBiophysicsTests     BiophysicsTest[]     @relation("DoctorBiophysics")
@@ -168,6 +173,23 @@ model User {
   conductedGeneticTests        GeneticTest[]        @relation("DoctorGenetics")
 
   @@map("users")
+}
+
+model UserPermissionLog {
+  id          String   @id @default(cuid())
+  userId      String
+  changedBy   String
+  module      String
+  oldValue    Boolean?
+  newValue    Boolean?
+  oldValueInt Int?
+  newValueInt Int?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_permission_logs")
 }
 
 model VerificationToken {
@@ -230,6 +252,7 @@ model Patient {
   passwordHash String?
 
   shareDataConsent Boolean  @default(false)
+  version          Int      @default(1)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

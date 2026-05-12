@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { ShieldCheck, User, Bell, Database, Lock, Save, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateAdminPassword } from '@/lib/actions/auth.actions';
+import { useSession } from 'next-auth/react';
 
 export default function AjustesPage() {
+  const { data: session } = useSession();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -106,12 +108,19 @@ export default function AjustesPage() {
           {/* Tarjeta de Información Profesional */}
           <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center text-[#23bcef]">
-                <User size={32} />
+              <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center text-[#23bcef] font-black text-2xl">
+                {session?.user?.name ? session.user.name.charAt(0).toUpperCase() : <User size={32} />}
               </div>
               <div>
-                <h3 className="font-black text-[#293b64] text-lg uppercase tracking-tighter">Dr. Juan Carlos Méndez</h3>
-                <p className="text-xs font-bold text-slate-400 uppercase">Director Médico / Administrador</p>
+                <h3 className="font-black text-[#293b64] text-lg uppercase tracking-tighter">
+                  {session?.user?.name || 'Usuario'}
+                </h3>
+                <p className="text-xs font-bold text-slate-400 uppercase">
+                  {session?.user?.role || 'Rol no definido'}
+                </p>
+                <p className="text-[10px] text-slate-300 mt-1">
+                  {session?.user?.email}
+                </p>
               </div>
             </div>
             <button className="text-slate-300 hover:text-[#293b64] font-black text-[10px] uppercase tracking-widest border-2 border-slate-50 px-4 py-2 rounded-xl transition-all">

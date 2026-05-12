@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { FaPlus, FaSearch } from 'react-icons/fa';
 import { toast } from 'sonner';
 import { ProfessionalRow } from '@/components/professionals/ProfessionalRow';
+import { PermissionsPanel } from '@/components/professionals/PermissionsPanel';
 import { rechargeCredits } from '@/lib/actions/professionals.actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,8 @@ interface Professional {
   status: string;
   balances: TestBalances;
   password?: string;
+  permissions?: any;
+  availableTests?: number;
 }
 
 const TEST_TYPE_LABELS: Record<TestType, string> = {
@@ -57,6 +60,7 @@ export default function ProfesionalesPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [profToDelete, setProfToDelete] = useState<Professional | null>(null);
   const [selectedProf, setSelectedProf] = useState<Professional | null>(null);
 
@@ -229,6 +233,7 @@ export default function ProfesionalesPage() {
                   isAdmin={isAdmin}
                   onEdit={() => { setSelectedProf(prof); setFormData(prof); setIsEditModalOpen(true); }}
                   onRecharge={() => { setSelectedProf(prof); setRechargeTestType('BIOFISICA'); setRechargeAmount(10); setIsRechargeModalOpen(true); }}
+                  onManagePermissions={() => { setSelectedProf(prof); setIsPermissionsModalOpen(true); }}
                   onDelete={() => handleDeleteRequest(prof)}
                 />
               ))}
@@ -392,6 +397,29 @@ export default function ProfesionalesPage() {
                 Sí, Eliminar
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Permissions & Quotas Modal */}
+      {isAdmin && (
+        <Dialog open={isPermissionsModalOpen} onOpenChange={setIsPermissionsModalOpen}>
+          <DialogContent className="sm:max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-[#293b64] font-black">Accesos y Cuotas</DialogTitle>
+              <DialogDescription>
+                Gestione los permisos de módulos y cuota de tests para <span className="font-bold">{selectedProf?.name}</span>.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedProf && (
+              <PermissionsPanel 
+                prof={selectedProf} 
+                onSuccess={() => {
+                  fetchProfessionals();
+                  // No cerramos el modal automáticamente para permitir múltiples cambios rápidos
+                }} 
+              />
+            )}
           </DialogContent>
         </Dialog>
       )}

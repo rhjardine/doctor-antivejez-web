@@ -86,3 +86,42 @@ export async function checkRateLimit(
 
     return null;
 }
+/**
+ * Check rate limit for auth flows using a plain string identifier.
+ * Designed for use inside NextAuth's `authorize()` where `req` is not a standard
+ * Web API Request object and `checkRateLimit` cannot be used directly.
+ *
+ * Applies a strict window: 5 attempts per 15 minutes per identifier.
+ * Returns { blocked: false } if Redis is not configured (fail open in dev).
+ */
+export async function checkAuthRateLimit(
+    identifier: string,
+    config?: RateLimitConfig
+): Promise<{ blocked: false } | { blocked: true; retryAfterSeconds: number }> {
+    const limiter = getLimiter(
+        config?.limit ?? 5,
+        config?.window ?? "15 m",
+        config?.prefix ?? "ratelimit:auth"
+    );
+
+    if (!limiter) {
+        // Redis not configured — fail open (development mode)
+        return { blocked: false };
+    }
+
+    try {
+        const { success, reset } = await limiter.limit(identifier);
+
+        if (!success) {
+            return {
+                blocked: true,
+                retryAfterSeconds: Math.max(1, Math.ceil((reset - Date.now()) / 1000)),
+            };
+        }
+    } catch (error) {
+        // Redis connection error — fail open to avoid blocking legitimate users
+        console.error("[RateLimit][Auth] Redis error, failing open:", (error as Error).message);
+    }
+
+    return { blocked: false };
+}
