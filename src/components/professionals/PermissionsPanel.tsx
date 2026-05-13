@@ -34,13 +34,19 @@ const MODULE_LABELS: Record<ModuleKey, { label: string; description: string }> =
   notificaciones: { label: 'Notificaciones', description: 'Envío de notificaciones' },
 };
 
-export default function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelProps) {
-  // Inicialización del estado
-  const [localPerms, setLocalPerms] = useState<Record<ModuleKey, boolean>>(() => resolvePermissions(user.role as UserRole, user.permissions));
+/**
+ * Panel de gestión de permisos y cuotas para profesionales.
+ * Utiliza exportación nombrada para evitar errores de importación en Render.
+ */
+export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelProps) {
+  // Inicializamos el estado local basándonos en las propiedades recibidas
+  const [localPerms, setLocalPerms] = useState<Record<ModuleKey, boolean>>(() =>
+    resolvePermissions(user.role as UserRole, user.permissions)
+  );
   const [testQuota, setTestQuota] = useState<number>(user.availableTests || 0);
   const [saving, setSaving] = useState<ModuleKey | 'quota' | null>(null);
 
-  // EFECTO CLAVE: Sincroniza el panel modal si los datos cambian en el fondo al guardar
+  // Sincronizar el estado interno si el objeto 'user' cambia desde el padre
   useEffect(() => {
     setLocalPerms(resolvePermissions(user.role as UserRole, user.permissions));
     setTestQuota(user.availableTests || 0);
@@ -53,7 +59,7 @@ export default function PermissionsPanel({ user, onClose, onSaved }: Permissions
     }
 
     setSaving(module);
-    // 1. Actualización Optimista: Cambia el switch visualmente al instante
+    // Actualización optimista para mejorar la respuesta visual
     setLocalPerms(prev => ({ ...prev, [module]: newValue }));
 
     try {
@@ -61,15 +67,15 @@ export default function PermissionsPanel({ user, onClose, onSaved }: Permissions
 
       if (result.success) {
         toast.success(`Acceso a "${MODULE_LABELS[module].label}" ${newValue ? 'habilitado' : 'revocado'}.`);
-        onSaved(); // Informa a la tabla para recargar datos
+        onSaved(); // Notifica a la página para refrescar la lista de profesionales
       } else {
-        // 2. Reversión si el servidor falla
+        // Revertir en caso de fallo en el servidor
         setLocalPerms(prev => ({ ...prev, [module]: !newValue }));
-        toast.error(result.error || 'Error al actualizar el permiso en BD.');
+        toast.error(result.error || 'Error al actualizar el permiso en la base de datos.');
       }
     } catch (error) {
       setLocalPerms(prev => ({ ...prev, [module]: !newValue }));
-      toast.error('Error de red al intentar conectar con el servidor.');
+      toast.error('Error de red al intentar actualizar los permisos.');
     } finally {
       setSaving(null);
     }
@@ -80,13 +86,13 @@ export default function PermissionsPanel({ user, onClose, onSaved }: Permissions
     try {
       const result = await updateUserTestQuota(user.id, testQuota);
       if (result.success) {
-        toast.success(`Cuota actualizada a ${testQuota} tests.`);
+        toast.success(`Cuota actualizada exitosamente a ${testQuota} tests.`);
         onSaved();
       } else {
-        toast.error(result.error || 'Error al actualizar cuota.');
+        toast.error(result.error || 'No se pudo actualizar la cuota.');
       }
     } catch (error) {
-      toast.error('Error de red al actualizar la cuota.');
+      toast.error('Error de red al intentar actualizar la cuota.');
     } finally {
       setSaving(null);
     }
@@ -99,51 +105,55 @@ export default function PermissionsPanel({ user, onClose, onSaved }: Permissions
   const defaultForRole = DEFAULT_PERMISSIONS[user.role as UserRole] || {};
 
   return (
-    <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2">
+    <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
       <div className="flex items-center gap-3 mb-2">
-        <div className="p-2 bg-[#293b64] rounded-xl">
+        <div className="p-2 bg-[#293b64] rounded-xl shadow-sm">
           <Shield className="text-[#23bcef]" size={20} />
         </div>
         <div>
-          <h3 className="font-black text-[#293b64] uppercase tracking-tight">
-            Gestión de Accesos: {user.name}
+          <h3 className="font-black text-[#293b64] uppercase tracking-tight text-sm">
+            Accesos de {user.name}
           </h3>
-          <p className="text-xs text-slate-400 font-medium">
-            Rol: {user.role} · Permite accesos y asigna recursos
+          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+            Rol: {user.role} · {user.id}
           </p>
         </div>
       </div>
 
-      {/* Control de Cuotas */}
-      <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
+      {/* Sección de Gestión de Cuotas */}
+      <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
         <div className="flex items-center gap-2 text-[#293b64]">
-          <Activity size={18} />
-          <h4 className="font-bold text-sm uppercase">Cuota de Tests Clínicos</h4>
+          <Activity size={18} className="text-[#23bcef]" />
+          <h4 className="font-black text-xs uppercase tracking-tighter">Tests Disponibles</h4>
         </div>
-        <p className="text-xs text-slate-500">
-          Asigna la cantidad de tests de edad biológica/genómicos que este profesional puede realizar en la plataforma.
+        <p className="text-[11px] text-slate-500 font-medium leading-tight">
+          Asigna la cantidad de tests clínicos que el profesional puede ejecutar antes de requerir una recarga del administrador.
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pt-1">
           <Input
             type="number"
             min="0"
             value={testQuota}
             onChange={(e) => setTestQuota(parseInt(e.target.value) || 0)}
-            className="w-24 text-center font-bold"
+            className="w-24 text-center font-black text-[#293b64] border-slate-200"
           />
           <Button
             onClick={handleSaveQuota}
             disabled={saving === 'quota' || testQuota === (user.availableTests || 0)}
-            className="bg-[#23bcef] hover:bg-[#1da8d8] text-white text-xs h-9 transition-colors"
+            className="bg-[#293b64] hover:bg-[#1e2b4a] text-white text-[10px] font-black uppercase h-10 px-4 transition-all"
           >
-            {saving === 'quota' ? 'Guardando...' : 'Actualizar Saldo'}
+            {saving === 'quota' ? 'Procesando...' : 'Actualizar Saldo'}
           </Button>
         </div>
       </div>
 
-      {/* Control de Switches / Toggles */}
+      {/* Listado de Módulos con Switches */}
       <div className="space-y-2">
-        <h4 className="font-bold text-sm uppercase text-slate-400 mb-3">Módulos del Sistema</h4>
+        <div className="flex items-center justify-between mb-4 px-1">
+          <h4 className="font-black text-[10px] uppercase tracking-widest text-slate-400">Habilitar Módulos</h4>
+          <span className="text-[9px] font-bold text-slate-300 uppercase">Estado</span>
+        </div>
+
         {configurableModules.map(module => {
           const isEnabled = localPerms[module];
           const isDefault = defaultForRole[module];
@@ -153,42 +163,42 @@ export default function PermissionsPanel({ user, onClose, onSaved }: Permissions
           return (
             <div
               key={module}
-              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${isEnabled
-                ? 'border-emerald-200 bg-emerald-50/50'
-                : 'border-slate-100 bg-white'
+              className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-300 ${isEnabled
+                  ? 'border-[#23bcef]/30 bg-[#23bcef]/5 shadow-sm'
+                  : 'border-slate-100 bg-white'
                 }`}
             >
               <div className="flex items-center gap-3">
-                {isEnabled
-                  ? <ShieldCheck size={16} className="text-emerald-500 flex-shrink-0" />
-                  : <ShieldOff size={16} className="text-slate-300 flex-shrink-0" />
-                }
+                <div className={`p-1.5 rounded-lg ${isEnabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                  {isEnabled ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}
+                </div>
                 <div>
-                  <p className="text-sm font-bold text-slate-800">
-                    {MODULE_LABELS[module].label}
+                  <div className="flex items-center gap-2">
+                    <p className={`text-xs font-black uppercase tracking-tighter ${isEnabled ? 'text-[#293b64]' : 'text-slate-500'}`}>
+                      {MODULE_LABELS[module].label}
+                    </p>
                     {isModified && (
-                      <span className="ml-2 text-[10px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase">
-                        Modificado
+                      <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100 uppercase tracking-tighter">
+                        Manual
                       </span>
                     )}
-                  </p>
-                  <p className="text-[11px] text-slate-400">{MODULE_LABELS[module].description}</p>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium leading-none mt-1">{MODULE_LABELS[module].description}</p>
                 </div>
               </div>
 
-              {/* BOTÓN SWITCH OPTIMIZADO */}
+              {/* Interruptor (Toggle Switch) */}
               <button
                 type="button"
                 onClick={() => handleToggle(module, !isEnabled)}
                 disabled={isSavingThis}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#23bcef] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isEnabled ? 'bg-emerald-500' : 'bg-slate-300'
+                className={`group relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#23bcef] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isEnabled ? 'bg-emerald-500' : 'bg-slate-200'
                   }`}
                 aria-pressed={isEnabled}
               >
-                <span className="sr-only">Toggle {MODULE_LABELS[module].label}</span>
                 <span
                   aria-hidden="true"
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isEnabled ? 'translate-x-5' : 'translate-x-0'
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isEnabled ? 'translate-x-5' : 'translate-x-0'
                     }`}
                 />
               </button>
@@ -198,8 +208,12 @@ export default function PermissionsPanel({ user, onClose, onSaved }: Permissions
       </div>
 
       <div className="flex justify-end pt-4 border-t border-slate-100 mt-6">
-        <Button variant="outline" onClick={onClose} className="text-sm font-bold text-slate-600">
-          Cerrar Panel
+        <Button
+          variant="ghost"
+          onClick={onClose}
+          className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+        >
+          Cerrar Configuración
         </Button>
       </div>
     </div>
