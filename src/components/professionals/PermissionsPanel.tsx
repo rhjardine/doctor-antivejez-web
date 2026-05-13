@@ -3,15 +3,15 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Shield, ShieldCheck, ShieldOff, Activity } from 'lucide-react';
-import { updateUserModulePermission, updateUserTestQuota } from '@/lib/actions/permissions.actions';
-import { resolvePermissions, DEFAULT_PERMISSIONS, ADMIN_ONLY_MODULES, ModuleKey, UserRole } from '@/lib/permissions';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { updateUserModulePermission, updateUserTestQuota } from '../../lib/actions/permissions.actions';
+import { resolvePermissions, DEFAULT_PERMISSIONS, ADMIN_ONLY_MODULES, ModuleKey, UserRole } from '../../lib/permissions';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface PermissionsPanelProps {
   user: {
     id: string;
-    name: string;
+    name: string | null; // Alineado con Prisma (String?)
     role: string;
     permissions: Record<string, boolean> | null;
     availableTests?: number;
@@ -112,7 +112,7 @@ export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelPro
         </div>
         <div>
           <h3 className="font-black text-[#293b64] uppercase tracking-tight text-sm">
-            Accesos de {user.name}
+            Accesos de {user.name || 'Profesional'}
           </h3>
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
             Rol: {user.role} · {user.id}
