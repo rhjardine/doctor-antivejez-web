@@ -3,21 +3,21 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Shield, ShieldCheck, ShieldOff, Activity } from 'lucide-react';
-import { updateUserModulePermission, updateUserTestQuota } from '../../lib/actions/permissions.actions';
-import { resolvePermissions, DEFAULT_PERMISSIONS, ADMIN_ONLY_MODULES, ModuleKey, UserRole } from '../../lib/permissions';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import { updateUserModulePermission, updateUserTestQuota } from '@/lib/actions/permissions.actions';
+import { resolvePermissions, DEFAULT_PERMISSIONS, ADMIN_ONLY_MODULES, ModuleKey, UserRole } from '@/lib/permissions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface PermissionsPanelProps {
-  user: {
+  prof: {
     id: string;
-    name: string | null; // Alineado con Prisma (String?)
+    name: string | null;
     role: string;
-    permissions: Record<string, boolean> | null;
+    permissions?: Record<string, boolean> | null;
     availableTests?: number;
   };
-  onClose: () => void;
-  onSaved: () => void;
+  onClose?: () => void;
+  onSuccess: () => void;
 }
 
 const MODULE_LABELS: Record<ModuleKey, { label: string; description: string }> = {
@@ -38,19 +38,19 @@ const MODULE_LABELS: Record<ModuleKey, { label: string; description: string }> =
  * Panel de gestión de permisos y cuotas para profesionales.
  * Utiliza exportación nombrada para evitar errores de importación en Render.
  */
-export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelProps) {
+export function PermissionsPanel({ prof, onClose, onSuccess }: PermissionsPanelProps) {
   // Inicializamos el estado local basándonos en las propiedades recibidas
   const [localPerms, setLocalPerms] = useState<Record<ModuleKey, boolean>>(() =>
-    resolvePermissions(user.role as UserRole, user.permissions)
+    resolvePermissions(prof.role as UserRole, prof.permissions)
   );
-  const [testQuota, setTestQuota] = useState<number>(user.availableTests || 0);
+  const [testQuota, setTestQuota] = useState<number>(prof.availableTests || 0);
   const [saving, setSaving] = useState<ModuleKey | 'quota' | null>(null);
 
-  // Sincronizar el estado interno si el objeto 'user' cambia desde el padre
+  // Sincronizar el estado interno si el objeto 'prof' cambia desde el padre
   useEffect(() => {
-    setLocalPerms(resolvePermissions(user.role as UserRole, user.permissions));
-    setTestQuota(user.availableTests || 0);
-  }, [user]);
+    setLocalPerms(resolvePermissions(prof.role as UserRole, prof.permissions));
+    setTestQuota(prof.availableTests || 0);
+  }, [prof]);
 
   const handleToggle = async (module: ModuleKey, newValue: boolean) => {
     if (ADMIN_ONLY_MODULES.includes(module)) {
@@ -63,11 +63,11 @@ export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelPro
     setLocalPerms(prev => ({ ...prev, [module]: newValue }));
 
     try {
-      const result = await updateUserModulePermission(user.id, module, newValue);
+      const result = await updateUserModulePermission(prof.id, module, newValue);
 
       if (result.success) {
         toast.success(`Acceso a "${MODULE_LABELS[module].label}" ${newValue ? 'habilitado' : 'revocado'}.`);
-        onSaved(); // Notifica a la página para refrescar la lista de profesionales
+        onSuccess(); // Notifica a la página para refrescar la lista de profesionales
       } else {
         // Revertir en caso de fallo en el servidor
         setLocalPerms(prev => ({ ...prev, [module]: !newValue }));
@@ -84,10 +84,10 @@ export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelPro
   const handleSaveQuota = async () => {
     setSaving('quota');
     try {
-      const result = await updateUserTestQuota(user.id, testQuota);
+      const result = await updateUserTestQuota(prof.id, testQuota);
       if (result.success) {
         toast.success(`Cuota actualizada exitosamente a ${testQuota} tests.`);
-        onSaved();
+        onSuccess();
       } else {
         toast.error(result.error || 'No se pudo actualizar la cuota.');
       }
@@ -102,7 +102,7 @@ export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelPro
     m => !ADMIN_ONLY_MODULES.includes(m)
   );
 
-  const defaultForRole = DEFAULT_PERMISSIONS[user.role as UserRole] || {};
+  const defaultForRole = DEFAULT_PERMISSIONS[prof.role as UserRole] || {};
 
   return (
     <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -112,10 +112,10 @@ export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelPro
         </div>
         <div>
           <h3 className="font-black text-[#293b64] uppercase tracking-tight text-sm">
-            Accesos de {user.name || 'Profesional'}
+            Accesos de {prof.name || 'Profesional'}
           </h3>
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-            Rol: {user.role} · {user.id}
+            Rol: {prof.role} · {prof.id}
           </p>
         </div>
       </div>
@@ -139,7 +139,7 @@ export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelPro
           />
           <Button
             onClick={handleSaveQuota}
-            disabled={saving === 'quota' || testQuota === (user.availableTests || 0)}
+            disabled={saving === 'quota' || testQuota === (prof.availableTests || 0)}
             className="bg-[#293b64] hover:bg-[#1e2b4a] text-white text-[10px] font-black uppercase h-10 px-4 transition-all"
           >
             {saving === 'quota' ? 'Procesando...' : 'Actualizar Saldo'}
@@ -207,15 +207,17 @@ export function PermissionsPanel({ user, onClose, onSaved }: PermissionsPanelPro
         })}
       </div>
 
-      <div className="flex justify-end pt-4 border-t border-slate-100 mt-6">
-        <Button
-          variant="ghost"
-          onClick={onClose}
-          className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-        >
-          Cerrar Configuración
-        </Button>
-      </div>
+      {onClose && (
+        <div className="flex justify-end pt-4 border-t border-slate-100 mt-6">
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+          >
+            Cerrar Configuración
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
