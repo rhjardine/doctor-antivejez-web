@@ -1,6 +1,8 @@
 // src/lib/actions/dashboard.actions.ts
 'use server';
 
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 
@@ -29,14 +31,41 @@ function getDateRange(range: TimeRange) {
 // --- Lógica principal para obtener estadísticas del Dashboard ---
 export async function getDashboardStats(range: TimeRange = 'monthly') {
   try {
-    const dateRange = getDateRange(range);
-    const whereClause = dateRange.gte ? { createdAt: { gte: dateRange.gte, lte: dateRange.lte } } : {};
+    // ================================================================
+    // AISLAMIENTO DE DATOS (Data Scoping)
+    // Obtenemos la sesión aquí mismo para que la acción sea la única
+    // fuente de verdad — el cliente no puede inyectar un userId falso.
+    // ================================================================
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false, error: 'No autenticado' };
+    }
 
-    // 1. Estadísticas para las tarjetas
-    const totalPatients = await prisma.patient.count();
-    const newPatientsInRange = await prisma.patient.count({ where: whereClause });
+    const isAdmin = session.user.role === 'ADMIN';
+    const scopedUserId = session.user.id;
+
+    // Filtro base de pacientes según el rol
+    // ADMIN: {} → ve todos los registros
+    // OTROS: { userId: scopedUserId } → solo sus propios pacientes
+    const patientScopeFilter = isAdmin ? {} : { userId: scopedUserId };
+
+    // Filtro equivalente para tests biológicos (relacionados por doctorId)
+    const testScopeFilter = isAdmin ? {} : { doctorId: scopedUserId };
+
+    const dateRange = getDateRange(range);
+    const dateFilter = dateRange.gte ? { createdAt: { gte: dateRange.gte, lte: dateRange.lte } } : {};
+
+    // 1. Estadísticas para las tarjetas (con scoping)
+    const totalPatients = await prisma.patient.count({
+      where: { ...patientScopeFilter },
+    });
+
+    const newPatientsInRange = await prisma.patient.count({
+      where: { ...patientScopeFilter, ...dateFilter },
+    });
 
     const latestTests = await prisma.biophysicsTest.findMany({
+      where: { ...testScopeFilter },
       orderBy: { testDate: 'desc' },
       distinct: ['patientId'],
     });
@@ -47,7 +76,7 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
 
     const rejuvenatedCount = latestTests.filter(t => t.differentialAge < -2).length;
 
-    // 2. Datos para el gráfico de pastel (Estado de Pacientes - Siempre muestra el estado general)
+    // 2. Datos para el gráfico de pastel (Estado de Pacientes - con scoping)
     let rejuvenatedTotal = 0;
     let normalTotal = 0;
     let agedTotal = 0;
@@ -62,7 +91,7 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
       { name: 'Envejecidos', value: agedTotal },
     ];
 
-    // 3. Datos para el gráfico de líneas (Evolución de Pacientes en el último año)
+    // 3. Datos para el gráfico de líneas (Evolución de Pacientes en el último año, con scoping)
     const monthlyPatientData = [];
     const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     for (let i = 11; i >= 0; i--) {
@@ -74,21 +103,24 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
       const lastDay = new Date(year, month + 1, 0);
 
       const count = await prisma.patient.count({
-        where: { createdAt: { gte: firstDay, lte: lastDay } },
+        where: {
+          ...patientScopeFilter,
+          createdAt: { gte: firstDay, lte: lastDay },
+        },
       });
       monthlyPatientData.push({ month: `${monthNames[month]} ${year.toString().slice(-2)}`, pacientes: count });
     }
 
-    // 4. Actividad Reciente (últimos 7 días)
+    // 4. Actividad Reciente (últimos 7 días, con scoping)
     const sevenDaysAgo = subDays(new Date(), 7);
     const recentPatients = await prisma.patient.findMany({
-      where: { createdAt: { gte: sevenDaysAgo } },
+      where: { ...patientScopeFilter, createdAt: { gte: sevenDaysAgo } },
       take: 3,
       orderBy: { createdAt: 'desc' },
       select: { firstName: true, lastName: true, createdAt: true }
     });
     const recentTests = await prisma.biophysicsTest.findMany({
-      where: { testDate: { gte: sevenDaysAgo } },
+      where: { ...testScopeFilter, testDate: { gte: sevenDaysAgo } },
       take: 3,
       orderBy: { testDate: 'desc' },
       include: { patient: { select: { firstName: true, lastName: true } } }
@@ -99,10 +131,11 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
       ...recentTests.map(t => ({ type: 'new_test', text: `Test completado: ${t.patient.firstName} ${t.patient.lastName}`, date: t.testDate }))
     ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
 
-    // 5. **Funcionalidad Innovadora: Puntuación de Compromiso del Paciente**
+    // 5. Puntuación de Compromiso del Paciente (con scoping)
     let engagementScores: { name: string; score: number }[] = [];
     try {
       const activePatients = await prisma.patient.findMany({
+        where: { ...patientScopeFilter },
         include: {
           biophysicsTests: { where: { testDate: { gte: subDays(new Date(), 90) } } },
           appointments: { where: { status: 'COMPLETED', date: { gte: subDays(new Date(), 90) } } }
@@ -137,4 +170,4 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
     return { success: false, error: 'Error al obtener estadísticas' };
   }
 }
-//Cambios
+

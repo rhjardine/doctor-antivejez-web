@@ -253,7 +253,7 @@ export default function HistoriasPage() {
                       <td className="py-3 px-4 text-gray-700 font-medium">{String(patient.controlNumber).padStart(4, '0')}</td>
                       <td className="py-3 px-4 text-gray-700">{formatIdentification(patient.nationality, patient.identification)}</td>
                       <td className="py-3 px-4 text-gray-700">{patient.chronologicalAge}</td>
-                      <td className="py-3 px-4 text-gray-700">Dr. Admin</td>
+                      <td className="py-3 px-4 text-gray-700">{(patient as any).user?.name || session?.user?.name || '—'}</td>
                       <td className="py-3 px-4 text-gray-700">{formatDate(patient.createdAt)}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2">
