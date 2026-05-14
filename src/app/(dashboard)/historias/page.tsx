@@ -156,7 +156,7 @@ export default function HistoriasPage() {
       {/* Patients View */}
       {patients.length === 0 ? (
         <div className="card text-center py-12">
-          <p className="text-gray-500">No se encontraron pacientes para tu usuario</p>
+          <p className="text-gray-500">No se encontraron pacientes registrados por ti</p>
           <Link href="/historias/nuevo" className="btn-primary mt-4 inline-block">
             Registrar primer paciente
           </Link>

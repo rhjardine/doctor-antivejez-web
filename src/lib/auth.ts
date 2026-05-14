@@ -147,20 +147,25 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
       }
 
-      // Si no tenemos los permisos cacheados en el token, o si forzamos una actualización (update)
-      if (!token.permissions || trigger === "update") {
-        try {
-          const dbUser = await db.user.findUnique({
-            where: { id: token.id },
-            select: { permissions: true }
-          });
-          
-          if (dbUser) {
-            token.permissions = dbUser.permissions as Record<string, boolean> | null;
+      // Consulta agresiva en cada refresco (ejecución del callback jwt)
+      // para asegurar sincronización en tiempo real de los permisos y estado.
+      try {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.id },
+          select: { permissions: true, role: true, status: true }
+        });
+        
+        if (dbUser) {
+          // Si el usuario fue desactivado mientras tenía sesión activa
+          if (dbUser.status === 'INACTIVO') {
+            token.role = 'INACTIVO' as any;
+          } else {
+            token.role = dbUser.role;
           }
-        } catch (error) {
-          console.error("🔥 [Auth] Error fetching user permissions for JWT:", error);
+          token.permissions = dbUser.permissions as Record<string, boolean> | null;
         }
+      } catch (error) {
+        console.error("🔥 [Auth] Error fetching user permissions for JWT:", error);
       }
 
       return token;
