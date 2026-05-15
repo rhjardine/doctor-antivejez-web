@@ -62,6 +62,8 @@ export async function updateUserModulePermission(targetUserId: string, module: M
 
 /**
  * Actualiza la cuota de tests disponibles de un usuario.
+ * Fuente de verdad: CreditTransaction ledger (BIOFISICA).
+ * availableTests se mantiene como campo caché para lecturas rápidas en la UI.
  * Solo accesible por ADMIN.
  */
 export async function updateUserTestQuota(targetUserId: string, newQuota: number) {
@@ -86,23 +88,56 @@ export async function updateUserTestQuota(targetUserId: string, newQuota: number
       return { success: false, error: "Usuario no encontrado." };
     }
 
-    const oldValueInt = targetUser.availableTests;
+    // ================================================================
+    // FUENTE DE VERDAD: Calcular saldo real desde el ledger CreditTransaction
+    // Usamos BIOFISICA como tipo genérico para la cuota general del profesional
+    // ================================================================
+    const aggregation = await db.creditTransaction.aggregate({
+      where: { userId: targetUserId, testType: 'BIOFISICA' },
+      _sum: { amount: true },
+    });
+    const currentLedgerBalance = aggregation._sum.amount ?? 0;
 
-    await db.$transaction([
-      db.user.update({
-        where: { id: targetUserId },
-        data: { availableTests: newQuota }
-      }),
-      db.userPermissionLog.create({
-        data: {
-          userId: targetUserId,
-          changedBy: adminId,
-          module: "TEST_QUOTA",
-          oldValueInt: oldValueInt,
-          newValueInt: newQuota
-        }
-      })
-    ]);
+    const adjustment = newQuota - currentLedgerBalance;
+    const oldCacheValue = targetUser.availableTests;
+
+    // Solo insertamos una transacción en el ledger si hay diferencia real
+    if (adjustment !== 0) {
+      await db.$transaction([
+        // 1. Registrar el ajuste en el ledger (positivo o negativo)
+        db.creditTransaction.create({
+          data: {
+            userId: targetUserId,
+            testType: 'BIOFISICA',
+            amount: adjustment,
+            description: `Ajuste de cuota por Administrador (${session.user.name || adminId})`,
+          }
+        }),
+        // 2. Actualizar el caché availableTests para lecturas rápidas en la UI
+        db.user.update({
+          where: { id: targetUserId },
+          data: { availableTests: newQuota }
+        }),
+        // 3. Log de auditoría
+        db.userPermissionLog.create({
+          data: {
+            userId: targetUserId,
+            changedBy: adminId,
+            module: "TEST_QUOTA",
+            oldValueInt: oldCacheValue,
+            newValueInt: newQuota,
+          }
+        })
+      ]);
+    } else {
+      // Sin diferencia: solo actualizamos el caché si está desincronizado
+      if (oldCacheValue !== newQuota) {
+        await db.user.update({
+          where: { id: targetUserId },
+          data: { availableTests: newQuota }
+        });
+      }
+    }
 
     return { success: true };
   } catch (error) {
@@ -112,10 +147,12 @@ export async function updateUserTestQuota(targetUserId: string, newQuota: number
 }
 
 /**
- * Consume 1 test de la cuota del usuario.
- * Esta función puede ser llamada por la PWA o por las acciones de backend cuando un médico/coach hace un test.
+ * @deprecated Usar consumeTestCredit() de professionals.actions.ts
+ * Esta función legacy solo decrementa el campo caché (availableTests).
+ * Se mantiene por retrocompatibilidad pero NO debe usarse en nuevos flujos.
  */
 export async function consumeTest(userId: string) {
+  console.warn("[DEPRECATED] consumeTest() is deprecated. Use consumeTestCredit() from professionals.actions.ts instead.");
   try {
     const user = await db.user.findUnique({
       where: { id: userId },
@@ -145,3 +182,4 @@ export async function consumeTest(userId: string) {
     return { success: false, error: error.message || "Error al consumir el test." };
   }
 }
+

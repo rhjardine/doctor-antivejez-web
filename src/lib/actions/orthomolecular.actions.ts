@@ -7,7 +7,7 @@ import { OrthomolecularFormValues } from '@/types/orthomolecular';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { consumeTestCredit } from './professionals.actions';
+// consumeTestCredit NO se importa aquí — la transacción atómica se hace internamente
 
 interface SaveTestParams {
   patientId: string;
@@ -47,15 +47,8 @@ export async function calculateAndSaveOrthomolecularTest(params: SaveTestParams)
       return { success: false, error: "Error de integridad: Paciente o Médico no encontrados." };
     }
 
-    const doctor = patient.user;
-    const isNonAdmin = doctor.role !== 'ADMIN';
-
-    if (isNonAdmin) {
-      const creditResult = await consumeTestCredit(doctor.id, 'ORTOMOLECULAR', 'Test Ortomolecular consumido');
-      if (!creditResult.success) {
-        return { success: false, error: creditResult.error || 'Créditos insuficientes para Ortomolecular.' };
-      }
-    }
+    const doctorId = patient.user.id;
+    const isNonAdmin = patient.user.role !== 'ADMIN';
 
     const dbData = {
       patientId,
@@ -67,8 +60,29 @@ export async function calculateAndSaveOrthomolecularTest(params: SaveTestParams)
       ...results.partialAges,
     };
 
-    await prisma.orthomolecularTest.create({
-      data: dbData,
+    await prisma.$transaction(async (tx) => {
+      if (isNonAdmin) {
+        const aggregation = await tx.creditTransaction.aggregate({
+          where: { userId: doctorId, testType: 'ORTOMOLECULAR' },
+          _sum: { amount: true },
+        });
+        const currentBalance = aggregation._sum.amount ?? 0;
+
+        if (currentBalance <= 0) {
+          throw new Error(`Créditos insuficientes para Ortomolecular. Saldo: ${currentBalance}. Contacte al administrador.`);
+        }
+
+        await tx.creditTransaction.create({
+          data: {
+            userId: doctorId,
+            testType: 'ORTOMOLECULAR',
+            amount: -1,
+            description: `Test Ortomolecular consumido — Paciente ${patientId}`,
+          },
+        });
+      }
+
+      await tx.orthomolecularTest.create({ data: dbData });
     });
 
     revalidatePath(`/historias/${patientId}`);

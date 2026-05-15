@@ -17,6 +17,23 @@ export async function createPatient(formData: PatientFormData & { userId: string
     const validatedData = patientSchema.parse(formData);
     const chronologicalAge = calculateAge(validatedData.birthDate);
 
+    // ================================================================
+    // FASE 4 — PRE-CHECK: Verificar duplicado de identificación
+    // Previene el error P2002 y devuelve un mensaje claro al usuario.
+    // Fail Fast: detectar el conflicto antes de intentar el INSERT.
+    // ================================================================
+    const existingPatient = await prisma.patient.findUnique({
+      where: { identification: validatedData.identification },
+      select: { id: true },
+    });
+
+    if (existingPatient) {
+      return {
+        success: false,
+        error: `El paciente con identificación ${validatedData.identification} ya existe en el sistema. Si este es tu paciente, contacte al Administrador para reasignarlo.`,
+      };
+    }
+
     // ✅ SEGURIDAD: hashear la contraseña antes de persistir
     let passwordHash: string | undefined = undefined;
     if (pwaPassword && pwaPassword.trim() !== '') {

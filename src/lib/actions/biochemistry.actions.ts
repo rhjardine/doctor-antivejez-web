@@ -7,7 +7,7 @@ import { BiochemistryFormValues, BiochemistryCalculationResult, BIOCHEMISTRY_ITE
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { consumeTestCredit } from './professionals.actions';
+// consumeTestCredit NO se importa aquí — la transacción atómica se hace internamente
 
 interface SaveTestParams {
   patientId: string;
@@ -64,29 +64,42 @@ export async function calculateAndSaveBiochemistryTest(params: SaveTestParams) {
       ...mappedPartialAges,
     };
 
-    // 4. QUOTA GUARD CHECK (Ledger)
+    // 4. QUOTA GUARD + CREACIÓN ATÓMICA (Ledger + Test en un solo bloque)
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
-      include: { user: true }
+      include: { user: { select: { id: true, role: true } } }
     });
 
     if (!patient || !patient.user) {
-      throw new Error("Error de integridad: Paciente o Médico no encontrados.");
+      return { success: false, error: "Error de integridad: Paciente o Médico no encontrados." };
     }
 
-    const doctor = patient.user;
-    const isNonAdmin = doctor.role !== 'ADMIN';
+    const doctorId = patient.user.id;
+    const isNonAdmin = patient.user.role !== 'ADMIN';
 
-    if (isNonAdmin) {
-      const creditResult = await consumeTestCredit(doctor.id, 'BIOQUIMICA', 'Test Bioquímica consumido');
-      if (!creditResult.success) {
-        throw new Error(creditResult.error || 'Créditos insuficientes para Bioquímica.');
+    const newTest = await prisma.$transaction(async (tx) => {
+      if (isNonAdmin) {
+        const aggregation = await tx.creditTransaction.aggregate({
+          where: { userId: doctorId, testType: 'BIOQUIMICA' },
+          _sum: { amount: true },
+        });
+        const currentBalance = aggregation._sum.amount ?? 0;
+
+        if (currentBalance <= 0) {
+          throw new Error(`Créditos insuficientes para Bioquímica. Saldo: ${currentBalance}. Contacte al administrador.`);
+        }
+
+        await tx.creditTransaction.create({
+          data: {
+            userId: doctorId,
+            testType: 'BIOQUIMICA',
+            amount: -1,
+            description: `Test Bioquímico consumido — Paciente ${patientId}`,
+          },
+        });
       }
-    }
 
-    // 5. Crear el nuevo registro del test
-    const newTest = await prisma.biochemistryTest.create({
-      data: dbData,
+      return await tx.biochemistryTest.create({ data: dbData });
     });
 
     // 6. Revalidar la caché para que la UI se actualice

@@ -6,7 +6,7 @@ import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/t
 import { calculateBiofisicaResults } from '@/utils/biofisica-calculations';
 import { revalidatePath } from 'next/cache';
 import { Gender } from '@prisma/client';
-import { consumeTestCredit } from './professionals.actions';
+// consumeTestCredit NO se importa aquí — la transacción atómica se hace internamente
 
 // --- ENFOQUE UNIFICADO: CALCULAR Y GUARDAR EN UN SOLO PASO ---
 interface CalculateAndSaveParams {
@@ -30,87 +30,104 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user || !session.user.id) {
-      throw new Error("No autorizado. Debes iniciar sesión.");
+      return { success: false, error: "No autorizado. Debes iniciar sesión." };
     }
 
     const { patientId, chronologicalAge, gender, isAthlete, formValues } = params;
 
-    // ... (existing logic)
-
+    // 1. Calcular resultados ANTES de la transacción (CPU-only, sin IO)
     const calculationResult = calculateBiofisicaResults(
-      [], // El argumento 'boards' ya no es necesario con la nueva lógica de cálculo.
+      [],
       formValues,
       chronologicalAge,
       gender,
       isAthlete
     );
 
-    // ... (existing quota checks)
-
+    // 2. Verificar integridad del paciente/médico
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
-      include: { user: true }
+      include: { user: { select: { id: true, role: true } } }
     });
 
     if (!patient || !patient.user) {
-      throw new Error("Error de integridad: Paciente o Médico no encontrados.");
+      return { success: false, error: "Error de integridad: Paciente o Médico no encontrados." };
     }
 
-    const doctor = patient.user;
-    const isNonAdmin = doctor.role !== 'ADMIN';
+    const doctorId = patient.user.id;
+    const isNonAdmin = patient.user.role !== 'ADMIN';
 
-    // Ledger: Consumir crédito de BIOFISICA (solo para no-admin)
-    if (isNonAdmin) {
-      const creditResult = await consumeTestCredit(doctor.id, 'BIOFISICA', 'Test Biofísica consumido');
-      if (!creditResult.success) {
-        throw new Error(creditResult.error || 'Créditos insuficientes para Biofísica.');
+    // ================================================================
+    // 3. TRANSACCIÓN ATÓMICA: Verificar crédito + Crear test en un solo bloque.
+    //    Si el INSERT del test falla, el débito de crédito hace ROLLBACK automático.
+    // ================================================================
+    const newTest = await prisma.$transaction(async (tx) => {
+      // 3a. Verificar y consumir crédito (solo para no-admin)
+      if (isNonAdmin) {
+        const aggregation = await tx.creditTransaction.aggregate({
+          where: { userId: doctorId, testType: 'BIOFISICA' },
+          _sum: { amount: true },
+        });
+        const currentBalance = aggregation._sum.amount ?? 0;
+
+        if (currentBalance <= 0) {
+          throw new Error(`Créditos insuficientes para Biofísica. Saldo: ${currentBalance}. Contacte al administrador.`);
+        }
+
+        await tx.creditTransaction.create({
+          data: {
+            userId: doctorId,
+            testType: 'BIOFISICA',
+            amount: -1,
+            description: `Test Biofísico consumido — Paciente ${patientId}`,
+          },
+        });
       }
-    }
 
-    // 3. Guardar el nuevo test en la base de datos
-    const newTest = await prisma.biophysicsTest.create({
-      data: {
-        patientId,
-        chronologicalAge,
-        gender,
-        isAthlete,
-        testDate: new Date(),
-        recordedBy: session.user.id, // Audit Trail (legacy)
-        doctorId: session.user.id,   // Ledger: Médico que consumió el crédito
-        biologicalAge: calculationResult.biologicalAge,
-        differentialAge: calculationResult.differentialAge,
-        fatPercentage: formValues.fatPercentage,
-        bmi: formValues.bmi,
-        digitalReflexes: formValues.digitalReflexes
-          ? ((formValues.digitalReflexes.high || 0) +
-            (formValues.digitalReflexes.long || 0) +
-            (formValues.digitalReflexes.width || 0)) / 3
-          : undefined,
-        visualAccommodation: formValues.visualAccommodation,
-        staticBalance: formValues.staticBalance
-          ? ((formValues.staticBalance.high || 0) +
-            (formValues.staticBalance.long || 0) +
-            (formValues.staticBalance.width || 0)) / 3
-          : undefined,
-        skinHydration: formValues.skinHydration,
-        systolicPressure: formValues.systolicPressure,
-        diastolicPressure: formValues.diastolicPressure,
-        fatAge: calculationResult.partialAges.fatAge,
-        bmiAge: calculationResult.partialAges.bmiAge,
-        reflexesAge: calculationResult.partialAges.reflexesAge,
-        visualAge: calculationResult.partialAges.visualAge,
-        balanceAge: calculationResult.partialAges.balanceAge,
-        hydrationAge: calculationResult.partialAges.hydrationAge,
-        systolicAge: calculationResult.partialAges.systolicAge,
-        diastolicAge: calculationResult.partialAges.diastolicAge,
-      },
+      // 3b. Crear el test (dentro del mismo bloque atómico)
+      return await tx.biophysicsTest.create({
+        data: {
+          patientId,
+          chronologicalAge,
+          gender,
+          isAthlete,
+          testDate: new Date(),
+          recordedBy: session.user.id,
+          doctorId: session.user.id,
+          biologicalAge: calculationResult.biologicalAge,
+          differentialAge: calculationResult.differentialAge,
+          fatPercentage: formValues.fatPercentage,
+          bmi: formValues.bmi,
+          digitalReflexes: formValues.digitalReflexes
+            ? ((formValues.digitalReflexes.high || 0) +
+              (formValues.digitalReflexes.long || 0) +
+              (formValues.digitalReflexes.width || 0)) / 3
+            : undefined,
+          visualAccommodation: formValues.visualAccommodation,
+          staticBalance: formValues.staticBalance
+            ? ((formValues.staticBalance.high || 0) +
+              (formValues.staticBalance.long || 0) +
+              (formValues.staticBalance.width || 0)) / 3
+            : undefined,
+          skinHydration: formValues.skinHydration,
+          systolicPressure: formValues.systolicPressure,
+          diastolicPressure: formValues.diastolicPressure,
+          fatAge: calculationResult.partialAges.fatAge,
+          bmiAge: calculationResult.partialAges.bmiAge,
+          reflexesAge: calculationResult.partialAges.reflexesAge,
+          visualAge: calculationResult.partialAges.visualAge,
+          balanceAge: calculationResult.partialAges.balanceAge,
+          hydrationAge: calculationResult.partialAges.hydrationAge,
+          systolicAge: calculationResult.partialAges.systolicAge,
+          diastolicAge: calculationResult.partialAges.diastolicAge,
+        },
+      });
     });
 
-    // 4. Revalidar rutas
+    // 4. Revalidar rutas DESPUÉS de confirmar la transacción
     revalidatePath('/dashboard');
     revalidatePath(`/historias/${patientId}`);
 
-    // 5. Devolver los datos serializados para que el cliente los muestre
     const serializableData = {
       ...newTest,
       testDate: newTest.testDate.toISOString(),
