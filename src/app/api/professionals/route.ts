@@ -36,13 +36,19 @@ export async function GET() {
     if (authError) return authError;
 
     try {
-        // 1. Un solo round-trip: todos los usuarios (sin usar omit para evitar errores TS)
-        const usersData = await prisma.user.findMany({
+        // 1. Un solo round-trip: todos los usuarios (usando select explícito para asegurar tipos)
+        const professionals = await prisma.user.findMany({
             orderBy: { name: 'asc' },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                // NO incluimos passwordHash aquí
+                permissions: true,
+                availableTests: true
+            }
         });
-
-        // Excluir de forma segura el passwordHash usando desestructuración de JS
-        const professionals = usersData.map(({ passwordHash, ...rest }) => rest);
 
         // 2. Extraer IDs para el filtro del groupBy global
         const userIds = professionals.map(p => p.id);
@@ -109,7 +115,7 @@ export async function POST(req: Request) {
 
         const hashedPassword = await bcrypt.hash(password || '123456', 10);
 
-        const newUserRaw = await prisma.user.create({
+        const newUser = await prisma.user.create({
             data: {
                 name,
                 email: email.toLowerCase().trim(),
@@ -117,10 +123,15 @@ export async function POST(req: Request) {
                 role: role || 'MEDICO',
                 // Se eliminó la inyección de 'status' para evitar Type Error en Prisma
             },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                permissions: true,
+                availableTests: true
+            }
         });
-
-        // Excluir de forma segura el passwordHash usando desestructuración de JS
-        const { passwordHash: _, ...newUser } = newUserRaw;
 
         return NextResponse.json(newUser, { status: 201 });
     } catch (error) {
@@ -152,14 +163,18 @@ export async function PUT(req: Request) {
 
         const { id, name, email, role } = parsed.data;
 
-        const updatedUserRaw = await prisma.user.update({
+        const updatedUser = await prisma.user.update({
             where: { id },
             data: { name, email, role },
-            // Se eliminó la inyección de 'status' para evitar Type Error en Prisma
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                permissions: true,
+                availableTests: true
+            }
         });
-
-        // Excluir de forma segura el passwordHash usando desestructuración de JS
-        const { passwordHash: _, ...updatedUser } = updatedUserRaw;
 
         return NextResponse.json(updatedUser);
     } catch (error) {
