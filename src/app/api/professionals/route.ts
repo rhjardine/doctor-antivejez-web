@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { z } from 'zod';
 
 // ─── Auth helper ─────────────────────────────────────────────────────────────
 
@@ -14,35 +15,57 @@ async function requireAdmin() {
     return null; // null = autorizado
 }
 
-// ─── GET — Listar profesionales ───────────────────────────────────────────────
+// ─── Zod Schemas (Allowlist — mitiga escalación de privilegios) ───────────────
+
+const ProfessionalSchema = z.object({
+    name: z.string().min(2, "Nombre requerido"),
+    email: z.string().email("Email inválido"),
+    password: z.string().optional(),
+    role: z.enum(['ADMIN', 'MEDICO', 'COACH', 'ADMINISTRATIVO']),
+    status: z.enum(['ACTIVO', 'INACTIVO']).optional(),
+});
+
+const UpdateProfessionalSchema = ProfessionalSchema.extend({
+    id: z.string().min(1, "ID requerido"),
+}).partial({ password: true });
+
+// ─── GET — Listar profesionales (N+1 eliminado) ───────────────────────────────
 
 export async function GET() {
-    // ✅ FIX: Protegido. Antes: cualquier request podía listar todos los médicos.
     const authError = await requireAdmin();
     if (authError) return authError;
 
     try {
+        // 1. Un solo round-trip: todos los usuarios (sin campos sensibles)
         const professionals = await prisma.user.findMany({
             orderBy: { name: 'asc' },
-            select: { id: true, name: true, email: true, role: true, status: true },
+            omit: { password: true, passwordHash: true },
         });
 
-        const professionalsWithBalances = await Promise.all(
-            professionals.map(async (prof) => {
-                const aggregations = await prisma.creditTransaction.groupBy({
-                    by: ['testType'],
-                    where: { userId: prof.id },
-                    _sum: { amount: true },
-                });
+        // 2. Extraer IDs para el filtro del groupBy global
+        const userIds = professionals.map(p => p.id);
 
-                const balances = { BIOFISICA: 0, BIOQUIMICA: 0, ORTOMOLECULAR: 0, GENETICA: 0 };
-                for (const agg of aggregations) {
-                    balances[agg.testType] = agg._sum.amount ?? 0;
-                }
+        // 3. Un único groupBy para TODOS los usuarios — elimina el N+1
+        const allBalances = await prisma.creditTransaction.groupBy({
+            by: ['userId', 'testType'],
+            where: { userId: { in: userIds } },
+            _sum: { amount: true },
+        });
 
-                return { ...prof, balances };
-            })
-        );
+        // 4. Reducción en memoria: O(M) donde M = filas del groupBy, no O(N×queries)
+        const emptyBalances = () => ({ BIOFISICA: 0, BIOQUIMICA: 0, ORTOMOLECULAR: 0, GENETICA: 0 });
+
+        const balancesByUserId = allBalances.reduce((acc, curr) => {
+            if (!acc[curr.userId]) acc[curr.userId] = emptyBalances();
+            acc[curr.userId][curr.testType] = curr._sum.amount ?? 0;
+            return acc;
+        }, {} as Record<string, ReturnType<typeof emptyBalances>>);
+
+        // 5. Ensamblar respuesta final
+        const professionalsWithBalances = professionals.map(prof => ({
+            ...prof,
+            balances: balancesByUserId[prof.id] ?? emptyBalances(),
+        }));
 
         return NextResponse.json(professionalsWithBalances);
     } catch (error) {
@@ -54,13 +77,22 @@ export async function GET() {
 // ─── POST — Crear profesional ─────────────────────────────────────────────────
 
 export async function POST(req: Request) {
-    // ✅ POST también requiere ADMIN
     const authError = await requireAdmin();
     if (authError) return authError;
 
     try {
         const body = await req.json();
-        const { name, email, password, role, status } = body;
+
+        // Validación Zod (allowlist — rechaza campos no declarados)
+        const parsed = ProfessionalSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+
+        const { name, email, password, role, status } = parsed.data;
 
         const existing = await prisma.user.findUnique({
             where: { email: email.toLowerCase().trim() },
@@ -83,9 +115,10 @@ export async function POST(req: Request) {
                 role: role || 'MEDICO',
                 status: status || 'ACTIVO',
             },
+            omit: { password: true, passwordHash: true },
         });
 
-        return NextResponse.json(newUser);
+        return NextResponse.json(newUser, { status: 201 });
     } catch (error) {
         console.error('Error creating professional:', error);
         return NextResponse.json(
@@ -98,21 +131,27 @@ export async function POST(req: Request) {
 // ─── PUT — Actualizar profesional ─────────────────────────────────────────────
 
 export async function PUT(req: Request) {
-    // ✅ FIX: Protegido. Antes: cualquier request podía editar roles y datos.
     const authError = await requireAdmin();
     if (authError) return authError;
 
     try {
         const body = await req.json();
-        const { id, name, email, role, status } = body;
 
-        if (!id) {
-            return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
+        // Validación Zod con id obligatorio
+        const parsed = UpdateProfessionalSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
         }
+
+        const { id, name, email, role, status } = parsed.data;
 
         const updatedUser = await prisma.user.update({
             where: { id },
             data: { name, email, role, status },
+            omit: { password: true, passwordHash: true },
         });
 
         return NextResponse.json(updatedUser);
@@ -125,7 +164,6 @@ export async function PUT(req: Request) {
 // ─── DELETE — Eliminar profesional ────────────────────────────────────────────
 
 export async function DELETE(req: Request) {
-    // ✅ FIX: Protegido. Antes: cualquier request podía eliminar usuarios.
     const authError = await requireAdmin();
     if (authError) return authError;
 

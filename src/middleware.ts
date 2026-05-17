@@ -11,8 +11,11 @@ export default withAuth(
 
     const permissions = resolvePermissions(token.role, token.permissions);
 
-    // Map paths to ModuleKeys
+    // Map paths to ModuleKeys.
+    // ORDEN CRÍTICO: rutas más específicas primero para que startsWith
+    // no haga match prematuro con un prefijo más corto.
     const routeConfig: { prefix: string; module: ModuleKey }[] = [
+      { prefix: "/dashboard/campaigns", module: "campanas" },   // ← más específico antes de /dashboard
       { prefix: "/historias", module: "historias" },
       { prefix: "/profesionales", module: "profesionales" },
       { prefix: "/agente-ia", module: "agente_ia" },
@@ -43,6 +46,7 @@ export default withAuth(
 
 export const config = {
   matcher: [
+    "/dashboard/campaigns/:path*",  // ← más específico primero en el matcher
     "/dashboard/:path*",
     "/historias/:path*",
     "/profesionales/:path*",
