@@ -39,7 +39,7 @@ export async function GET() {
         // 1. Un solo round-trip: todos los usuarios (sin campos sensibles)
         const professionals = await prisma.user.findMany({
             orderBy: { name: 'asc' },
-            omit: { password: true, passwordHash: true },
+            omit: { passwordHash: true },
         });
 
         // 2. Extraer IDs para el filtro del groupBy global
