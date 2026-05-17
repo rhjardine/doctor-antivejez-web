@@ -37,21 +37,21 @@ export async function GET() {
 
     try {
         // 1. Un solo round-trip: todos los usuarios (usando select explícito para asegurar tipos)
-        const professionals = await prisma.user.findMany({
+        const professionalsRaw = await prisma.user.findMany({
             orderBy: { name: 'asc' },
             select: {
                 id: true,
                 name: true,
                 email: true,
                 role: true,
-                // NO incluimos passwordHash aquí
+                // NO incluimos password aquí
                 permissions: true,
                 availableTests: true
             }
         });
 
         // 2. Extraer IDs para el filtro del groupBy global
-        const userIds = professionals.map(p => p.id);
+        const userIds = professionalsRaw.map(p => p.id);
 
         // 3. Un único groupBy para TODOS los usuarios — elimina el N+1
         const allBalances = await prisma.creditTransaction.groupBy({
@@ -70,7 +70,7 @@ export async function GET() {
         }, {} as Record<string, ReturnType<typeof emptyBalances>>);
 
         // 5. Ensamblar respuesta final
-        const professionalsWithBalances = professionals.map(prof => ({
+        const professionalsWithBalances = professionalsRaw.map(prof => ({
             ...prof,
             balances: balancesByUserId[prof.id] ?? emptyBalances(),
         }));
@@ -119,9 +119,8 @@ export async function POST(req: Request) {
             data: {
                 name,
                 email: email.toLowerCase().trim(),
-                passwordHash: hashedPassword,
+                password: hashedPassword, // <-- Corregido: Prisma espera 'password'
                 role: role || 'MEDICO',
-                // Se eliminó la inyección de 'status' para evitar Type Error en Prisma
             },
             select: {
                 id: true,
