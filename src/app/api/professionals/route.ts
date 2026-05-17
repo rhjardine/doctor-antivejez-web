@@ -22,7 +22,7 @@ const ProfessionalSchema = z.object({
     email: z.string().email("Email inválido"),
     password: z.string().optional(),
     role: z.enum(['ADMIN', 'MEDICO', 'COACH', 'ADMINISTRATIVO']),
-    status: z.enum(['ACTIVO', 'INACTIVO']).optional(),
+    // Se elimina el campo 'status' porque no existe en prisma/schema.prisma
 });
 
 const UpdateProfessionalSchema = ProfessionalSchema.extend({
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { name, email, password, role, status } = parsed.data;
+        const { name, email, password, role } = parsed.data;
 
         const existing = await prisma.user.findUnique({
             where: { email: email.toLowerCase().trim() },
@@ -113,11 +113,10 @@ export async function POST(req: Request) {
             data: {
                 name,
                 email: email.toLowerCase().trim(),
-                passwordHash: hashedPassword, // Corregido el nombre del campo según tu schema
+                passwordHash: hashedPassword,
                 role: role || 'MEDICO',
-                status: status || 'ACTIVO',
+                // Se eliminó la inyección de 'status' para evitar Type Error en Prisma
             },
-            // Se eliminó el "omit" problemático
         });
 
         // Excluir de forma segura el passwordHash usando desestructuración de JS
@@ -151,12 +150,12 @@ export async function PUT(req: Request) {
             );
         }
 
-        const { id, name, email, role, status } = parsed.data;
+        const { id, name, email, role } = parsed.data;
 
         const updatedUserRaw = await prisma.user.update({
             where: { id },
-            data: { name, email, role, status },
-            // Se eliminó el "omit" problemático
+            data: { name, email, role },
+            // Se eliminó la inyección de 'status' para evitar Type Error en Prisma
         });
 
         // Excluir de forma segura el passwordHash usando desestructuración de JS
