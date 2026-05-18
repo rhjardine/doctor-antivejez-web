@@ -285,19 +285,25 @@ export default function ProfesionalesPage() {
                 </select>
               </div>
             </div>
-            {!selectedProf && (
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase text-[#293b64]">Contraseña</label>
-                <Input
-                  type="password"
-                  autoComplete="current-password"
-                  value={formData.password as string || ''}
-                  onChange={e => setFormData({ ...formData, password: e.target.value })}
-                  className="border-[#293b64]"
-                  placeholder="Opcional (default: 123456)"
-                />
-              </div>
-            )}
+            {/* Campo de contraseña — obligatorio en creación, opcional en edición */}
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase text-[#293b64]">
+                {selectedProf ? 'Nueva Contraseña (Opcional)' : 'Contraseña Inicial'}
+              </label>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={formData.password as string || ''}
+                onChange={e => setFormData({ ...formData, password: e.target.value })}
+                className="border-slate-200 focus:ring-[#23bcef] text-[#293b64]"
+                placeholder={selectedProf ? '•••••• (sin cambios si está vacío)' : 'Opcional (default: 123456)'}
+              />
+              {selectedProf && (
+                <p className="text-[10px] text-slate-500 ml-1">
+                  Déjalo en blanco si no deseas cambiar la contraseña actual.
+                </p>
+              )}
+            </div>
             <DialogFooter className="mt-6">
               <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancelar</Button>
               <Button type="submit" className="bg-[#293b64] text-white font-bold">Guardar</Button>

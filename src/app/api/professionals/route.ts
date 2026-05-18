@@ -172,17 +172,19 @@ export async function PUT(req: Request) {
             );
         }
 
-        const { id, name, email, role, status } = parsed.data;
+        const { id, name, email, role, status, password } = parsed.data;
+
+        // Construir objeto de actualización dinámico.
+        // Si password no viene o está vacío, NO se incluye → la contraseña en BD se preserva.
+        const updateData: Record<string, any> = { name, email, role: role as any, status };
+
+        if (password && password.trim().length >= 6) {
+            updateData.password = await bcrypt.hash(password.trim(), 10);
+        }
 
         const updatedUser = await prisma.user.update({
             where: { id },
-            // Prisma ignorará automáticamente los campos que vengan como "undefined"
-            data: {
-                name,
-                email,
-                role: role as any,
-                status
-            },
+            data: updateData,
             select: {
                 id: true,
                 name: true,
