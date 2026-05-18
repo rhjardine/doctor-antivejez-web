@@ -9,7 +9,17 @@ export default withAuth(
 
     if (!token) return NextResponse.next();
 
+    // --- TRAMPA DE SEGURIDAD (Forced Password Change) ---
+    const overrides = token.permissions as Record<string, boolean> | null;
+    const mustChangePassword = overrides?.forcePasswordChange === true;
+
+    if (mustChangePassword && !path.startsWith('/ajustes')) {
+        return NextResponse.redirect(new URL('/ajustes', req.url));
+    }
+    // ----------------------------------------------------
+
     const permissions = resolvePermissions(token.role, token.permissions);
+
 
     // Map paths to ModuleKeys.
     // ORDEN CRÍTICO: rutas más específicas primero para que startsWith

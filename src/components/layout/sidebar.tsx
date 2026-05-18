@@ -50,6 +50,8 @@ export function Sidebar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { can, session } = usePermissions();
 
+  const mustChangePassword = (session?.user as any)?.permissions?.forcePasswordChange === true;
+
   const handleLogout = async () => {
     await signOut({ redirect: true, callbackUrl: '/login' });
   };
@@ -84,6 +86,22 @@ export function Sidebar() {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
             const hasAccess = can(item.module);
+
+            // Bloqueo estricto visual si requiere cambio de contraseña
+            const isLocked = mustChangePassword && item.href !== '/ajustes';
+
+            if (isLocked) {
+              return (
+                <li key={item.name} title="ACCIÓN REQUERIDA: Debe cambiar su contraseña primero">
+                  <div className="flex items-center space-x-3 px-4 py-3 rounded-lg opacity-40 cursor-not-allowed filter grayscale">
+                    <Icon className={item.color} />
+                    <span className="font-medium text-gray-300">
+                      {item.name}
+                    </span>
+                  </div>
+                </li>
+              );
+            }
 
             return (
               <li key={item.name} title={!hasAccess ? "Esta opción no está disponible. Contacte a un Administrador" : ""}>

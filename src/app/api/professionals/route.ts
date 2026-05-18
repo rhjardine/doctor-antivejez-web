@@ -132,6 +132,7 @@ export async function POST(req: Request) {
                 password: hashedPassword,
                 role: role as any,
                 status: status || 'ACTIVO',
+                permissions: { forcePasswordChange: true },
             },
             select: {
                 id: true,

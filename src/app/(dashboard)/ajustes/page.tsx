@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheck, User, Lock, Save, Eye, EyeOff, Users, ArrowRight, Cpu, HeartPulse } from 'lucide-react';
+import { ShieldCheck, User, Lock, Save, Eye, EyeOff, Users, ArrowRight, Cpu, HeartPulse, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateAdminPassword } from '@/lib/actions/auth.actions';
+import { updateMyPassword } from '@/lib/actions/auth.actions';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 
@@ -12,6 +12,8 @@ export default function AjustesPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+
+  const mustChangePassword = (session?.user as any)?.permissions?.forcePasswordChange === true;
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 8;
@@ -37,10 +39,10 @@ export default function AjustesPage() {
     setIsLoading(true);
 
     try {
-      const result = await updateAdminPassword(newPassword);
+      const result = await updateMyPassword(newPassword);
 
       if (result.success) {
-        toast.success("Seguridad actualizada. Ya puede solicitar al equipo técnico retirar el bypass.");
+        toast.success("Seguridad actualizada. Ya puede continuar su trabajo en el sistema.");
         setNewPassword('');
       } else {
         toast.error(result.error || "Error al actualizar la contraseña.");
@@ -70,6 +72,15 @@ export default function AjustesPage() {
               <Lock size={20} className="text-[#23bcef]" />
               <h2 className="text-sm font-black uppercase tracking-widest">Seguridad de la Cuenta</h2>
             </div>
+
+            {mustChangePassword && (
+              <div className="mx-8 mt-8 bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3">
+                <ShieldAlert className="text-rose-500 shrink-0 mt-0.5" size={24} />
+                <p className="text-rose-700 text-sm font-medium">
+                  <strong>ACCIÓN REQUERIDA:</strong> Por políticas de seguridad, debe cambiar la contraseña temporal asignada por el administrador antes de poder acceder al sistema.
+                </p>
+              </div>
+            )}
 
             <form onSubmit={handlePasswordUpdate} className="p-8 space-y-6">
               <div className="grid grid-cols-1 gap-6">

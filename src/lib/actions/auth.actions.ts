@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 const signUpSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -106,28 +108,40 @@ export async function getUserById(id: string) {
   }
 }
 
-export async function updateAdminPassword(newPassword: string) {
+export async function updateMyPassword(newPassword: string) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false, error: "No autenticado" };
+    }
+
     // 1. Hash de la nueva contraseña
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // 2. Actualizar el usuario con email admin@doctorantivejez.com
+    // 2. Extraer permisos actuales y retirar el flag
+    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+    const currentPerms = (user?.permissions as Record<string, boolean>) || {};
+
+    // 3. Actualizar el usuario actual
     const updatedUser = await prisma.user.update({
-      where: { email: 'admin@doctorantivejez.com' },
-      data: { password: hashedPassword },
+      where: { id: session.user.id },
+      data: { 
+        password: hashedPassword,
+        permissions: { ...currentPerms, forcePasswordChange: false }
+      },
     });
 
-    console.log("✅ [updateAdminPassword] Contraseña actualizada para admin-master-account");
+    console.log(`✅ [updateMyPassword] Contraseña actualizada para user=${session.user.id}`);
 
     return {
       success: true,
-      message: "Credenciales de administrador actualizadas exitosamente."
+      message: "Credenciales actualizadas exitosamente."
     };
   } catch (error) {
-    console.error("❌ [updateAdminPassword] Error al actualizar:", error);
+    console.error("❌ [updateMyPassword] Error al actualizar:", error);
     return {
       success: false,
-      error: "Error interno al actualizar las credenciales del sistema."
+      error: "Error interno al actualizar las credenciales."
     };
   }
 }
