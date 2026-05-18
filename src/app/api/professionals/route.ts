@@ -15,14 +15,21 @@ async function requireAdmin() {
     return null; // null = autorizado
 }
 
-// ─── Zod Schemas (Allowlist — mitiga escalación de privilegios) ───────────────
+// ─── Zod Schemas (Tolerantes a Mayúsculas/Minúsculas) ─────────────────────────
 
 const ProfessionalSchema = z.object({
     name: z.string().min(2, "Nombre requerido"),
     email: z.string().email("Email inválido"),
     password: z.string().optional(),
-    role: z.enum(['ADMIN', 'MEDICO', 'COACH', 'ADMINISTRATIVO']),
-    // Se elimina el campo 'status' porque no existe en prisma/schema.prisma
+    // z.preprocess transforma el valor entrante a MAYÚSCULAS antes de validar
+    role: z.preprocess(
+        (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+        z.enum(['ADMIN', 'MEDICO', 'COACH', 'ADMINISTRATIVO'])
+    ),
+    status: z.preprocess(
+        (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+        z.string().optional()
+    ),
 });
 
 const UpdateProfessionalSchema = ProfessionalSchema.extend({
@@ -44,7 +51,8 @@ export async function GET() {
                 name: true,
                 email: true,
                 role: true,
-                // NO incluimos password aquí
+                status: true,
+                // NO incluimos password aquí para evitar fugas
                 permissions: true,
                 availableTests: true
             }
@@ -69,9 +77,11 @@ export async function GET() {
             return acc;
         }, {} as Record<string, ReturnType<typeof emptyBalances>>);
 
-        // 5. Ensamblar respuesta final
+        // 5. Ensamblar respuesta final normalizando el estado
         const professionalsWithBalances = professionalsRaw.map(prof => ({
             ...prof,
+            // Garantizamos que nunca devuelva null y siempre esté en mayúscula para la UI
+            status: prof.status ? prof.status.toUpperCase() : 'ACTIVO',
             balances: balancesByUserId[prof.id] ?? emptyBalances(),
         }));
 
@@ -91,7 +101,7 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        // Validación Zod (allowlist — rechaza campos no declarados)
+        // Validación Zod
         const parsed = ProfessionalSchema.safeParse(body);
         if (!parsed.success) {
             return NextResponse.json(
@@ -100,7 +110,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { name, email, password, role } = parsed.data;
+        const { name, email, password, role, status } = parsed.data;
 
         const existing = await prisma.user.findUnique({
             where: { email: email.toLowerCase().trim() },
@@ -119,14 +129,16 @@ export async function POST(req: Request) {
             data: {
                 name,
                 email: email.toLowerCase().trim(),
-                password: hashedPassword, // <-- Corregido: Prisma espera 'password'
-                role: role || 'MEDICO',
+                password: hashedPassword,
+                role: role as any,
+                status: status || 'ACTIVO',
             },
             select: {
                 id: true,
                 name: true,
                 email: true,
                 role: true,
+                status: true,
                 permissions: true,
                 availableTests: true
             }
@@ -151,7 +163,7 @@ export async function PUT(req: Request) {
     try {
         const body = await req.json();
 
-        // Validación Zod con id obligatorio
+        // Validación Zod
         const parsed = UpdateProfessionalSchema.safeParse(body);
         if (!parsed.success) {
             return NextResponse.json(
@@ -160,16 +172,23 @@ export async function PUT(req: Request) {
             );
         }
 
-        const { id, name, email, role } = parsed.data;
+        const { id, name, email, role, status } = parsed.data;
 
         const updatedUser = await prisma.user.update({
             where: { id },
-            data: { name, email, role },
+            // Prisma ignorará automáticamente los campos que vengan como "undefined"
+            data: {
+                name,
+                email,
+                role: role as any,
+                status
+            },
             select: {
                 id: true,
                 name: true,
                 email: true,
                 role: true,
+                status: true,
                 permissions: true,
                 availableTests: true
             }
