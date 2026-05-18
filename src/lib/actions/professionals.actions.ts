@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { TestType } from '@prisma/client';
+import { TestType, Prisma } from '@prisma/client';
 
 // =============================================================================
 // TYPES
@@ -94,7 +94,7 @@ export async function consumeTestCredit(
     description: string
 ): Promise<{ success: boolean; error?: string }> {
     return await db.$transaction(async (tx) => {
-        // 1. Calcular saldo actual DENTRO de la transacción
+        // 1. Calcular saldo actual DENTRO de la transacción (lectura bloqueante)
         const aggregation = await tx.creditTransaction.aggregate({
             where: { userId: doctorId, testType },
             _sum: { amount: true },
@@ -110,15 +110,16 @@ export async function consumeTestCredit(
 
         // 2. Insertar registro de consumo (-1)
         await tx.creditTransaction.create({
-            data: {
-                userId: doctorId,
-                testType,
-                amount: -1,
-                description,
-            },
+            data: { userId: doctorId, testType, amount: -1, description },
         });
 
         return { success: true };
+    }, {
+        // SERIALIZABLE: máximo nivel de aislamiento.
+        // Previene Race Conditions: si dos transacciones concurrentes leen
+        // el mismo saldo, la segunda fallará con un error de serialización
+        // y Prisma hará retry automático en lugar de permitir un débito doble.
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     }).catch((error) => {
         console.error('Error consuming test credit:', error);
         return {

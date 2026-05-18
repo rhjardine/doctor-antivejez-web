@@ -80,6 +80,17 @@ export async function createPatient(formData: PatientFormData & { userId: string
 
 export async function updatePatient(id: string, formData: Partial<PatientFormData>) {
   try {
+    // ── IDOR GUARD ──────────────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
+    const owned = await prisma.patient.findUnique({ where: { id }, select: { userId: true } });
+    if (!owned) return { success: false, error: 'Paciente no encontrado' };
+    if (session.user.role !== 'ADMIN' && owned.userId !== session.user.id) {
+      console.error(`[IDOR] updatePatient: user=${session.user.id} intentó modificar paciente de user=${owned.userId}`);
+      return { success: false, error: 'Acceso denegado' };
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
     // Extraer pwaPassword del formData antes de pasar a Prisma
     const { pwaPassword, ...restFormData } = formData;
     let updateData: any = { ...restFormData };
@@ -113,6 +124,17 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
 
 export async function deletePatient(id: string) {
   try {
+    // ── IDOR GUARD ──────────────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
+    const owned = await prisma.patient.findUnique({ where: { id }, select: { userId: true } });
+    if (!owned) return { success: false, error: 'Paciente no encontrado' };
+    if (session.user.role !== 'ADMIN' && owned.userId !== session.user.id) {
+      console.error(`[IDOR] deletePatient: user=${session.user.id} intentó eliminar paciente de user=${owned.userId}`);
+      return { success: false, error: 'Acceso denegado' };
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
     await prisma.$transaction([
       prisma.appointment.deleteMany({ where: { patientId: id } }),
       prisma.biochemistryTest.deleteMany({ where: { patientId: id } }),
@@ -189,6 +211,17 @@ export async function getPatientDetails(id: string) {
 
 export async function getPatientBiophysicsTrends(id: string) {
   try {
+    // ── IDOR GUARD ──────────────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, error: 'No autenticado', trends: [] };
+    const owned = await prisma.patient.findUnique({ where: { id }, select: { userId: true } });
+    if (!owned) return { success: false, error: 'Paciente no encontrado', trends: [] };
+    if (session.user.role !== 'ADMIN' && owned.userId !== session.user.id) {
+      console.error(`[IDOR] getPatientBiophysicsTrends: user=${session.user.id}`);
+      return { success: false, error: 'Acceso denegado', trends: [] };
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
     const trends = await prisma.biophysicsTest.findMany({
       where: { patientId: id },
       select: {

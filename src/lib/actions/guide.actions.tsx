@@ -7,6 +7,8 @@ import { getEmailProvider } from '@/lib/services/notificationService';
 import { render } from '@react-email/render';
 import GuideEmailTemplate from '@/components/emails/GuideEmailTemplate';
 import { PatientWithDetails } from '@/types';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // Mapa: ID de categoría web → ProtocolCategory en la PWA
 const CATEGORY_MAP: Record<string, string> = {
@@ -199,28 +201,28 @@ export async function getGuideTemplate() {
  */
 export async function savePatientGuide(patientId: string, formData: GuideFormValues, guideData?: GuideCategory[]) {
   try {
+    // ── IDOR GUARD ─────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
+    const pt = await prisma.patient.findUnique({ where: { id: patientId }, select: { userId: true } });
+    if (!pt) return { success: false, error: 'Paciente no encontrado' };
+    if (session.user.role !== 'ADMIN' && pt.userId !== session.user.id) {
+      console.error(`[IDOR] savePatientGuide: user=${session.user.id}`);
+      return { success: false, error: 'Acceso denegado' };
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const { selections, observaciones, guideDate } = formData;
 
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
     if (!patient) throw new Error('Paciente no encontrado');
 
-    // Guardamos las selecciones RAW del formulario para poder recargar el historial
     const newGuide = await prisma.patientGuide.create({
-      data: {
-        patientId,
-        observations: observaciones,
-        selections: selections as any,
-        createdAt: new Date(guideDate),
-      },
+      data: { patientId, observations: observaciones, selections: selections as any, createdAt: new Date(guideDate) },
     });
 
     revalidatePath(`/historias/${patientId}`);
-
-    return {
-      success: true,
-      message: 'Guía guardada. Actualizada en la app del paciente.',
-      guideId: newGuide.id,
-    };
+    return { success: true, message: 'Guía guardada. Actualizada en la app del paciente.', guideId: newGuide.id };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error al guardar.';
     return { success: false, error: msg };
@@ -232,6 +234,17 @@ export async function savePatientGuide(patientId: string, formData: GuideFormVal
  */
 export async function sendGuideByEmail(patientId: string, guideId: string) {
   try {
+    // ── IDOR GUARD ─────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
+    const pt = await prisma.patient.findUnique({ where: { id: patientId }, select: { userId: true } });
+    if (!pt) return { success: false, error: 'Paciente no encontrado' };
+    if (session.user.role !== 'ADMIN' && pt.userId !== session.user.id) {
+      console.error(`[IDOR] sendGuideByEmail: user=${session.user.id}`);
+      return { success: false, error: 'Acceso denegado' };
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: {
@@ -247,26 +260,13 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
 
     const guideTemplateResult = await getGuideTemplate();
     const guideData: GuideCategory[] = guideTemplateResult.success ? (guideTemplateResult.data as any) : [];
-
-    const formValues: GuideFormValues = {
-      guideDate: guide.createdAt.toISOString(),
-      selections: guide.selections as any,
-      observaciones: guide.observations || '',
-    };
-
-    const emailHtml = await render(
-      <GuideEmailTemplate patient={patient as PatientWithDetails} guideData={guideData} formValues={formValues} />
-    );
-
+    const formValues: GuideFormValues = { guideDate: guide.createdAt.toISOString(), selections: guide.selections as any, observaciones: guide.observations || '' };
+    const emailHtml = await render(<GuideEmailTemplate patient={patient as PatientWithDetails} guideData={guideData} formValues={formValues} />);
     const subject = `Tu Guía de Tratamiento Personalizada — Dr. AntiVejez`;
     const textBody = `Hola ${patient.firstName}, tu guía de tratamiento ha sido actualizada. Por favor ábrela en la App Rejuvenate o revisa tu correo.`;
-
     const emailProvider = getEmailProvider();
     const result = await emailProvider.send(patient.email, subject, textBody, null, emailHtml);
-
-    return result.success
-      ? { success: true, message: 'Guía enviada por correo.' }
-      : { success: false, error: result.error || 'No se pudo enviar.' };
+    return result.success ? { success: true, message: 'Guía enviada por correo.' } : { success: false, error: result.error || 'No se pudo enviar.' };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error al enviar correo.';
     return { success: false, error: msg };
@@ -276,6 +276,16 @@ export async function sendGuideByEmail(patientId: string, guideId: string) {
 export async function getPatientGuideHistory(patientId: string) {
   try {
     if (!patientId) return { success: false, error: 'Se requiere el ID del paciente.' };
+    // ── IDOR GUARD ─────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
+    const pt = await prisma.patient.findUnique({ where: { id: patientId }, select: { userId: true } });
+    if (!pt) return { success: false, error: 'Paciente no encontrado' };
+    if (session.user.role !== 'ADMIN' && pt.userId !== session.user.id) {
+      console.error(`[IDOR] getPatientGuideHistory: user=${session.user.id}`);
+      return { success: false, error: 'Acceso denegado' };
+    }
+    // ──────────────────────────────────────────────────────────────────────
     const guides = await prisma.patientGuide.findMany({
       where: { patientId },
       orderBy: { createdAt: 'desc' },
@@ -292,10 +302,17 @@ export async function getPatientGuideDetails(guideId: string) {
     if (!guideId) return { success: false, error: 'Se requiere el ID de la guía.' };
     const guide = await prisma.patientGuide.findUnique({ where: { id: guideId } });
     if (!guide) return { success: false, error: 'No se encontró la guía.' };
-    return {
-      success: true,
-      data: { ...guide, selections: JSON.parse(JSON.stringify(guide.selections)) },
-    };
+    // ── IDOR GUARD: verificar propietario del paciente vinculado ──────────────────
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
+    const pt = await prisma.patient.findUnique({ where: { id: guide.patientId }, select: { userId: true } });
+    if (!pt) return { success: false, error: 'Paciente no encontrado' };
+    if (session.user.role !== 'ADMIN' && pt.userId !== session.user.id) {
+      console.error(`[IDOR] getPatientGuideDetails: user=${session.user.id}`);
+      return { success: false, error: 'Acceso denegado' };
+    }
+    // ──────────────────────────────────────────────────────────────────────
+    return { success: true, data: { ...guide, selections: JSON.parse(JSON.stringify(guide.selections)) } };
   } catch (error) {
     return { success: false, error: 'Error al cargar los detalles.' };
   }
@@ -304,13 +321,17 @@ export async function getPatientGuideDetails(guideId: string) {
 export async function deletePatientGuide(guideId: string, patientId: string) {
   try {
     if (!guideId || !patientId) return { success: false, error: 'Faltan parámetros requeridos.' };
-
-    // Auth check implicitly assumed or can be added if needed via import { getServerSession } 
-    // Since it's a server action from dashboard, we assume they are authorized but we should revalidate
-    await prisma.patientGuide.delete({
-      where: { id: guideId }
-    });
-
+    // ── IDOR GUARD ─────────────────────────────────────────────────────
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
+    const pt = await prisma.patient.findUnique({ where: { id: patientId }, select: { userId: true } });
+    if (!pt) return { success: false, error: 'Paciente no encontrado' };
+    if (session.user.role !== 'ADMIN' && pt.userId !== session.user.id) {
+      console.error(`[IDOR] deletePatientGuide: user=${session.user.id}`);
+      return { success: false, error: 'Acceso denegado' };
+    }
+    // ──────────────────────────────────────────────────────────────────────
+    await prisma.patientGuide.delete({ where: { id: guideId } });
     revalidatePath(`/historias/${patientId}`);
     return { success: true, message: 'Guía eliminada exitosamente.' };
   } catch (error) {
