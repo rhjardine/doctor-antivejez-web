@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheck, User, Bell, Database, Lock, Save, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, User, Lock, Save, Eye, EyeOff, Users, ArrowRight, Cpu, HeartPulse } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateAdminPassword } from '@/lib/actions/auth.actions';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 
 export default function AjustesPage() {
   const { data: session } = useSession();
@@ -129,22 +130,74 @@ export default function AjustesPage() {
           </section>
         </div>
 
-        {/* COLUMNA DERECHA: Configuración Global */}
-        <div className="space-y-6">
-          <div className="bg-[#f8fafc] rounded-[2.5rem] border border-slate-200 p-8 space-y-6">
-            <h3 className="text-xs font-black text-[#293b64] uppercase tracking-[0.2em] mb-4">Estado del Ecosistema</h3>
+        {/* COLUMNA DERECHA: Hub de Administración */}
+        <div className="space-y-4">
 
-            <SettingsToggle label="Módulo de Profesionales" description="Habilitar registro de nuevos médicos" active />
-            <SettingsToggle label="VCoach IA" description="Activar asistente para pacientes" active />
-            <SettingsToggle label="Cifrado de Extremo a Extremo" description="Protección de datos PHI activa" active />
-
-            <div className="pt-6 border-t border-slate-200">
-              <div className="flex items-center gap-2 text-emerald-600">
-                <ShieldCheck size={18} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Servidor Virginia Live</span>
+          {/* Tarjeta Principal: Gestión de Profesionales */}
+          <Link href="/profesionales" className="block group">
+            <div className="bg-[#293b64] rounded-[2rem] p-6 text-white shadow-lg hover:shadow-xl hover:bg-[#1e2d52] transition-all duration-300 cursor-pointer">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-[#23bcef]/20 rounded-2xl flex items-center justify-center">
+                  <Users size={24} className="text-[#23bcef]" />
+                </div>
+                <ArrowRight size={18} className="text-slate-400 group-hover:text-[#23bcef] group-hover:translate-x-1 transition-all" />
+              </div>
+              <h3 className="font-black text-base uppercase tracking-tight mb-1">
+                Gestión de Profesionales
+              </h3>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Administra las cuentas, accesos y cuotas de los médicos y coaches del sistema.
+              </p>
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <span className="text-[10px] font-black text-[#23bcef] uppercase tracking-widest">
+                  Ir al módulo →
+                </span>
               </div>
             </div>
+          </Link>
+
+          {/* Tarjeta: Edad Biológica */}
+          <Link href="/edad-biologica" className="block group">
+            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-[#23bcef]/30 transition-all duration-300 cursor-pointer">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center">
+                  <HeartPulse size={20} className="text-[#23bcef]" />
+                </div>
+                <ArrowRight size={16} className="text-slate-300 group-hover:text-[#23bcef] group-hover:translate-x-1 transition-all" />
+              </div>
+              <h3 className="font-black text-[12px] text-[#293b64] uppercase tracking-tight mb-1">
+                Análisis de Edad Biológica
+              </h3>
+              <p className="text-[10px] text-slate-400 leading-relaxed">
+                Herramientas de cálculo y referencia clínica.
+              </p>
+            </div>
+          </Link>
+
+          {/* Estado del Sistema */}
+          <div className="bg-[#f8fafc] rounded-[2rem] border border-slate-200 p-6 space-y-4">
+            <h3 className="text-[10px] font-black text-[#293b64] uppercase tracking-[0.2em]">Estado del Sistema</h3>
+
+            <div className="flex items-center gap-3">
+              <Cpu size={15} className="text-slate-400" />
+              <div className="flex-1">
+                <p className="text-[10px] font-black text-slate-700 uppercase">Infraestructura</p>
+                <p className="text-[9px] text-slate-400">PostgreSQL + Next.js App Router</p>
+              </div>
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+
+            <div className="pt-4 border-t border-slate-200">
+              <div className="flex items-center gap-2 text-emerald-600">
+                <ShieldCheck size={16} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Servidor Virginia Live</span>
+              </div>
+              <p className="text-[9px] text-slate-400 mt-1 ml-6">
+                Aislamiento de datos PHI activo · Zero-Trust Scoping
+              </p>
+            </div>
           </div>
+
         </div>
 
       </div>
@@ -152,16 +205,3 @@ export default function AjustesPage() {
   );
 }
 
-function SettingsToggle({ label, description, active }: { label: string, description: string, active: boolean }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="space-y-1">
-        <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{label}</p>
-        <p className="text-[10px] text-slate-400 font-medium leading-tight">{description}</p>
-      </div>
-      <div className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${active ? 'bg-[#23bcef]' : 'bg-slate-200'}`}>
-        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${active ? 'right-1' : 'left-1'}`} />
-      </div>
-    </div>
-  );
-}

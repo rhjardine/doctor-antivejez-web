@@ -41,16 +41,15 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
       return { success: false, error: 'No autenticado' };
     }
 
-    const isAdmin = session.user.role === 'ADMIN';
     const scopedUserId = session.user.id;
 
-    // Filtro base de pacientes según el rol
-    // ADMIN: {} → ve todos los registros
-    // OTROS: { userId: scopedUserId } → solo sus propios pacientes
-    const patientScopeFilter = isAdmin ? {} : { userId: scopedUserId };
-
-    // Filtro equivalente para tests biológicos (relacionados por doctorId)
-    const testScopeFilter = isAdmin ? {} : { doctorId: scopedUserId };
+    // ================================================================
+    // ZERO-TRUST SCOPING — Privacidad Clínica Absoluta
+    // NADIE ve pacientes ajenos: ni ADMIN ni MEDICO ni COACH.
+    // El userId del token (servidor) es la única fuente de verdad.
+    // ================================================================
+    const patientScopeFilter = { userId: scopedUserId };
+    const testScopeFilter = { doctorId: scopedUserId };
 
     const dateRange = getDateRange(range);
     const dateFilter = dateRange.gte ? { createdAt: { gte: dateRange.gte, lte: dateRange.lte } } : {};

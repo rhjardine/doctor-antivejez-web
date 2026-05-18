@@ -32,8 +32,9 @@ export default function HistoriasPage() {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.id) {
-      const fetchUserId = session.user.role === 'ADMIN' ? undefined : session.user.id;
-      loadPatients(currentPage, fetchUserId);
+      // ZERO-TRUST: siempre pasamos el userId del usuario autenticado.
+      // La Server Action ya maneja el scoping — no hay bypass por rol en el cliente.
+      loadPatients(currentPage, session.user.id);
     } else if (status === 'unauthenticated') {
       setLoading(false);
     }
@@ -56,7 +57,8 @@ export default function HistoriasPage() {
 
   const handleSearch = async () => {
     if (!session?.user) return;
-    const fetchUserId = session.user.role === 'ADMIN' ? undefined : session.user.id;
+    // ZERO-TRUST: siempre scope al usuario actual, sin bypass por rol.
+    const fetchUserId = session.user.id;
     setCurrentPage(1);
     setLoading(true);
     try {
