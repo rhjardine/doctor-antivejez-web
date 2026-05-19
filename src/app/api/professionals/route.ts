@@ -43,8 +43,9 @@ export async function GET() {
     if (authError) return authError;
 
     try {
-        // 1. Un solo round-trip: todos los usuarios (usando select explícito para asegurar tipos)
+        // 1. Un solo round-trip: usuarios ACTIVOS (excluye los eliminados lógicamente)
         const professionalsRaw = await prisma.user.findMany({
+            where: { deletedAt: null },
             orderBy: { name: 'asc' },
             select: {
                 id: true,
@@ -218,7 +219,12 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
         }
 
-        await prisma.user.delete({ where: { id } });
+        // Soft Delete: marcamos fecha de borrado y forzamos estado INACTIVO.
+        // El registro persiste en BD para preservar historial clínico y auditoría.
+        await prisma.user.update({
+            where: { id },
+            data: { deletedAt: new Date(), status: 'INACTIVO' },
+        });
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error deleting professional:', error);

@@ -135,13 +135,14 @@ export async function deletePatient(id: string) {
     }
     // ────────────────────────────────────────────────────────────────────────────
 
-    await prisma.$transaction([
-      prisma.appointment.deleteMany({ where: { patientId: id } }),
-      prisma.biochemistryTest.deleteMany({ where: { patientId: id } }),
-      prisma.biophysicsTest.deleteMany({ where: { patientId: id } }),
-      prisma.patient.delete({ where: { id } }),
-    ]);
+    // Soft Delete: actualizamos deletedAt en lugar de destruir el registro.
+    // El historial clínico (tests, citas, guías) se preserva intacto en la BD.
+    await prisma.patient.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
     revalidatePath('/historias');
+    revalidatePath('/dashboard');
     return { success: true };
   } catch (error) {
     console.error('Error eliminando paciente:', error);
@@ -254,7 +255,9 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
       ? userId
       : session.user.id;
 
-    const where = effectiveUserId ? { userId: effectiveUserId } : {};
+    const where = effectiveUserId
+      ? { userId: effectiveUserId, deletedAt: null }
+      : { deletedAt: null };
 
     const [patients, totalPatients] = await prisma.$transaction([
       prisma.patient.findMany({
@@ -317,6 +320,7 @@ export async function searchPatients({ query, userId, page = 1, limit = 10 }: { 
     const whereClause: Prisma.PatientWhereInput = {
       AND: [
         ...(effectiveUserId ? [{ userId: effectiveUserId }] : []),
+        { deletedAt: null }, // Excluir pacientes eliminados lógicamente
         {
           OR: [
             // Búsqueda por partes (Nombre y Apellido)

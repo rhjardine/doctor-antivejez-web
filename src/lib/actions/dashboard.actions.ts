@@ -48,7 +48,7 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
     // NADIE ve pacientes ajenos: ni ADMIN ni MEDICO ni COACH.
     // El userId del token (servidor) es la única fuente de verdad.
     // ================================================================
-    const patientScopeFilter = { userId: scopedUserId };
+    const patientScopeFilter = { userId: scopedUserId, deletedAt: null as null }; // Excluye eliminados lógicamente
     const testScopeFilter = { doctorId: scopedUserId };
 
     const dateRange = getDateRange(range);

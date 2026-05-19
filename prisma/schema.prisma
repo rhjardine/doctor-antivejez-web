@@ -154,6 +154,7 @@ model User {
   password      String?
   role          Role      @default(MEDICO)
   status        String    @default("ACTIVO")
+  deletedAt     DateTime? // Soft Delete — null = activo, fecha = eliminado lógicamente
   accounts      Account[]
   sessions      Session[]
   patients      Patient[]
@@ -251,10 +252,11 @@ model Patient {
   // Nullable: pacientes existentes sin contraseña asignada aún
   passwordHash String?
 
-  shareDataConsent Boolean  @default(false)
-  version          Int      @default(1)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  shareDataConsent Boolean   @default(false)
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime? // Soft Delete — null = activo, fecha = eliminado lógicamente
 
   user                User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   biophysicsTests     BiophysicsTest[]
