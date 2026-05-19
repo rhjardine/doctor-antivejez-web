@@ -9,7 +9,6 @@ type TargetGroup = 'new' | 'legacy' | 'all';
  * Placeholder para la futura funcionalidad de obtener notificaciones.
  */
 export async function getNotificationsForUser(userId: string) {
-  console.log(`Buscando notificaciones para el usuario: ${userId}`);
   return { success: true, notifications: [] };
 }
 
@@ -22,10 +21,7 @@ export async function sendMassNotification(
   channels: Channel[]
 ): Promise<ActionResult> { // <-- Se añade el tipo de retorno explícito
   try {
-    console.log('Enviando notificación masiva:');
-    console.log('Mensaje:', message);
-    console.log('Grupo Objetivo:', targetGroup);
-    console.log('Canales:', channels);
+    console.log(`[Notifications] Envío masivo iniciado. Grupo: ${targetGroup}, Canales: ${channels.length}`);
 
     // Simulación de una operación exitosa
     if (message) {

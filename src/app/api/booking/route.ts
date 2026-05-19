@@ -68,12 +68,8 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        // 3. Notify team (console fallback — connect email/Resend when ready)
-        console.log('[BOOKING] Nueva reserva recibida:', {
-            name, email, phone, country, bookingType,
-            schedulePreference, bookingId: booking.id,
-            testScore, testCategory,
-        });
+        // 3. Notify team (metadata-only log — no PII in stdout)
+        console.log(`[Booking] Nueva reserva registrada. bookingId=${booking.id}, type=${bookingType}`);
 
         // TODO: Send email via Resend/Nodemailer when RESEND_API_KEY is configured:
         // if (process.env.RESEND_API_KEY) { await sendBookingNotification(...) }

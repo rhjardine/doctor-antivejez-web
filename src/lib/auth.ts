@@ -26,7 +26,6 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        console.log("🔐 [Auth] Credentials received for:", credentials?.email);
 
         if (!credentials?.email || !credentials?.password) {
           return null;
@@ -88,12 +87,10 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user) {
-            console.log("❌ [Auth] Usuario NO encontrado:", normalizedEmail);
             return null;
           }
 
           if (!user.password) {
-            console.log("❌ [Auth] El usuario no tiene contraseña (Google Login?)");
             return null;
           }
 
@@ -103,17 +100,13 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (!isPasswordValid) {
-            console.log("❌ [Auth] Contraseña incorrecta para:", normalizedEmail);
             return null;
           }
 
           // ===== Validar Estatus =====
           if (user.status === 'INACTIVO') {
-            console.log("⛔ [Auth] Usuario INACTIVO:", normalizedEmail);
             throw new Error("Tu cuenta está inactiva. Contacta al administrador.");
           }
-
-          console.log("✅ [Auth] Login exitoso para:", user.name);
 
           return {
             id: user.id,

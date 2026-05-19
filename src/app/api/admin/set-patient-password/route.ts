@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { getCorsHeaders } from "@/lib/cors";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 /**
  * ADMIN-ONLY endpoint to set or reset a patient's PWA password.
@@ -18,14 +20,14 @@ import { getCorsHeaders } from "@/lib/cors";
 export async function POST(req: Request) {
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
-    try {
-        const { adminSecret, identification, newPassword } = await req.json();
+    // ── AUTH: Requiere sesión activa con rol ADMIN (reemplaza el backdoor ADMIN_REPAIR_SECRET) ──
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'ADMIN') {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401, headers: corsHeaders });
+    }
 
-        // Security: require a secret token known only to the admin
-        const expectedSecret = process.env.ADMIN_REPAIR_SECRET;
-        if (!expectedSecret || adminSecret !== expectedSecret) {
-            return NextResponse.json({ error: "No autorizado" }, { status: 401, headers: corsHeaders });
-        }
+    try {
+        const { identification, newPassword } = await req.json();
 
         if (!identification || !newPassword) {
             return NextResponse.json({ error: "Faltan parámetros" }, { status: 400, headers: corsHeaders });
