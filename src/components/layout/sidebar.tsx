@@ -12,7 +12,7 @@ import {
 } from 'react-icons/fa';
 import { signOut, useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
-import type { ModuleKey } from '@/lib/permissions';
+import { ADMIN_ONLY_MODULES, type ModuleKey } from '@/lib/permissions';
 
 type MenuItem = {
   name: string;
@@ -41,20 +41,26 @@ export function Sidebar() {
   const router = useRouter();
   const { data: session } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const { can } = usePermissions();
+  const { can, isAdmin } = usePermissions();
 
   // Comprobar si el usuario tiene el cambio de contraseña obligatorio activo
   const mustChangePassword = session?.user?.permissions?.forcePasswordChange === true;
 
-  // Filtrar los módulos que el usuario tiene permitido visualizar
-  const visibleItems = ALL_MENU_ITEMS.filter(item => can(item.module));
+  // Filtrar los módulos aplicando Aislamiento de Seguridad Estricto
+  const visibleItems = ALL_MENU_ITEMS.filter(item => {
+    // Si es un módulo exclusivo de administrador, bajo ninguna circunstancia se muestra a no-admins
+    if (ADMIN_ONLY_MODULES.includes(item.module)) {
+      return isAdmin;
+    }
+    return can(item.module);
+  });
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/login' });
   };
 
   return (
-    // 🌌 Fondo actualizado a Azul Marino Profundo (Dark Navy) para coincidir con la PWA
+    // 🌌 Fondo Azul Marino Profundo (Dark Navy) para coincidir con el diseño PWA
     <div className="w-64 bg-[#070b1a]/95 backdrop-blur-2xl flex flex-col fixed h-full z-20 border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.5)] overflow-hidden">
 
       {/* 💡 Luces ambientales suaves (Top & Bottom) */}
@@ -76,7 +82,7 @@ export function Sidebar() {
               width={170}
               height={45}
               style={{ objectFit: 'contain' }}
-              // 🔥 EL SECRETO: mix-blend-screen hace que el fondo del JPEG desaparezca y se funda con nuestro azul marino.
+              // 🔥 EL SECRETO: mix-blend-screen hace que el fondo del JPEG desaparezca y se funde con nuestro azul marino.
               className="transition-transform duration-500 group-hover:scale-105 mix-blend-screen"
               priority
             />
