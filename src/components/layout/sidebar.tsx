@@ -41,7 +41,10 @@ export function Sidebar() {
   const router = useRouter();
   const { data: session } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const { can, isAdmin } = usePermissions();
+  const { can } = usePermissions();
+
+  // Calcular isAdmin directamente desde la sesión
+  const isAdmin = session?.user?.role === 'ADMIN';
 
   // Comprobar si el usuario tiene el cambio de contraseña obligatorio activo
   const mustChangePassword = session?.user?.permissions?.forcePasswordChange === true;
