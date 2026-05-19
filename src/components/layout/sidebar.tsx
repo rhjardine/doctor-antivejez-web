@@ -54,33 +54,34 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-[#0a0f24]/85 backdrop-blur-2xl flex flex-col fixed h-full z-20 border-r border-white/10 shadow-[4px_0_24px_rgba(0,0,0,0.5)] overflow-hidden">
-      {/* 🔮 Efecto sutil de aura brillante en la esquina superior izquierda */}
-      <div className="absolute top-[-50px] left-[-50px] w-48 h-48 rounded-full bg-[#23bcef]/10 blur-[80px] pointer-events-none" />
+    // 🌌 Fondo actualizado a Azul Marino Profundo (Dark Navy) para coincidir con la PWA
+    <div className="w-64 bg-[#070b1a]/95 backdrop-blur-2xl flex flex-col fixed h-full z-20 border-r border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.5)] overflow-hidden">
 
-      {/* 🔮 Luz trasera adicional para ambientación cibernética/médica de vanguardia */}
+      {/* 💡 Luces ambientales suaves (Top & Bottom) */}
+      <div className="absolute top-[-50px] left-[-50px] w-48 h-48 rounded-full bg-[#23bcef]/10 blur-[80px] pointer-events-none" />
       <div className="absolute bottom-[-100px] right-[-100px] w-64 h-64 rounded-full bg-blue-500/[0.04] blur-[100px] pointer-events-none" />
 
-      {/* 🛡️ Header con contenedor de Glassmorphic para enmascarar el contraste del logotipo */}
-      <div className="p-6 border-b border-white/5 relative z-10">
-        <div className="relative group overflow-hidden bg-white/[0.02] backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04]">
-          {/* Brillo dinámico trasero detrás del logotipo */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#23bcef]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      {/* 🎯 HEADER DEL LOGO: Estilo PWA (Fusión y Brillo Trasero, Sin bordes/márgenes) */}
+      <div className="p-6 relative z-10 flex justify-center items-center border-b border-white/5 bg-gradient-to-b from-[#0a1128] to-transparent">
 
-          <Link href={mustChangePassword ? '#' : '/dashboard'} className={mustChangePassword ? 'cursor-not-allowed' : 'cursor-pointer'}>
-            <div className="flex justify-center items-center relative z-10">
-              <Image
-                src="/images/Logoico.jpeg"
-                alt="Doctor AntiVejez"
-                width={170}
-                height={38}
-                style={{ objectFit: 'contain' }}
-                className="transition-transform duration-300 group-hover:scale-102 rounded-lg"
-                priority
-              />
-            </div>
-          </Link>
-        </div>
+        {/* ✨ Brillo focal concentrado detrás del logo (Glow Effect) */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-12 bg-[#23bcef]/30 blur-[45px] rounded-full pointer-events-none" />
+
+        <Link href={mustChangePassword ? '#' : '/dashboard'} className={`relative z-20 ${mustChangePassword ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
+          {/* Drop-shadow exterior para dar volumen a las letras */}
+          <div className="flex justify-center items-center relative drop-shadow-[0_0_12px_rgba(35,188,239,0.35)]">
+            <Image
+              src="/images/Logoico.jpeg"
+              alt="Doctor AntiVejez"
+              width={170}
+              height={45}
+              style={{ objectFit: 'contain' }}
+              // 🔥 EL SECRETO: mix-blend-screen hace que el fondo del JPEG desaparezca y se funda con nuestro azul marino.
+              className="transition-transform duration-500 group-hover:scale-105 mix-blend-screen"
+              priority
+            />
+          </div>
+        </Link>
       </div>
 
       {/* 🧭 Navegación con efecto de lista Premium */}
@@ -164,7 +165,7 @@ export function Sidebar() {
 
         {/* Dropdown de opciones de sesión */}
         {isUserMenuOpen && (
-          <div className="mt-2 py-1.5 bg-slate-950/90 border border-white/10 rounded-2xl shadow-xl overflow-hidden backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="mt-2 py-1.5 bg-[#070b1a]/95 border border-white/10 rounded-2xl shadow-xl overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
             <button
               onClick={handleLogout}
               className="w-full flex items-center space-x-3 px-4 py-2.5 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors text-xs font-bold uppercase tracking-wide"
