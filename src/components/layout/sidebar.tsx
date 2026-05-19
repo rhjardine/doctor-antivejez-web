@@ -7,8 +7,7 @@ import { useState } from 'react';
 import {
   FaHome, FaHistory, FaUserMd, FaRobot, FaHeartbeat,
   FaChartBar, FaCog, FaSignOutAlt, FaChevronDown,
-  FaChevronUp, FaCalendarAlt, FaPaperPlane, FaUsers,
-  FaBell, FaLock,
+  FaChevronUp, FaCalendarAlt, FaPaperPlane, FaLock,
 } from 'react-icons/fa';
 import { signOut, useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -22,6 +21,7 @@ type MenuItem = {
   module: ModuleKey;
 };
 
+// Lista de navegación limpia sin las opciones de 'Leads' ni 'Notificaciones'
 const ALL_MENU_ITEMS: MenuItem[] = [
   { name: 'Dashboard', icon: FaHome, href: '/dashboard', color: 'text-[#23bcef]', module: 'dashboard' },
   { name: 'Historias', icon: FaHistory, href: '/historias', color: 'text-blue-400', module: 'historias' },
@@ -30,8 +30,6 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { name: 'Agente IA', icon: FaRobot, href: '/agente-ia', color: 'text-purple-400', module: 'agente_ia' },
   { name: 'Edad Biológica', icon: FaHeartbeat, href: '/edad-biologica', color: 'text-red-400', module: 'edad_biologica' },
   { name: 'Campañas', icon: FaPaperPlane, href: '/dashboard/campaigns', color: 'text-orange-400', module: 'campanas' },
-  { name: 'Leads', icon: FaUsers, href: '/leads', color: 'text-yellow-400', module: 'leads' },
-  { name: 'Notificaciones', icon: FaBell, href: '/notificaciones', color: 'text-cyan-400', module: 'notificaciones' },
   { name: 'Reportes', icon: FaChartBar, href: '/reportes', color: 'text-amber-400', module: 'reportes' },
   { name: 'Ajustes', icon: FaCog, href: '/ajustes', color: 'text-slate-400', module: 'ajustes' },
 ];
@@ -43,7 +41,7 @@ export function Sidebar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { can } = usePermissions();
 
-  // Calcular isAdmin directamente desde la sesión
+  // Calcular isAdmin directamente desde la sesión para evitar errores de tipo si el hook no lo expone
   const isAdmin = session?.user?.role === 'ADMIN';
 
   // Comprobar si el usuario tiene el cambio de contraseña obligatorio activo
