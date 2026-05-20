@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 
 // ─── Resolución Segura de Dependencias para Next.js ──────────────────────
 // Usamos referencias dinámicas con require para evitar que el compilador del visor lance errores de resolución estática.
@@ -164,12 +164,11 @@ class BiotechParticle {
   }
 }
 
-// ─── COMPONENTE PRINCIPAL DE LOGIN ──────────────────────────────────────────
+// ─── FORMULARIO DE INICIO DE SESIÓN (AISLADO PARA SUSPENSE) ────────────────
 
-export default function LoginPage() {
+function LoginFormCard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Estados de inicio de sesión
   const [email, setEmail] = useState('');
@@ -179,6 +178,172 @@ export default function LoginPage() {
 
   // Capturar errores del query-string (ej. redirección por bloqueo del middleware)
   const isBlocked = searchParams ? searchParams.get('blocked') : null;
+
+  // 🔐 Envío del formulario de Login hacia NextAuth
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await signIn('credentials', {
+        email: email.toLowerCase().trim(),
+        password,
+        redirect: false,
+      });
+
+      if (res?.error) {
+        // Manejo semántico de errores del proveedor de credenciales (Throttling, etc.)
+        if (res.error.includes('attempts') || res.error.includes('intentos')) {
+          setError(res.error);
+        } else {
+          setError('Credenciales incorrectas. Verifique su correo y contraseña.');
+        }
+        setLoading(false);
+      } else {
+        // Redirección exitosa con recarga forzada para sincronizar la nueva cookie de sesión
+        router.push('/dashboard');
+        router.refresh();
+      }
+    } catch (err) {
+      console.error('[Login Submit Error]:', err);
+      setError('Ocurrió un error en el servidor. Intente de nuevo.');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#0c122c]/65 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_24px_50px_rgba(0,0,0,0.6)] p-8 relative overflow-hidden transition-all duration-300 hover:border-white/20 w-full">
+      
+      {/* Destello sutil en el borde superior de la caja */}
+      <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#23bcef]/45 to-transparent" />
+
+      {/* 🎯 Logotipo Integrado Estilo PWA (Fusión Cromática con mix-blend-screen) */}
+      <div className="flex flex-col items-center mb-8 relative">
+        <div className="absolute -top-6 w-32 h-10 bg-[#23bcef]/25 blur-2xl rounded-full pointer-events-none" />
+        <div className="relative drop-shadow-[0_0_15px_rgba(35,188,239,0.3)]">
+          <img
+            src="/images/Logoico.jpeg"
+            alt="Doctor AntiVejez Logo"
+            width={200}
+            height={55}
+            className="mix-blend-screen select-none object-contain"
+          />
+        </div>
+        <p className="text-[10px] text-[#23bcef] tracking-[0.25em] font-black uppercase text-center mt-4">
+          Portal Clínico Profesional
+        </p>
+      </div>
+
+      {/* ⚠️ Alertas de Seguridad o Errores de Acceso */}
+      {isBlocked && !error && (
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <svg className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p className="text-[11px] text-amber-200 font-bold uppercase tracking-wider leading-snug">
+            Acceso restringido. Inicie sesión con una cuenta autorizada para este módulo.
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <svg className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p className="text-[11px] text-red-200 font-bold uppercase tracking-wider leading-snug">
+            {error}
+          </p>
+        </div>
+      )}
+
+      {/* 📝 Formulario */}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        
+        {/* Campo Email */}
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">
+            Correo Electrónico
+          </label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-4 flex items-center text-slate-500 group-focus-within:text-[#23bcef] transition-colors duration-200">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <input
+              id="email"
+              type="email"
+              required
+              disabled={loading}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ejemplo@doctorantivejez.com"
+              className="w-full bg-[#070b1a]/70 border border-white/5 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all duration-300 focus:border-[#23bcef]/50 focus:ring-2 focus:ring-[#23bcef]/10 focus:bg-[#070b1a]/95"
+            />
+          </div>
+        </div>
+
+        {/* Campo Contraseña */}
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">
+            Contraseña de Acceso
+          </label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-4 flex items-center text-slate-500 group-focus-within:text-[#23bcef] transition-colors duration-200">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+            </div>
+            <input
+              id="password"
+              type="password"
+              required
+              disabled={loading}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••••"
+              className="w-full bg-[#070b1a]/70 border border-white/5 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all duration-300 focus:border-[#23bcef]/50 focus:ring-2 focus:ring-[#23bcef]/10 focus:bg-[#070b1a]/95"
+            />
+          </div>
+        </div>
+
+        {/* Botón de Envío Premium (Gradiente y Aura Neon al pasar cursor) */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full relative group mt-8 h-12 bg-gradient-to-r from-[#23bcef] to-blue-600 hover:from-[#39c8f9] hover:to-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-[0_4px_20px_rgba(35,188,239,0.3)] hover:shadow-[0_4px_30px_rgba(35,188,239,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
+        >
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Verificando credenciales...
+            </span>
+          ) : (
+            'Ingresar al Sistema'
+          )}
+        </button>
+      </form>
+
+      {/* Copyright sutil corporativo */}
+      <div className="mt-8 text-center">
+        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+          © {new Date().getFullYear()} Doctor AntiVejez · Longevity System
+        </span>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── CONTENEDOR PRINCIPAL (PAGE LAYOUT CON INTEGRACIÓN CANVAS) ─────────────
+
+export default function LoginPage() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Tracking de ratón para el efecto Antigravedad
   const mouseRef = useRef({ x: -1000, y: -1000 });
@@ -247,39 +412,6 @@ export default function LoginPage() {
     };
   }, []);
 
-  // 🔐 Envío del formulario de Login hacia NextAuth
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      const res = await signIn('credentials', {
-        email: email.toLowerCase().trim(),
-        password,
-        redirect: false,
-      });
-
-      if (res?.error) {
-        // Manejo semántico de errores del proveedor de credenciales (Throttling, etc.)
-        if (res.error.includes('attempts') || res.error.includes('intentos')) {
-          setError(res.error);
-        } else {
-          setError('Credenciales incorrectas. Verifique su correo y contraseña.');
-        }
-        setLoading(false);
-      } else {
-        // Redirección exitosa con recarga forzada para sincronizar la nueva cookie de sesión
-        router.push('/dashboard');
-        router.refresh();
-      }
-    } catch (err) {
-      console.error('[Login Submit Error]:', err);
-      setError('Ocurrió un error en el servidor. Intente de nuevo.');
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden font-sans">
       {/* 🔮 Lienzo del fondo dinámico interactivo */}
@@ -289,132 +421,21 @@ export default function LoginPage() {
       <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-[#23bcef]/10 blur-[130px] pointer-events-none z-0" />
       <div className="absolute bottom-1/4 right-1/3 w-[500px] h-[500px] rounded-full bg-blue-600/[0.06] blur-[150px] pointer-events-none z-0" />
 
-      {/* 📦 Contenedor del Formulario Estilo Glassmorphism */}
+      {/* 📦 Contenedor del Formulario Estilo Glassmorphism protegido con Suspense */}
       <div className="relative z-10 w-full max-w-md px-6 py-12">
-        <div className="bg-[#0c122c]/65 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_24px_50px_rgba(0,0,0,0.6)] p-8 relative overflow-hidden transition-all duration-300 hover:border-white/20">
-          
-          {/* Destello sutil en el borde superior de la caja */}
-          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#23bcef]/45 to-transparent" />
-
-          {/* 🎯 Logotipo Integrado Estilo PWA (Fusión Cromática con mix-blend-screen) */}
-          <div className="flex flex-col items-center mb-8 relative">
-            <div className="absolute -top-6 w-32 h-10 bg-[#23bcef]/25 blur-2xl rounded-full pointer-events-none" />
-            <div className="relative drop-shadow-[0_0_15px_rgba(35,188,239,0.3)]">
-              <img
-                src="/images/Logoico.jpeg"
-                alt="Doctor AntiVejez Logo"
-                width={200}
-                height={55}
-                className="mix-blend-screen select-none object-contain"
-              />
-            </div>
-            <p className="text-[10px] text-[#23bcef] tracking-[0.25em] font-black uppercase text-center mt-4">
-              Portal Clínico Profesional
+        <Suspense fallback={
+          <div className="bg-[#0c122c]/65 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-[0_24px_50px_rgba(0,0,0,0.6)] flex flex-col items-center justify-center min-h-[450px]">
+            <svg className="animate-spin h-8 w-8 text-[#23bcef] mb-4" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-[10px] text-[#23bcef] tracking-[0.25em] font-black uppercase text-center">
+              Cargando Portal...
             </p>
           </div>
-
-          {/* ⚠️ Alertas de Seguridad o Errores de Acceso */}
-          {isBlocked && !error && (
-            <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              <svg className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <p className="text-[11px] text-amber-200 font-bold uppercase tracking-wider leading-snug">
-                Acceso restringido. Inicie sesión con una cuenta autorizada para este módulo.
-              </p>
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              <svg className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <p className="text-[11px] text-red-200 font-bold uppercase tracking-wider leading-snug">
-                {error}
-              </p>
-            </div>
-          )}
-
-          {/* 📝 Formulario */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            
-            {/* Campo Email */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">
-                Correo Electrónico
-              </label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-4 flex items-center text-slate-500 group-focus-within:text-[#23bcef] transition-colors duration-200">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                  </svg>
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  disabled={loading}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ejemplo@doctorantivejez.com"
-                  className="w-full bg-[#070b1a]/70 border border-white/5 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all duration-300 focus:border-[#23bcef]/50 focus:ring-2 focus:ring-[#23bcef]/10 focus:bg-[#070b1a]/95"
-                />
-              </div>
-            </div>
-
-            {/* Campo Contraseña */}
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">
-                Contraseña de Acceso
-              </label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-4 flex items-center text-slate-500 group-focus-within:text-[#23bcef] transition-colors duration-200">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                  </svg>
-                </div>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  disabled={loading}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full bg-[#070b1a]/70 border border-white/5 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all duration-300 focus:border-[#23bcef]/50 focus:ring-2 focus:ring-[#23bcef]/10 focus:bg-[#070b1a]/95"
-                />
-              </div>
-            </div>
-
-            {/* Botón de Envío Premium (Gradiente y Aura Neon al pasar cursor) */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full relative group mt-8 h-12 bg-gradient-to-r from-[#23bcef] to-blue-600 hover:from-[#39c8f9] hover:to-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-[0_4px_20px_rgba(35,188,239,0.3)] hover:shadow-[0_4px_30px_rgba(35,188,239,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Verificando credenciales...
-                </span>
-              ) : (
-                'Ingresar al Sistema'
-              )}
-            </button>
-          </form>
-
-          {/* Copyright sutil corporativo */}
-          <div className="mt-8 text-center">
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-              © {new Date().getFullYear()} Doctor AntiVejez · Longevity System
-            </span>
-          </div>
-
-        </div>
+        }>
+          <LoginFormCard />
+        </Suspense>
       </div>
     </div>
   );
