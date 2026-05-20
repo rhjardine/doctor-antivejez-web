@@ -106,6 +106,12 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
       updateData.passwordHash = await bcrypt.hash(pwaPassword.trim(), 12);
     }
 
+    // ── OCC: Incrementar version atómicamente ─────────────────────────────────
+    // La plataforma web siempre gana (no envía version), pero al incrementarla
+    // invalida el caché de la PWA y fuerza un re-fetch antes de sincronizar.
+    updateData.version = { increment: 1 };
+    // ────────────────────────────────────────────────────────────────────────────
+
     const patient = await prisma.patient.update({
       where: { id },
       data: updateData,
@@ -129,9 +135,13 @@ export async function deletePatient(id: string) {
 
     // Soft Delete: actualizamos deletedAt en lugar de destruir el registro.
     // El historial clínico (tests, citas, guías) se preserva intacto en la BD.
+    // OCC: incrementar version para invalidar el caché de la PWA.
     await prisma.patient.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        version: { increment: 1 },
+      },
     });
     revalidatePath('/historias');
     revalidatePath('/dashboard');
