@@ -203,22 +203,61 @@ export async function getGuideTemplate() {
 export async function savePatientGuide(patientId: string, formData: GuideFormValues, guideData?: GuideCategory[]) {
   try {
     // ── IDOR GUARD (Centralizado) ─────────────────────────────────────────────────────────────
-    await validatePatientAccess(patientId);
+    const { session } = await validatePatientAccess(patientId);
     // ────────────────────────────────────────────────────────────────────────────
 
     const { selections, observaciones, guideDate } = formData;
 
-    const patient = await prisma.patient.findUnique({ where: { id: patientId } });
-    if (!patient) throw new Error('Paciente no encontrado');
+    // ── TRANSACCIÓN ATÓMICA: Archivar guía previa + Crear nueva ───────────────
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Buscar la guía más reciente existente para este paciente
+      const latestGuide = await tx.patientGuide.findFirst({
+        where: { patientId },
+        orderBy: { createdAt: 'desc' },
+      });
 
-    const newGuide = await prisma.patientGuide.create({
-      data: { patientId, observations: observaciones, selections: selections as any, createdAt: new Date(guideDate) },
+      // 2. Si existe una guía previa, archivarla como versión inmutable
+      if (latestGuide) {
+        const lastVersionAgg = await tx.patientGuideVersion.aggregate({
+          where: { patientId },
+          _max: { version: true },
+        });
+        const nextVersion = (lastVersionAgg._max.version ?? 0) + 1;
+
+        await tx.patientGuideVersion.create({
+          data: {
+            patientId,
+            createdById: session.user.id,
+            version: nextVersion,
+            data: {
+              selections: latestGuide.selections,
+              observations: latestGuide.observations,
+              originalCreatedAt: latestGuide.createdAt.toISOString(),
+            },
+            notes: `Archivado automáticamente al crear nueva prescripción (v${nextVersion}).`,
+          },
+        });
+      }
+
+      // 3. Crear la nueva guía vigente
+      const newGuide = await tx.patientGuide.create({
+        data: {
+          patientId,
+          observations: observaciones,
+          selections: selections as any,
+          createdAt: new Date(guideDate),
+        },
+      });
+
+      return newGuide;
     });
+    // ────────────────────────────────────────────────────────────────────────────
 
     revalidatePath(`/historias/${patientId}`);
-    return { success: true, message: 'Guía guardada. Actualizada en la app del paciente.', guideId: newGuide.id };
+    return { success: true, message: 'Guía guardada. Versión anterior archivada automáticamente.', guideId: result.id };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error al guardar.';
+    console.error('[GUIDE VERSIONING ERROR]:', msg);
     return { success: false, error: msg };
   }
 }
@@ -305,3 +344,74 @@ export async function deletePatientGuide(guideId: string, patientId: string) {
     return { success: false, error: 'Error al eliminar la guía.' };
   }
 }
+
+// =================================================================
+// Historial de Versiones de Guías (Snapshots Inmutables)
+// =================================================================
+
+/**
+ * Lista el historial de versiones archivadas de guías para un paciente.
+ * Cada versión es un snapshot inmutable creado automáticamente al guardar
+ * una nueva prescripción. Incluye metadata del profesional que generó el cambio.
+ */
+export async function getPatientGuideVersionHistory(patientId: string) {
+  try {
+    if (!patientId) return { success: false, error: 'Se requiere el ID del paciente.' };
+    // ── IDOR GUARD (Centralizado) ─────────────────────────────────────────────────────────────
+    await validatePatientAccess(patientId);
+    // ────────────────────────────────────────────────────────────────────────────
+
+    const history = await prisma.patientGuideVersion.findMany({
+      where: { patientId },
+      orderBy: { version: 'desc' },
+      select: {
+        id: true,
+        version: true,
+        createdAt: true,
+        notes: true,
+        createdBy: {
+          select: { name: true },
+        },
+      },
+    });
+
+    return { success: true, data: history };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'No se pudo cargar el historial de versiones.';
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Retorna el snapshot completo de una versión específica de guía.
+ * Valida acceso IDOR usando el patientId del registro histórico.
+ */
+export async function getPatientGuideVersionDetails(versionId: string) {
+  try {
+    if (!versionId) return { success: false, error: 'Se requiere el ID de la versión.' };
+
+    const versionRecord = await prisma.patientGuideVersion.findUnique({
+      where: { id: versionId },
+      include: {
+        createdBy: { select: { name: true } },
+      },
+    });
+
+    if (!versionRecord) return { success: false, error: 'Versión histórica no encontrada.' };
+
+    // ── IDOR GUARD (Centralizado): verificar acceso vía patientId del snapshot ─────────
+    await validatePatientAccess(versionRecord.patientId);
+    // ────────────────────────────────────────────────────────────────────────────
+
+    return {
+      success: true,
+      data: {
+        ...versionRecord,
+        data: JSON.parse(JSON.stringify(versionRecord.data)),
+      },
+    };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error al cargar los detalles de la versión.';
+    return { success: false, error: msg };
+  }
+}
