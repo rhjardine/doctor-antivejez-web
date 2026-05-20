@@ -26,6 +26,7 @@ interface SaveNlrTestParams {
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { validatePatientAccess } from '@/lib/auth-guards';
 
 export async function saveNlrTest(params: SaveNlrTestParams) {
   const { patientId, neutrophils, lymphocytes, testDate } = params;
@@ -39,6 +40,7 @@ export async function saveNlrTest(params: SaveNlrTestParams) {
     if (!session || !session.user || !session.user.id) {
       return { success: false, error: "No autorizado. Debes iniciar sesión." };
     }
+    await validatePatientAccess(patientId);
 
     const nlrValue = parseFloat((neutrophils / lymphocytes).toFixed(2));
     const riskLevel = determineNlrRiskLevel(nlrValue);
@@ -87,13 +89,14 @@ export async function saveNlrTest(params: SaveNlrTestParams) {
 
 export async function getNlrHistory(patientId: string) {
   try {
+    await validatePatientAccess(patientId);
     const history = await prisma.nlrTest.findMany({
       where: { patientId },
       orderBy: { testDate: 'desc' },
     });
     return { success: true, data: history };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error obteniendo el historial de NLR:', error);
-    return { success: false, error: 'No se pudo cargar el historial.' };
+    return { success: false, error: error.message || 'No se pudo cargar el historial.' };
   }
 }

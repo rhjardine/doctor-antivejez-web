@@ -42,13 +42,22 @@ export async function getDashboardStats(range: TimeRange = 'monthly') {
     }
 
     const scopedUserId = session.user.id;
+    const { tenantId, role } = session.user;
+    const isAdmin = role === 'ADMIN';
 
     // ================================================================
-    // ZERO-TRUST SCOPING — Privacidad Clínica Absoluta
-    // NADIE ve pacientes ajenos: ni ADMIN ni MEDICO ni COACH.
-    // El userId del token (servidor) es la única fuente de verdad.
+    // MULTI-TENANT SCOPING — Aislamiento Organizacional
+    // Regla: ADMIN ve todo. MEDICO/COACH con tenantId ve su clínica completa.
+    // Fallback legacy: si no hay tenantId, aislar por userId (Single-User).
+    // Invariante: deletedAt: null se preserva en TODOS los filtros.
     // ================================================================
-    const patientScopeFilter = { userId: scopedUserId, deletedAt: null as null }; // Excluye eliminados lógicamente
+    const patientScopeFilter = isAdmin
+      ? { deletedAt: null as null }
+      : tenantId
+        ? { tenantId, deletedAt: null as null }
+        : { userId: scopedUserId, deletedAt: null as null };
+
+    // Tests: se sigue filtrando por doctorId (el test pertenece al médico que lo realizó)
     const testScopeFilter = { doctorId: scopedUserId };
 
     const dateRange = getDateRange(range);

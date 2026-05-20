@@ -23,8 +23,7 @@ interface CalculateAndSaveParams {
  */
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-// ... (existing imports)
+import { validatePatientAccess, validateTestAccess } from '@/lib/auth-guards';
 
 export async function calculateAndSaveBiophysicsTest(params: CalculateAndSaveParams) {
   try {
@@ -34,6 +33,9 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
     }
 
     const { patientId, chronologicalAge, gender, isAthlete, formValues } = params;
+
+    // IDOR guard: validate tenant-level access to this patient
+    await validatePatientAccess(patientId);
 
     // 1. Calcular resultados ANTES de la transacción (CPU-only, sin IO)
     const calculationResult = calculateBiofisicaResults(
@@ -161,6 +163,8 @@ export async function getBiophysicsBoardsAndRanges(): Promise<BoardWithRanges[]>
 
 export async function deleteBiophysicsTest(testId: string, patientId: string) {
   try {
+    const { session } = await validateTestAccess(testId, patientId);
+
     await prisma.biophysicsTest.delete({
       where: { id: testId },
     });
@@ -169,12 +173,15 @@ export async function deleteBiophysicsTest(testId: string, patientId: string) {
     return { success: true };
   } catch (error) {
     console.error('Error eliminando test biofísico:', error);
-    return { success: false, error: 'Error al eliminar el test' };
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    return { success: false, error: errorMessage };
   }
 }
 
 export async function getLatestBiophysicsTest(patientId: string) {
   try {
+    await validatePatientAccess(patientId);
+
     const test = await prisma.biophysicsTest.findFirst({
       where: { patientId },
       orderBy: { testDate: 'desc' },
@@ -186,12 +193,15 @@ export async function getLatestBiophysicsTest(patientId: string) {
     return { success: true, test: null };
   } catch (error) {
     console.error('Error obteniendo último test:', error);
-    return { success: false, error: 'Error al obtener el test' };
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    return { success: false, error: errorMessage };
   }
 }
 
 export async function getBiophysicsTestHistory(patientId: string) {
   try {
+    await validatePatientAccess(patientId);
+
     const tests = await prisma.biophysicsTest.findMany({
       where: { patientId },
       orderBy: { testDate: 'desc' },
@@ -203,6 +213,7 @@ export async function getBiophysicsTestHistory(patientId: string) {
     return { success: true, tests: serializableTests };
   } catch (error) {
     console.error('Error obteniendo historial de tests:', error);
-    return { success: false, error: 'Error al obtener el historial', tests: [] };
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    return { success: false, error: errorMessage, tests: [] };
   }
 }

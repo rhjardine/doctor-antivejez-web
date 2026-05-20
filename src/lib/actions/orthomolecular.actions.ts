@@ -7,6 +7,7 @@ import { OrthomolecularFormValues } from '@/types/orthomolecular';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { validatePatientAccess, requireSession } from '@/lib/auth-guards';
 // consumeTestCredit NO se importa aquí — la transacción atómica se hace internamente
 
 interface SaveTestParams {
@@ -26,6 +27,9 @@ export async function calculateAndSaveOrthomolecularTest(params: SaveTestParams)
     if (!session || !session.user || !session.user.id) {
       return { success: false, error: "No autorizado. Debes iniciar sesión." };
     }
+
+    // IDOR Guard: verify caller owns this patient
+    await validatePatientAccess(patientId);
 
     const filledFields = Object.values(formValues).filter(
       value => typeof value === 'number' && !isNaN(value)
@@ -100,10 +104,16 @@ export async function calculateAndSaveOrthomolecularTest(params: SaveTestParams)
  */
 export async function deleteOrthomolecularTest(testId: string) {
   try {
+    // Auth Guard: require authenticated session
+    const { session } = await requireSession();
+
     const test = await prisma.orthomolecularTest.findUnique({ where: { id: testId } });
     if (!test) {
       return { success: false, error: 'Test no encontrado.' };
     }
+
+    // IDOR Guard: verify caller owns the patient linked to this test
+    await validatePatientAccess(test.patientId);
 
     await prisma.orthomolecularTest.delete({
       where: { id: testId },
@@ -111,8 +121,8 @@ export async function deleteOrthomolecularTest(testId: string) {
 
     revalidatePath(`/historias/${test.patientId}`);
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting orthomolecular test:', error);
-    return { success: false, error: 'No se pudo eliminar el test.' };
+    return { success: false, error: error.message || 'No se pudo eliminar el test.' };
   }
 }

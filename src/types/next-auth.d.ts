@@ -7,12 +7,16 @@ declare module 'next-auth' {
       id: string;
       role: PrismaUser['role'];
       permissions: Record<string, boolean> | null;
+      /** ID de la clínica/organización a la que pertenece el profesional.
+       *  null → usuario sin tenant asignado (legacy fallback: aislar por userId). */
+      tenantId?: string | null;
     } & DefaultSession['user'];
   }
 
   interface User {
     role: PrismaUser['role'];
     permissions?: Record<string, boolean> | null;
+    tenantId?: string | null;
   }
 }
 
@@ -21,5 +25,6 @@ declare module 'next-auth/jwt' {
     id: string;
     role: PrismaUser['role'];
     permissions?: Record<string, boolean> | null;
+    tenantId?: string | null;
   }
 }

@@ -84,6 +84,16 @@ export const authOptions: NextAuthOptions = {
             where: {
               email: normalizedEmail,
             },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              password: true,
+              role: true,
+              status: true,
+              image: true,
+              tenantId: true,
+            },
           });
 
           if (!user) {
@@ -114,6 +124,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
             image: user.image,
+            tenantId: user.tenantId ?? null,
           };
         } catch (error) {
           console.error("🔥 [Auth] Error en proceso de autorización:", error);
@@ -131,6 +142,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.image = token.picture;
         session.user.permissions = token.permissions || null;
+        session.user.tenantId = token.tenantId ?? null;
       }
       return session;
     },
@@ -145,7 +157,7 @@ export const authOptions: NextAuthOptions = {
       try {
         const dbUser = await db.user.findUnique({
           where: { id: token.id },
-          select: { permissions: true, role: true, status: true }
+          select: { permissions: true, role: true, status: true, tenantId: true }
         });
         
         if (dbUser) {
@@ -156,6 +168,7 @@ export const authOptions: NextAuthOptions = {
             token.role = dbUser.role;
           }
           token.permissions = dbUser.permissions as Record<string, boolean> | null;
+          token.tenantId = dbUser.tenantId ?? null;
         }
       } catch (error) {
         console.error("🔥 [Auth] Error fetching user permissions for JWT:", error);

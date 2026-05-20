@@ -8,10 +8,14 @@ import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import { validatePatientAccess, requireSession } from '@/lib/auth-guards';
 
 export async function createPatient(formData: PatientFormData & { userId: string }) {
 
   try {
+    // Obtener sesión para extraer tenantId del profesional autenticado
+    const session = await getServerSession(authOptions);
+
     // Extraer pwaPassword antes de enviar a Prisma (no es campo de BD)
     const { pwaPassword, ...restFormData } = formData;
     const validatedData = patientSchema.parse(formData);
@@ -47,6 +51,7 @@ export async function createPatient(formData: PatientFormData & { userId: string
       data: {
         ...prismaFields,
         userId: formData.userId,
+        tenantId: session?.user?.tenantId ?? null, // ← Asociar al tenant de la clínica
         historyDate: new Date(validatedData.historyDate),
         birthDate: new Date(validatedData.birthDate),
         chronologicalAge,
@@ -80,15 +85,8 @@ export async function createPatient(formData: PatientFormData & { userId: string
 
 export async function updatePatient(id: string, formData: Partial<PatientFormData>) {
   try {
-    // ── IDOR GUARD ──────────────────────────────────────────────────────────────
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
-    const owned = await prisma.patient.findUnique({ where: { id }, select: { userId: true } });
-    if (!owned) return { success: false, error: 'Paciente no encontrado' };
-    if (session.user.role !== 'ADMIN' && owned.userId !== session.user.id) {
-      console.error(`[IDOR] updatePatient: user=${session.user.id} intentó modificar paciente de user=${owned.userId}`);
-      return { success: false, error: 'Acceso denegado' };
-    }
+    // ── IDOR GUARD (Centralizado) ───────────────────────────────────────────────
+    await validatePatientAccess(id);
     // ────────────────────────────────────────────────────────────────────────────
 
     // Extraer pwaPassword del formData antes de pasar a Prisma
@@ -118,21 +116,15 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
     return { success: true, patient };
   } catch (error) {
     console.error('Error actualizando paciente:', error);
-    return { success: false, error: 'Error al actualizar el paciente' };
+    const msg = error instanceof Error ? error.message : 'Error al actualizar el paciente';
+    return { success: false, error: msg };
   }
 }
 
 export async function deletePatient(id: string) {
   try {
-    // ── IDOR GUARD ──────────────────────────────────────────────────────────────
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: 'No autenticado' };
-    const owned = await prisma.patient.findUnique({ where: { id }, select: { userId: true } });
-    if (!owned) return { success: false, error: 'Paciente no encontrado' };
-    if (session.user.role !== 'ADMIN' && owned.userId !== session.user.id) {
-      console.error(`[IDOR] deletePatient: user=${session.user.id} intentó eliminar paciente de user=${owned.userId}`);
-      return { success: false, error: 'Acceso denegado' };
-    }
+    // ── IDOR GUARD (Centralizado) ───────────────────────────────────────────────
+    await validatePatientAccess(id);
     // ────────────────────────────────────────────────────────────────────────────
 
     // Soft Delete: actualizamos deletedAt en lugar de destruir el registro.
@@ -146,25 +138,19 @@ export async function deletePatient(id: string) {
     return { success: true };
   } catch (error) {
     console.error('Error eliminando paciente:', error);
-    return { success: false, error: 'Error al eliminar el paciente' };
+    const msg = error instanceof Error ? error.message : 'Error al eliminar el paciente';
+    return { success: false, error: msg };
   }
 }
 
 export async function getPatientDetails(id: string) {
   try {
-    // ✅ SECURITY: Ownership check — un médico solo ve sus propios pacientes
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return { success: false, error: 'No autorizado' };
-    }
+    // ── IDOR GUARD (Centralizado) ───────────────────────────────────────────────
+    await validatePatientAccess(id);
+    // ────────────────────────────────────────────────────────────────────────────
 
-    // ADMIN ve todos, MEDICO/COACH solo los suyos
-    const whereClause = session.user.role === 'ADMIN'
-      ? { id }
-      : { id, userId: session.user.id };
-
-    const patient = await prisma.patient.findFirst({
-      where: whereClause,
+    const patient = await prisma.patient.findUnique({
+      where: { id },
       include: {
         biophysicsTests: {
           orderBy: { testDate: 'desc' },
@@ -206,21 +192,15 @@ export async function getPatientDetails(id: string) {
     return { success: true, patient: safePatient };
   } catch (error) {
     console.error('Error obteniendo paciente:', error);
-    return { success: false, error: 'Error al obtener el paciente' };
+    const msg = error instanceof Error ? error.message : 'Error al obtener el paciente';
+    return { success: false, error: msg };
   }
 }
 
 export async function getPatientBiophysicsTrends(id: string) {
   try {
-    // ── IDOR GUARD ──────────────────────────────────────────────────────────────
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return { success: false, error: 'No autenticado', trends: [] };
-    const owned = await prisma.patient.findUnique({ where: { id }, select: { userId: true } });
-    if (!owned) return { success: false, error: 'Paciente no encontrado', trends: [] };
-    if (session.user.role !== 'ADMIN' && owned.userId !== session.user.id) {
-      console.error(`[IDOR] getPatientBiophysicsTrends: user=${session.user.id}`);
-      return { success: false, error: 'Acceso denegado', trends: [] };
-    }
+    // ── IDOR GUARD (Centralizado) ───────────────────────────────────────────────
+    await validatePatientAccess(id);
     // ────────────────────────────────────────────────────────────────────────────
 
     const trends = await prisma.biophysicsTest.findMany({
@@ -236,7 +216,8 @@ export async function getPatientBiophysicsTrends(id: string) {
     return { success: true, trends };
   } catch (error) {
     console.error('Error obteniendo tendencias:', error);
-    return { success: false, error: 'Error al obtener tendencias', trends: [] };
+    const msg = error instanceof Error ? error.message : 'Error al obtener tendencias';
+    return { success: false, error: msg, trends: [] };
   }
 }
 
@@ -248,16 +229,22 @@ export async function getPaginatedPatients({ page = 1, limit = 10, userId }: { p
 
     const skip = (page - 1) * limit;
 
-    // ✅ VISIBILIDAD DE DATOS (Protección Richard Jardine)
-    // Si es ADMIN, ve todo (o filtro opcional userId). 
-    // Si es MEDICO/COACH, forzamos su propio ID.
-    const effectiveUserId = session.user.role === 'ADMIN'
-      ? userId
-      : session.user.id;
+    // ✅ MULTI-TENANT SCOPING
+    // ADMIN: ve todo; MEDICO/COACH con tenantId: ve su clínica; fallback a userId.
+    const { tenantId: sessionTenantId, role: sessionRole, id: sessionUserId } = session.user;
+    const isAdmin = sessionRole === 'ADMIN';
 
-    const where = effectiveUserId
-      ? { userId: effectiveUserId, deletedAt: null }
-      : { deletedAt: null };
+    let where: Prisma.PatientWhereInput;
+    if (isAdmin) {
+      // Admin: filtro opcional por userId (para ver pacientes de un médico específico), siempre sin deletedAt
+      where = userId ? { userId, deletedAt: null } : { deletedAt: null };
+    } else if (sessionTenantId) {
+      // Profesional con tenant: ve todos los pacientes de su clínica
+      where = { tenantId: sessionTenantId, deletedAt: null };
+    } else {
+      // Fallback legacy: sin tenant, aislar por userId
+      where = { userId: sessionUserId, deletedAt: null };
+    }
 
     const [patients, totalPatients] = await prisma.$transaction([
       prisma.patient.findMany({
@@ -309,18 +296,24 @@ export async function searchPatients({ query, userId, page = 1, limit = 10 }: { 
     const session = await getServerSession(authOptions);
     if (!session?.user) throw new Error("No autorizado");
 
-    // ✅ VISIBILIDAD DE DATOS
-    const effectiveUserId = session.user.role === 'ADMIN'
-      ? userId
-      : session.user.id;
+    // ✅ MULTI-TENANT SCOPING para búsqueda
+    const { tenantId: sessionTenantId, role: sessionRole, id: sessionUserId } = session.user;
+    const isAdmin = sessionRole === 'ADMIN';
+
+    // Construir filtro de scope según tenant
+    const scopeFilter: Prisma.PatientWhereInput = isAdmin
+      ? (userId ? { userId } : {})
+      : sessionTenantId
+        ? { tenantId: sessionTenantId }
+        : { userId: sessionUserId };
 
     const queryParts = query.trim().split(/\s+/).filter(part => part.length > 0);
     const isNumericQuery = !isNaN(parseFloat(query)) && isFinite(Number(query));
 
     const whereClause: Prisma.PatientWhereInput = {
       AND: [
-        ...(effectiveUserId ? [{ userId: effectiveUserId }] : []),
-        { deletedAt: null }, // Excluir pacientes eliminados lógicamente
+        scopeFilter,           // Filtro de scope: tenant, userId o vacío (admin)
+        { deletedAt: null },   // Excluir pacientes eliminados lógicamente
         {
           OR: [
             // Búsqueda por partes (Nombre y Apellido)

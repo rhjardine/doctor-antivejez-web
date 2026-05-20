@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { validatePatientAccess } from '@/lib/auth-guards';
 
 export async function createGeneticTest(data: {
     patientId: string;
@@ -22,6 +23,7 @@ export async function createGeneticTest(data: {
         if (!session || !session.user?.id) {
             return { success: false, error: 'No autorizado. Debes iniciar sesión.' };
         }
+        await validatePatientAccess(data.patientId);
 
         const patient = await prisma.patient.findUnique({
             where: { id: data.patientId },
@@ -86,6 +88,7 @@ export async function createGeneticTest(data: {
 
 export async function getGeneticTests(patientId: string) {
     try {
+        await validatePatientAccess(patientId);
         const tests = await prisma.geneticTest.findMany({
             where: { patientId },
             orderBy: { testDate: 'desc' },
@@ -93,6 +96,6 @@ export async function getGeneticTests(patientId: string) {
         return { success: true, data: tests };
     } catch (error: any) {
         console.error('Error fetching genetic tests:', error);
-        return { success: false, error: 'Error al obtener los tests genéticos' };
+        return { success: false, error: error.message || 'Error al obtener los tests genéticos' };
     }
 }

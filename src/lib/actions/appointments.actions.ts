@@ -4,6 +4,7 @@
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { validatePatientAccess, validateAppointmentAccess, requireSession } from '@/lib/auth-guards';
 
 // --- CORRECCIÓN: Se elimina 'userId' del esquema de creación. ---
 // La cita se relaciona con el usuario a través del paciente, por lo que
@@ -26,6 +27,9 @@ export async function createAppointment(data: {
   reason: string;
 }) {
   try {
+    // IDOR GUARD: verificar acceso al paciente antes de crear la cita
+    await validatePatientAccess(data.patientId);
+
     // Se validan solo los datos que corresponden al modelo Appointment.
     const validatedData = appointmentSchema.parse({
       patientId: data.patientId,
@@ -58,15 +62,21 @@ export async function createAppointment(data: {
  */
 export async function getAppointmentsByMonth(userId: string, month: Date) {
   try {
+    // Multi-Tenant scoping para citas
+    const { session } = await requireSession();
+    const isAdmin = session.user.role === 'ADMIN';
+    const patientFilter = isAdmin
+      ? {}
+      : session.user.tenantId
+        ? { tenantId: session.user.tenantId, deletedAt: null }
+        : { userId: session.user.id, deletedAt: null };
+
     const start = new Date(month.getFullYear(), month.getMonth(), 1);
     const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        // La consulta busca citas de pacientes que pertenecen al userId del profesional.
-        patient: {
-          userId: userId,
-        },
+        patient: patientFilter,
         date: {
           gte: start,
           lte: end,
@@ -86,9 +96,9 @@ export async function getAppointmentsByMonth(userId: string, month: Date) {
     });
 
     return { success: true, appointments };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al obtener las citas:", error);
-    return { success: false, error: "No se pudieron obtener las citas." };
+    return { success: false, error: error.message || "No se pudieron obtener las citas." };
   }
 }
 
@@ -104,6 +114,9 @@ export async function updateAppointment(id: string, data: Partial<{
   status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 }>) {
   try {
+    // IDOR GUARD: verificar acceso a la cita antes de modificar
+    await validateAppointmentAccess(id);
+
     const appointment = await prisma.appointment.update({
       where: { id },
       data,
@@ -113,9 +126,9 @@ export async function updateAppointment(id: string, data: Partial<{
     revalidatePath(`/historias/${appointment.patientId}`);
     
     return { success: true, appointment };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al actualizar la cita:", error);
-    return { success: false, error: "No se pudo actualizar la cita." };
+    return { success: false, error: error.message || "No se pudo actualizar la cita." };
   }
 }
 
@@ -125,6 +138,9 @@ export async function updateAppointment(id: string, data: Partial<{
  */
 export async function deleteAppointment(id: string) {
   try {
+    // IDOR GUARD: verificar acceso a la cita antes de eliminar
+    await validateAppointmentAccess(id);
+
     const appointment = await prisma.appointment.delete({
       where: { id },
     });
@@ -133,8 +149,8 @@ export async function deleteAppointment(id: string) {
     revalidatePath(`/historias/${appointment.patientId}`);
 
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al eliminar la cita:", error);
-    return { success: false, error: "No se pudo eliminar la cita." };
+    return { success: false, error: error.message || "No se pudo eliminar la cita." };
   }
 }
