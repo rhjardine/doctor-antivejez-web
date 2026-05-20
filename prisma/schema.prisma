@@ -155,6 +155,7 @@ model User {
   role          Role      @default(MEDICO)
   status        String    @default("ACTIVO")
   deletedAt     DateTime? // Soft Delete — null = activo, fecha = eliminado lógicamente
+  tenantId      String?   // Multi-Tenant — ID de la clínica/organización. Null = usuario sin tenant asignado
   accounts      Account[]
   sessions      Session[]
   patients      Patient[]
@@ -227,6 +228,7 @@ model Patient {
   id               String   @id @default(cuid())
   controlNumber    Int      @default(autoincrement())
   userId           String
+  tenantId         String?  // Multi-Tenant — ID de la clínica. Null = registro legacy sin tenant asignado
   photo            String?
   nationality      String
   identification   String   @unique
