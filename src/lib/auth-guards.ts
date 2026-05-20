@@ -180,3 +180,56 @@ export async function validateAppointmentAccess(
   // Delegar al guard de paciente
   return validatePatientAccess(appointment.patientId);
 }
+
+// ─── Mobile API Guard ───────────────────────────────────────────────────────
+
+/**
+ * Payload extraído y validado del token JWT de la PWA móvil.
+ */
+export interface MobileTokenPayload {
+  id: string;
+  role: string;
+  tenantId: string | null;
+}
+
+/**
+ * Guard de autenticación para endpoints de la PWA móvil.
+ *
+ * Extrae el Bearer token del header Authorization, lo verifica con
+ * MOBILE_JWT_SECRET (con fallback a NEXTAUTH_SECRET para tokens legacy),
+ * y retorna el payload tipado {id, role, tenantId}.
+ *
+ * @throws Error UNAUTHORIZED si el token es ausente, inválido o expirado.
+ */
+export async function validateMobileSession(req: Request): Promise<MobileTokenPayload> {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('UNAUTHORIZED: Token de autorización móvil ausente');
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  // Intentar verificar con el secreto móvil (v1 tokens)
+  const { verifyMobileAccessToken, verifyToken } = await import('@/lib/jwt');
+
+  const mobilePayload = await verifyMobileAccessToken(token);
+  if (mobilePayload) {
+    return {
+      id: mobilePayload.sub,
+      role: mobilePayload.role,
+      tenantId: mobilePayload.tenantId || null,
+    };
+  }
+
+  // Fallback: verificar con el secreto legacy (tokens de mobile-login v0)
+  const legacyPayload = await verifyToken(token);
+  if (legacyPayload && legacyPayload.id) {
+    return {
+      id: legacyPayload.id as string,
+      role: (legacyPayload.role as string) || 'PATIENT',
+      tenantId: (legacyPayload.tenantId as string) || null,
+    };
+  }
+
+  throw new Error('UNAUTHORIZED: Firma de sesión móvil inválida o expirada');
+}

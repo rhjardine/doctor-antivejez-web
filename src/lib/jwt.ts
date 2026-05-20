@@ -34,8 +34,8 @@ const getMobileRefreshSecret = () =>
     new TextEncoder().encode(process.env.MOBILE_REFRESH_SECRET || process.env.NEXTAUTH_SECRET);
 
 /** Access token para la PWA — corta duración (15 min) */
-export async function signMobileAccessToken(payload: { id: string; role: string }) {
-    return new SignJWT({ sub: payload.id, role: payload.role, type: 'access' })
+export async function signMobileAccessToken(payload: { id: string; role: string; tenantId?: string | null }) {
+    return new SignJWT({ sub: payload.id, role: payload.role, tenantId: payload.tenantId || null, type: 'access' })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime('15m')
@@ -66,7 +66,7 @@ export async function verifyMobileAccessToken(token: string | undefined) {
     try {
         const { payload } = await jwtVerify(token, getMobileAccessSecret());
         if (payload.type !== 'access') return null;
-        return payload as { sub: string; role: string; type: string };
+        return payload as { sub: string; role: string; tenantId: string | null; type: string };
     } catch (error) {
         console.error('JWT Verification Error:', error);
         return null;

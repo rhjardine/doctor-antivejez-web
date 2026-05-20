@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyToken } from "@/lib/jwt";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
+import { validateMobileSession } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,22 +13,18 @@ export async function GET(req: Request) {
     const corsHeaders = getCorsHeaders(req, "GET, OPTIONS");
 
     try {
-        // 1. Authorization Check
-        const authHeader = req.headers.get("Authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
-        }
+        // ── MOBILE AUTH GUARD (Centralizado) ──────────────────────────────────
+        const session = await validateMobileSession(req);
+        // ────────────────────────────────────────────────────────────────────────
 
-        const token = authHeader.split(" ")[1];
-        const decoded = await verifyToken(token);
-
-        if (!decoded || !decoded.id) {
-            return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: corsHeaders });
-        }
+        // Multi-Tenant + Soft Delete filter
+        const tenantFilter = session.tenantId
+            ? { id: session.id, tenantId: session.tenantId, deletedAt: null }
+            : { id: session.id, deletedAt: null };
 
         // 2. Get Patient Blood Type
-        const patient = await db.patient.findUnique({
-            where: { id: decoded.id },
+        const patient = await db.patient.findFirst({
+            where: tenantFilter,
             select: { bloodType: true }
         });
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { validateMobileSession } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,36 @@ export async function POST(req: Request) {
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
     try {
+        // ── MOBILE AUTH GUARD (Centralizado) ──────────────────────────────────
+        const session = await validateMobileSession(req);
+        // ────────────────────────────────────────────────────────────────────────
+
         const { message, history, patientContext } = await req.json();
+
+        // SECURITY: Verificar que el patientContext.id del body coincide con el token
+        if (!patientContext || patientContext.id !== session.id) {
+            console.warn(
+                `[SECURITY WARN] VCoach IDOR attempt | ` +
+                `tokenId=${session.id} bodyId=${patientContext?.id ?? 'NULL'}`
+            );
+            return NextResponse.json({ error: "Acceso denegado" }, { status: 403, headers: corsHeaders });
+        }
+
+        // Multi-Tenant: verificar existencia y pertenencia del paciente
+        const { db } = await import("@/lib/db");
+        const tenantFilter = session.tenantId
+            ? { id: session.id, tenantId: session.tenantId, deletedAt: null }
+            : { id: session.id, deletedAt: null };
+
+        const patientExists = await db.patient.findFirst({
+            where: tenantFilter,
+            select: { id: true },
+        });
+
+        if (!patientExists) {
+            return NextResponse.json({ error: "Paciente no encontrado" }, { status: 404, headers: corsHeaders });
+        }
+
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
@@ -49,12 +79,11 @@ export async function POST(req: Request) {
         const result = await chat.sendMessage(message);
         const text = result.response.text();
 
-        // AUDIT LOGGING (non-blocking)
+        // AUDIT LOGGING (non-blocking) — usa session.id del token (nunca del body)
         try {
-            const { db } = await import("@/lib/db");
             await db.aIAnalysis.create({
                 data: {
-                    patientId: patientContext.id,
+                    patientId: session.id,  // SECURE: del token JWT, no del body
                     analysisType: 'vcoach_chat',
                     prompt: message,
                     response: text,
@@ -67,7 +96,11 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ text }, { headers: corsHeaders });
-    } catch (e) {
+    } catch (e: any) {
+        const isAuthError = e?.message?.startsWith('UNAUTHORIZED');
+        if (isAuthError) {
+            return NextResponse.json({ error: e.message }, { status: 401, headers: corsHeaders });
+        }
         return NextResponse.json({ error: "IA Offline" }, { status: 500, headers: corsHeaders });
     }
 }

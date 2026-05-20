@@ -54,7 +54,8 @@ export async function POST(req: Request) {
         }
 
         // ✅ SECURITY: Dual token — access (15min) + refresh (7d)
-        const token = await signMobileAccessToken({ id: patient.id, role: "PATIENT" });
+        // Incluye tenantId para aislamiento Multi-Tenant en endpoints de datos
+        const token = await signMobileAccessToken({ id: patient.id, role: "PATIENT", tenantId: patient.tenantId || null });
         const refreshToken = await signMobileRefreshToken({ id: patient.id });
 
         // Consolidamos el objeto paciente — con fallback si la BD tiene drift

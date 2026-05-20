@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { NlrRiskLevel } from '@prisma/client';
 import { getCorsHeaders, handleCorsPreflightOrReject } from '@/lib/cors';
+import { validateMobileSession } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,11 +25,29 @@ export async function POST(req: Request) {
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
     try {
-        const body = await req.json();
-        const { patientId, neutrophils, lymphocytes, testDate } = body;
+        // ── MOBILE AUTH GUARD (Centralizado) ──────────────────────────────────
+        const session = await validateMobileSession(req);
+        // ────────────────────────────────────────────────────────────────────────
 
-        if (!patientId || !neutrophils || !lymphocytes) {
-            return NextResponse.json({ error: 'Faltan datos requeridos (patientId, neutrófilos o linfocitos)' }, { status: 400, headers: corsHeaders });
+        const body = await req.json();
+        const { neutrophils, lymphocytes, testDate } = body;
+
+        if (!neutrophils || !lymphocytes) {
+            return NextResponse.json({ error: 'Faltan datos requeridos (neutrófilos o linfocitos)' }, { status: 400, headers: corsHeaders });
+        }
+
+        // Multi-Tenant + Soft Delete: verificar existencia del paciente
+        const tenantFilter = session.tenantId
+            ? { id: session.id, tenantId: session.tenantId, deletedAt: null }
+            : { id: session.id, deletedAt: null };
+
+        const patient = await db.patient.findFirst({
+            where: tenantFilter,
+            select: { id: true },
+        });
+
+        if (!patient) {
+            return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404, headers: corsHeaders });
         }
 
         const nlrValue = Number(neutrophils) / Number(lymphocytes);
@@ -36,7 +55,7 @@ export async function POST(req: Request) {
 
         const test = await db.nlrTest.create({
             data: {
-                patientId,
+                patientId: patient.id, // SECURE: del token JWT, no del body
                 neutrophils: Number(neutrophils),
                 lymphocytes: Number(lymphocytes),
                 nlrValue: Number(nlrValue),
@@ -47,6 +66,10 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true, data: test }, { status: 201, headers: corsHeaders });
     } catch (error: any) {
+        const isAuthError = error?.message?.startsWith('UNAUTHORIZED');
+        if (isAuthError) {
+            return NextResponse.json({ error: error.message }, { status: 401, headers: corsHeaders });
+        }
         console.error('NLR test error:', (error as Error).message);
         return NextResponse.json({
             error: 'Error al guardar el test de NLR',

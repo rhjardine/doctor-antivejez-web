@@ -20,12 +20,16 @@ export async function POST(req: Request) {
         if (!patient || !patient.user || !patient.user.password) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401, headers: corsHeaders });
         }
+        if (patient.deletedAt) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401, headers: corsHeaders });
+        }
         const isMatch = await bcrypt.compare(password, patient.user.password);
         if (!isMatch) {
             return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401, headers: corsHeaders });
         }
-        const token = await signToken({ id: patient.id, role: "PATIENT" });
-        return NextResponse.json({ success: true, token, patient }, { headers: corsHeaders });
+        const token = await signToken({ id: patient.id, role: "PATIENT", tenantId: patient.tenantId || null });
+        const { passwordHash: _ph, ...safePatient } = patient as any;
+        return NextResponse.json({ success: true, token, patient: safePatient }, { headers: corsHeaders });
     } catch (error) {
         return NextResponse.json({ error: "Server Error" }, { status: 500, headers: corsHeaders });
     }

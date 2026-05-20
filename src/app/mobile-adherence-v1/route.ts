@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { verifyToken } from '@/lib/jwt';
 import { getCorsHeaders, handleCorsPreflightOrReject } from '@/lib/cors';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { validateMobileSession } from '@/lib/auth-guards';
 
 const PWA_CORS_HEADERS = {
     'Access-Control-Allow-Origin': 'https://doctorantivejez-patients.onrender.com',
@@ -23,18 +23,11 @@ export async function POST(req: Request) {
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
     try {
-        const authHeader = req.headers.get("Authorization");
-        const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+        // ── MOBILE AUTH GUARD (Centralizado) ──────────────────────────────────
+        const session = await validateMobileSession(req);
+        // ────────────────────────────────────────────────────────────────────────
 
-        if (!token) {
-            return NextResponse.json({ error: "Token missing" }, { status: 401, headers: corsHeaders });
-        }
-
-        // Security: Verify token and extract ID from payload, NOT body
-        const payload = await verifyToken(token);
-
-        if (!payload || !payload.id || payload.role !== 'PATIENT') {
-            // Strict Role Check: Only PATIENT role can submit adherence
+        if (session.role !== 'PATIENT') {
             return NextResponse.json({ error: "Unauthorized access" }, { status: 403, headers: corsHeaders });
         }
 
@@ -45,10 +38,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Invalid data structure" }, { status: 400, headers: corsHeaders });
         }
 
-        // Clinical Rigor: Create transaction tied strictly to the authenticated user ID
-        // First, find the patient record associated with this User ID
+        // Multi-Tenant + Soft Delete: verificar que el paciente existe y pertenece al tenant
+        const tenantFilter = session.tenantId
+            ? { id: session.id, tenantId: session.tenantId, deletedAt: null }
+            : { id: session.id, deletedAt: null };
+
         const patient = await db.patient.findFirst({
-            where: { userId: payload.id }
+            where: tenantFilter,
+            select: { id: true },
         });
 
         if (!patient) {
@@ -57,7 +54,7 @@ export async function POST(req: Request) {
 
         const transaction = await db.omicTransaction.create({
             data: {
-                patientId: patient.id, // SECURE: sourced from DB relation to verified Token ID
+                patientId: patient.id, // SECURE: sourced from DB, filtered by tenant + token
                 type,
                 pointsEarned: points,
                 pointsPotential: 100, // Default potential

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { verifyMobileAccessToken } from '@/lib/jwt';
 import { calculateAge } from '@/utils/date';
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
+import { validateMobileSession } from '@/lib/auth-guards';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,20 +29,17 @@ export async function GET(req: Request) {
     const corsHeaders = getCorsHeaders(req, "GET, PATCH, OPTIONS");
 
     try {
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Token no proporcionado" }, { status: 401, headers: corsHeaders });
-        }
+        // ── MOBILE AUTH GUARD (Centralizado) ──────────────────────────────────
+        const session = await validateMobileSession(req);
+        // ────────────────────────────────────────────────────────────────────────
 
-        const token = authHeader.split(" ")[1];
-        const payload = await verifyMobileAccessToken(token);
+        // Multi-Tenant + Soft Delete filter
+        const tenantFilter = session.tenantId
+            ? { id: session.id, tenantId: session.tenantId, deletedAt: null }
+            : { id: session.id, deletedAt: null };
 
-        if (!payload) {
-            return NextResponse.json({ error: "Token inválido o expirado" }, { status: 401, headers: corsHeaders });
-        }
-
-        const patient = await db.patient.findUnique({
-            where: { id: payload.sub },
+        const patient = await db.patient.findFirst({
+            where: tenantFilter,
             include: {
                 biophysicsTests: { orderBy: { createdAt: 'desc' }, take: 1 },
                 biochemistryTests: { orderBy: { createdAt: 'desc' }, take: 1 },
@@ -214,17 +211,9 @@ export async function PATCH(req: Request) {
     const corsHeaders = getCorsHeaders(req, "GET, PATCH, OPTIONS");
 
     try {
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "No autorizado" }, { status: 401, headers: corsHeaders });
-        }
-
-        const token = authHeader.split(" ")[1];
-        const payload = await verifyMobileAccessToken(token);
-
-        if (!payload) {
-            return NextResponse.json({ error: "Token inválido" }, { status: 401, headers: corsHeaders });
-        }
+        // ── MOBILE AUTH GUARD (Centralizado) ──────────────────────────────────
+        const session = await validateMobileSession(req);
+        // ────────────────────────────────────────────────────────────────────────
 
         // ================================================================
         // PASO 3: Extraer version del body enviado por la PWA
@@ -256,7 +245,7 @@ export async function PATCH(req: Request) {
         try {
             const updatedPatient = await db.patient.update({
                 where: {
-                    id: payload.sub,
+                    id: session.id,
                     version: incomingVersion,         // ← OCC: debe coincidir con la versión en DB
                 },
                 data: {
@@ -287,7 +276,7 @@ export async function PATCH(req: Request) {
             // ================================================================
             if (prismaError?.code === "P2025") {
                 console.warn(
-                    `[OCC] ⚡ Conflicto detectado para paciente ${payload.sub}: ` +
+                    `[OCC] ⚡ Conflicto detectado para paciente ${session.id}: ` +
                     `versión entrante=${incomingVersion} ya fue superada en DB.`
                 );
                 return NextResponse.json(
