@@ -47,7 +47,8 @@ class BiotechParticle {
     this.vx = (Math.random() - 0.5) * 0.4;
     this.vy = -(Math.random() * 0.4 + 0.1); // Flotar suavemente hacia arriba
     this.size = Math.random() * 3 + 1.5;
-    this.alpha = Math.random() * 0.4 + 0.15;
+    // Elevamos levemente el floor de opacidad (0.3 a 0.75) para que destaquen sobre fondo claro
+    this.alpha = Math.random() * 0.45 + 0.3;
     this.angle = Math.random() * Math.PI * 2;
     this.rotationSpeed = (Math.random() - 0.5) * 0.01;
     this.amplitude = Math.random() * 15 + 5;
@@ -100,7 +101,7 @@ class BiotechParticle {
       const points = 8;
       ctx.beginPath();
       ctx.strokeStyle = '#23bcef';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.2;
 
       // Cadena A y B con diferencia de fase de Pi
       for (let i = 0; i < points; i++) {
@@ -111,49 +112,50 @@ class BiotechParticle {
         // Dibujar peldaño/enlace de bases nitrogenadas
         if (i % 2 === 0) {
           ctx.beginPath();
-          ctx.strokeStyle = `rgba(35, 188, 239, ${this.alpha * 0.6})`;
+          ctx.strokeStyle = `rgba(35, 188, 239, ${this.alpha * 0.75})`;
           ctx.moveTo(t, wave1);
           ctx.lineTo(t, wave2);
           ctx.stroke();
         }
 
-        // Nodo de la cadena A
+        // Nodo de la cadena A (Cian)
         ctx.beginPath();
         ctx.fillStyle = '#23bcef';
-        ctx.arc(t, wave1, 1.5, 0, Math.PI * 2);
+        ctx.arc(t, wave1, 1.8, 0, Math.PI * 2);
         ctx.fill();
 
-        // Nodo de la cadena B
+        // Nodo de la cadena B (Azul Marino del Pantone)
         ctx.beginPath();
         ctx.fillStyle = '#1e40af';
-        ctx.arc(t, wave2, 1.5, 0, Math.PI * 2);
+        ctx.arc(t, wave2, 1.8, 0, Math.PI * 2);
         ctx.fill();
       }
     } else if (this.type === 'atom') {
       // ⚛️ CÉLULA NÚCLEO / ÁTOMO DE LONGEVIDAD
       ctx.beginPath();
-      ctx.strokeStyle = '#23bcef';
-      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = '#1e40af';
+      ctx.lineWidth = 1;
       // Órbita elíptica 1
       ctx.ellipse(0, 0, this.size, this.size / 2.5, Math.PI / 4, 0, Math.PI * 2);
       ctx.stroke();
 
       ctx.beginPath();
+      ctx.strokeStyle = '#23bcef';
       // Órbita elíptica 2
       ctx.ellipse(0, 0, this.size, this.size / 2.5, -Math.PI / 4, 0, Math.PI * 2);
       ctx.stroke();
 
       // Núcleo brillante
       ctx.beginPath();
-      ctx.fillStyle = '#ffffff';
-      ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#1e40af';
+      ctx.arc(0, 0, 1.8, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // ⚪ MICROESFERA/COLÁGENO FLOTANTE
+      // ⚪ MICROESFERA/COLÁGENO FLOTANTE (Adaptado para destacar en claro)
       const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-      gradient.addColorStop(0.3, 'rgba(35, 188, 239, 0.5)');
-      gradient.addColorStop(1, 'rgba(7, 11, 26, 0)');
+      gradient.addColorStop(0, 'rgba(35, 188, 239, 0.7)');
+      gradient.addColorStop(0.5, 'rgba(30, 64, 175, 0.35)');
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(0, 0, this.size, 0, Math.PI * 2);
@@ -213,7 +215,8 @@ function LoginFormCard() {
   };
 
   return (
-    <div className="bg-[#0c122c]/65 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_24px_50px_rgba(0,0,0,0.6)] p-8 relative overflow-hidden transition-all duration-300 hover:border-white/20 w-full">
+    // 🛡️ MODAL CON GLASSMORPHISM PREMIUM (Fondo oficial oscuro con blur de alta fidelidad)
+    <div className="bg-[#0c122c]/85 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_24px_60px_rgba(7,11,26,0.35),0_0_40px_rgba(35,188,239,0.08)] p-8 relative overflow-hidden transition-all duration-300 hover:border-white/15 w-full">
       
       {/* Destello sutil en el borde superior de la caja */}
       <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#23bcef]/45 to-transparent" />
@@ -221,7 +224,7 @@ function LoginFormCard() {
       {/* 🎯 Logotipo Integrado Estilo PWA (Fusión Cromática con mix-blend-screen) */}
       <div className="flex flex-col items-center mb-8 relative">
         <div className="absolute -top-6 w-32 h-10 bg-[#23bcef]/25 blur-2xl rounded-full pointer-events-none" />
-        <div className="relative drop-shadow-[0_0_15px_rgba(35,188,239,0.3)]">
+        <div className="relative drop-shadow-[0_0_15px_rgba(35,188,239,0.35)]">
           <img
             src="/images/Logoico.jpeg"
             alt="Doctor AntiVejez Logo"
@@ -263,15 +266,17 @@ function LoginFormCard() {
         
         {/* Campo Email */}
         <div className="space-y-2">
-          <label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">
+          <label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-300 block px-1">
             Correo Electrónico
           </label>
           <div className="relative group">
-            <div className="absolute inset-y-0 left-4 flex items-center text-slate-500 group-focus-within:text-[#23bcef] transition-colors duration-200">
+            {/* El icono cambia a azul brillante cuando el input está enfocado */}
+            <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 group-focus-within:text-[#23bcef] transition-colors duration-200 z-10">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
               </svg>
             </div>
+            {/* ⚪ Fondo Blanco Puro con Fuente Negra */}
             <input
               id="email"
               type="email"
@@ -280,22 +285,23 @@ function LoginFormCard() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ejemplo@doctorantivejez.com"
-              className="w-full bg-[#070b1a]/70 border border-white/5 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all duration-300 focus:border-[#23bcef]/50 focus:ring-2 focus:ring-[#23bcef]/10 focus:bg-[#070b1a]/95"
+              className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-sm text-black placeholder-slate-400 outline-none transition-all duration-300 focus:border-[#23bcef]/60 focus:ring-4 focus:ring-[#23bcef]/15"
             />
           </div>
         </div>
 
         {/* Campo Contraseña */}
         <div className="space-y-2">
-          <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 block px-1">
+          <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-300 block px-1">
             Contraseña de Acceso
           </label>
           <div className="relative group">
-            <div className="absolute inset-y-0 left-4 flex items-center text-slate-500 group-focus-within:text-[#23bcef] transition-colors duration-200">
+            <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 group-focus-within:text-[#23bcef] transition-colors duration-200 z-10">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
               </svg>
             </div>
+            {/* ⚪ Fondo Blanco Puro con Fuente Negra */}
             <input
               id="password"
               type="password"
@@ -304,7 +310,7 @@ function LoginFormCard() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••••••"
-              className="w-full bg-[#070b1a]/70 border border-white/5 rounded-2xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all duration-300 focus:border-[#23bcef]/50 focus:ring-2 focus:ring-[#23bcef]/10 focus:bg-[#070b1a]/95"
+              className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-sm text-black placeholder-slate-400 outline-none transition-all duration-300 focus:border-[#23bcef]/60 focus:ring-4 focus:ring-[#23bcef]/15"
             />
           </div>
         </div>
@@ -313,7 +319,7 @@ function LoginFormCard() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full relative group mt-8 h-12 bg-gradient-to-r from-[#23bcef] to-blue-600 hover:from-[#39c8f9] hover:to-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-[0_4px_20px_rgba(35,188,239,0.3)] hover:shadow-[0_4px_30px_rgba(35,188,239,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
+          className="w-full relative group mt-8 h-12 bg-gradient-to-r from-[#23bcef] to-blue-600 hover:from-[#39c8f9] hover:to-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-[0_4px_20px_rgba(35,188,239,0.35)] hover:shadow-[0_4px_30px_rgba(35,188,239,0.55)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
         >
           {loading ? (
             <span className="flex items-center gap-2">
@@ -329,11 +335,14 @@ function LoginFormCard() {
         </button>
       </form>
 
-      {/* Copyright sutil corporativo */}
-      <div className="mt-8 text-center">
-        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-          © {new Date().getFullYear()} Doctor AntiVejez · Longevity System
-        </span>
+      {/* 🏢 Copyright y Powered By Vytalix en la parte inferior */}
+      <div className="mt-8 text-center space-y-2 border-t border-white/5 pt-6">
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+          © 2026 Doctor Antivejez - Medicina Antienvejecimiento y Longevidad
+        </p>
+        <p className="text-[11px] font-black text-[#23bcef] tracking-[0.25em] uppercase drop-shadow-[0_0_8px_rgba(35,188,239,0.35)]">
+          Powered by Vytalix
+        </p>
       </div>
 
     </div>
@@ -386,10 +395,10 @@ export default function LoginPage() {
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Dibujar fondo degradado sutil de forma nativa para mejor integración cromática
+      // 🌅 FONDO CLARO E INMERSIVO (Blanquecino-Azulado de Alta Estética)
       const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      bgGradient.addColorStop(0, '#070b1a');
-      bgGradient.addColorStop(1, '#0e1736');
+      bgGradient.addColorStop(0, '#f2f6fa'); // Blanco azulado claro y limpio
+      bgGradient.addColorStop(1, '#e5ecf2'); // Tono azulado suave de longevidad celular
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -417,14 +426,14 @@ export default function LoginPage() {
       {/* 🔮 Lienzo del fondo dinámico interactivo */}
       <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
 
-      {/* 💡 Luces volumétricas decorativas fijas para atmósfera estética */}
-      <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-[#23bcef]/10 blur-[130px] pointer-events-none z-0" />
-      <div className="absolute bottom-1/4 right-1/3 w-[500px] h-[500px] rounded-full bg-blue-600/[0.06] blur-[150px] pointer-events-none z-0" />
+      {/* 💡 Luces volumétricas decorativas suaves para atmósfera estética */}
+      <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-[#23bcef]/15 blur-[120px] pointer-events-none z-0" />
+      <div className="absolute bottom-1/4 right-1/3 w-[500px] h-[500px] rounded-full bg-blue-500/[0.08] blur-[140px] pointer-events-none z-0" />
 
       {/* 📦 Contenedor del Formulario Estilo Glassmorphism protegido con Suspense */}
       <div className="relative z-10 w-full max-w-md px-6 py-12">
         <Suspense fallback={
-          <div className="bg-[#0c122c]/65 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-[0_24px_50px_rgba(0,0,0,0.6)] flex flex-col items-center justify-center min-h-[450px]">
+          <div className="bg-[#0c122c]/85 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-[0_24px_50px_rgba(7,11,26,0.35)] flex flex-col items-center justify-center min-h-[450px]">
             <svg className="animate-spin h-8 w-8 text-[#23bcef] mb-4" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
