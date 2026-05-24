@@ -156,20 +156,20 @@ export const authOptions: NextAuthOptions = {
       // para asegurar sincronización en tiempo real de los permisos y estado.
       try {
         const dbUser = await db.user.findUnique({
-          where: { id: token.id },
-          select: { permissions: true, role: true, status: true, tenantId: true }
+          where: { id: token.id as string },
+          select: { permissions: true, role: true, status: true, tenantId: true, deletedAt: true }
         });
         
-        if (dbUser) {
-          // Si el usuario fue desactivado mientras tenía sesión activa
-          if (dbUser.status === 'INACTIVO') {
-            token.role = 'INACTIVO' as any;
-          } else {
-            token.role = dbUser.role;
-          }
-          token.permissions = dbUser.permissions as Record<string, boolean> | null;
-          token.tenantId = dbUser.tenantId ?? null;
+        // ⚡ FAIL FAST: Invalidar sesión en tiempo real
+        if (!dbUser || dbUser.status !== 'ACTIVO' || dbUser.deletedAt !== null) {
+          console.warn(`[SECURITY] Sesión activa rechazada para el usuario inactivo/borrado ID: ${token.id}`);
+          return {} as any; // Token vacío destruye la sesión y el middleware redirige a /login
         }
+
+        // Si es válido, actualizar roles y permisos en tiempo real
+        token.role = dbUser.role;
+        token.permissions = dbUser.permissions as Record<string, boolean> | null;
+        token.tenantId = dbUser.tenantId ?? null;
       } catch (error) {
         console.error("🔥 [Auth] Error fetching user permissions for JWT:", error);
       }
