@@ -183,3 +183,53 @@ export async function consumeTest(userId: string) {
   }
 }
 
+/**
+ * Obtiene el registro de auditoría de permisos de forma paginada/limitada.
+ * Solo accesible para administradores.
+ */
+export async function getAdminAuditLogs() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return { success: false, error: 'No autorizado.' };
+  }
+
+  try {
+    const logs = await db.userPermissionLog.findMany({
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { name: true, email: true } },
+        changedByRelation: { select: { name: true } }
+      }
+    });
+    return { success: true, data: logs };
+  } catch (error: any) {
+    console.error('[AUDIT LOG FETCH ERROR]:', error.message);
+    return { success: false, error: 'Fallo al obtener bitácora de auditoría.' };
+  }
+}
+
+/**
+ * Obtiene el historial global de transacciones del Ledger de Créditos.
+ */
+export async function getAdminCreditHistory() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return { success: false, error: 'No autorizado.' };
+  }
+
+  try {
+    const credits = await db.creditTransaction.findMany({
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { name: true, email: true } }
+      }
+    });
+    return { success: true, data: credits };
+  } catch (error: any) {
+    console.error('[CREDIT LOG FETCH ERROR]:', error.message);
+    return { success: false, error: 'Fallo al obtener historial de créditos.' };
+  }
+}
+

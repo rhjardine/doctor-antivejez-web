@@ -24,18 +24,27 @@ export async function createPatient(formData: PatientFormData & { userId: string
     // ================================================================
     // FASE 4 — PRE-CHECK: Verificar duplicado de identificación
     // Previene el error P2002 y devuelve un mensaje claro al usuario.
-    // Fail Fast: detectar el conflicto antes de intentar el INSERT.
+    // Lógica Zero-Knowledge para evitar la enumeración de pacientes.
     // ================================================================
-    const existingPatient = await prisma.patient.findUnique({
+    const userTenantId = session?.user?.tenantId ?? null;
+
+    const existingPatient = await prisma.patient.findFirst({
       where: { identification: validatedData.identification },
-      select: { id: true },
+      select: { id: true, tenantId: true, userId: true },
     });
 
     if (existingPatient) {
-      return {
-        success: false,
-        error: `El paciente con identificación ${validatedData.identification} ya existe en el sistema. Si este es tu paciente, contacte al Administrador para reasignarlo.`,
-      };
+      if (existingPatient.tenantId === userTenantId) {
+        return {
+          success: false,
+          error: "El paciente ya se encuentra registrado en esta clínica.",
+        };
+      } else {
+        return {
+          success: false,
+          error: "No se pudo procesar el registro del paciente. Verifique los datos de identificación ingresados o contacte a soporte.",
+        };
+      }
     }
 
     // ✅ SEGURIDAD: hashear la contraseña antes de persistir
@@ -51,7 +60,7 @@ export async function createPatient(formData: PatientFormData & { userId: string
       data: {
         ...prismaFields,
         userId: formData.userId,
-        tenantId: session?.user?.tenantId ?? null, // ← Asociar al tenant de la clínica
+        tenantId: userTenantId, // ← Asociar al tenant de la clínica
         historyDate: new Date(validatedData.historyDate),
         birthDate: new Date(validatedData.birthDate),
         chronologicalAge,
@@ -66,12 +75,14 @@ export async function createPatient(formData: PatientFormData & { userId: string
   } catch (error) {
     console.error('Error creando paciente:', error);
 
-    // ✅ ÚNICO CAMBIO: Se mejora el manejo de errores para detectar duplicados.
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
         const target = error.meta?.target as string[];
         if (target && target.includes('identification')) {
-          return { success: false, error: 'Ya existe un paciente con este número de identificación.' };
+          return {
+            success: false,
+            error: "No se pudo procesar el registro del paciente. Verifique los datos de identificación ingresados o contacte a soporte."
+          };
         }
       }
     }

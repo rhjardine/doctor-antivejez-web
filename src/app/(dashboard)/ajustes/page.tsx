@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ShieldCheck, User, Lock, Save, Eye, EyeOff, Users, ArrowRight, Cpu, HeartPulse, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, User, Lock, Save, Eye, EyeOff, Users, ArrowRight, Cpu, HeartPulse, ShieldAlert, ClipboardList, Coins } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateMyPassword } from '@/lib/actions/auth.actions';
 import { useSession } from 'next-auth/react';
+import { getAdminAuditLogs, getAdminCreditHistory } from '@/lib/actions/permissions.actions';
 import Link from 'next/link';
 
 export default function AjustesPage() {
@@ -12,6 +13,44 @@ export default function AjustesPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [creditHistory, setCreditHistory] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  const isAdmin = session?.user?.role === 'ADMIN';
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const loadAuditData = async () => {
+      setLogsLoading(true);
+      try {
+        const [logsRes, creditRes] = await Promise.all([
+          getAdminAuditLogs(),
+          getAdminCreditHistory()
+        ]);
+
+        if (logsRes.success && logsRes.data) {
+          setAuditLogs(logsRes.data);
+        } else if (logsRes.error) {
+          toast.error(logsRes.error);
+        }
+
+        if (creditRes.success && creditRes.data) {
+          setCreditHistory(creditRes.data);
+        } else if (creditRes.error) {
+          toast.error(creditRes.error);
+        }
+      } catch (err) {
+        console.error("Error loading audit logs:", err);
+        toast.error("Fallo al cargar registros de auditoría.");
+      } finally {
+        setLogsLoading(false);
+      }
+    };
+
+    loadAuditData();
+  }, [isAdmin]);
 
   const mustChangePassword = (session?.user as any)?.permissions?.forcePasswordChange === true;
 
@@ -212,6 +251,151 @@ export default function AjustesPage() {
         </div>
 
       </div>
+
+      {/* SECCIÓN DE AUDITORÍA (SÓLO ADMIN) */}
+      {isAdmin && (
+        <div className="space-y-8 pt-8 border-t border-slate-100">
+          <header className="flex items-center gap-3">
+            <ShieldCheck size={28} className="text-[#293b64]" />
+            <div>
+              <h2 className="text-2xl font-black text-[#293b64] tracking-tight">Consola de Auditoría HIPAA</h2>
+              <p className="text-slate-500 font-medium text-sm">Registro histórico de control de accesos, permisos y transacciones de créditos.</p>
+            </div>
+          </header>
+
+          <div className="grid grid-cols-1 gap-8">
+            {/* TABLA DE PERMISOS */}
+            <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="bg-[#293b64] p-6 text-white flex items-center gap-3">
+                <ClipboardList size={20} className="text-[#23bcef]" />
+                <h3 className="text-sm font-black uppercase tracking-widest">Bitácora de Auditoría Clínica (Permisos)</h3>
+              </div>
+
+              <div className="p-8">
+                {logsLoading ? (
+                  <div className="text-center py-6 text-slate-500 font-medium">Cargando bitácora de auditoría...</div>
+                ) : auditLogs.length === 0 ? (
+                  <div className="text-center py-6 text-slate-500 font-medium">No hay registros de auditoría de permisos disponibles.</div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-[#0c122c]/5">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
+                          <th className="px-6 py-4">Fecha</th>
+                          <th className="px-6 py-4">Administrador</th>
+                          <th className="px-6 py-4">Usuario Afectado</th>
+                          <th className="px-6 py-4">Módulo</th>
+                          <th className="px-6 py-4">Valor Anterior</th>
+                          <th className="px-6 py-4">Valor Nuevo</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-600">
+                        {auditLogs.map((log) => {
+                          const isQuota = log.module === "TEST_QUOTA";
+                          let oldDisplay = "-";
+                          let newDisplay = "-";
+                          let oldColorClass = "text-slate-600";
+                          let newColorClass = "text-slate-600";
+
+                          if (isQuota) {
+                            oldDisplay = log.oldValueInt !== null ? log.oldValueInt.toString() : "-";
+                            newDisplay = log.newValueInt !== null ? log.newValueInt.toString() : "-";
+                            const diff = (log.newValueInt ?? 0) - (log.oldValueInt ?? 0);
+                            newColorClass = diff > 0 ? "text-emerald-600 font-black" : diff < 0 ? "text-rose-600 font-black" : "text-slate-600";
+                          } else {
+                            oldDisplay = log.oldValue === true ? "Habilitado" : log.oldValue === false ? "Deshabilitado" : "-";
+                            newDisplay = log.newValue === true ? "Habilitado" : log.newValue === false ? "Deshabilitado" : "-";
+                            oldColorClass = log.oldValue === true ? "text-emerald-600" : log.oldValue === false ? "text-rose-600" : "text-slate-400";
+                            newColorClass = log.newValue === true ? "text-emerald-600 font-black" : log.newValue === false ? "text-rose-600 font-black" : "text-slate-400";
+                          }
+
+                          return (
+                            <tr key={log.id} className="hover:bg-slate-50/30 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap text-[10px] text-slate-400 font-medium">
+                                {new Date(log.createdAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-[#293b64]">
+                                {log.changedByRelation?.name || log.changedBy}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {log.user?.name || log.userId}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md text-[10px] uppercase font-black tracking-wider">
+                                  {log.module}
+                                </span>
+                              </td>
+                              <td className={`px-6 py-4 whitespace-nowrap ${oldColorClass}`}>
+                                {oldDisplay}
+                              </td>
+                              <td className={`px-6 py-4 whitespace-nowrap ${newColorClass}`}>
+                                {newDisplay}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* LEDGER DE CRÉDITOS */}
+            <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="bg-[#293b64] p-6 text-white flex items-center gap-3">
+                <Coins size={20} className="text-[#23bcef]" />
+                <h3 className="text-sm font-black uppercase tracking-widest">Ledger de Movimientos de Crédito (Auditoría de Consumos)</h3>
+              </div>
+
+              <div className="p-8">
+                {logsLoading ? (
+                  <div className="text-center py-6 text-slate-500 font-medium">Cargando historial de créditos...</div>
+                ) : creditHistory.length === 0 ? (
+                  <div className="text-center py-6 text-slate-500 font-medium">No hay transacciones de crédito registradas.</div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-[#0c122c]/5">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
+                          <th className="px-6 py-4">Fecha</th>
+                          <th className="px-6 py-4">Profesional</th>
+                          <th className="px-6 py-4">Tipo de Test</th>
+                          <th className="px-6 py-4">Cantidad</th>
+                          <th className="px-6 py-4">Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-600">
+                        {creditHistory.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap text-[10px] text-slate-400 font-medium">
+                              {new Date(item.createdAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-[#293b64]">
+                              {item.user?.name || item.user?.email || item.userId}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="bg-[#23bcef]/10 text-[#23bcef] px-2.5 py-1 rounded-md text-[10px] uppercase font-black tracking-wider border border-[#23bcef]/20">
+                                {item.testType}
+                              </span>
+                            </td>
+                            <td className={`px-6 py-4 whitespace-nowrap ${item.amount > 0 ? "text-emerald-600 font-black" : "text-rose-600 font-black"}`}>
+                              {item.amount > 0 ? `+${item.amount}` : item.amount}
+                            </td>
+                            <td className="px-6 py-4 text-slate-500 font-medium">
+                              {item.description}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

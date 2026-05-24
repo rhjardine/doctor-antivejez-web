@@ -167,6 +167,7 @@ model User {
   // Ledger Pattern: Créditos por tipo de test
   creditTransactions CreditTransaction[]
   permissionLogs     UserPermissionLog[]
+  changedPermissionLogs UserPermissionLog[] @relation("ChangedByRelation")
 
   // Relaciones inversas: Tests realizados por este médico
   conductedBiophysicsTests     BiophysicsTest[]     @relation("DoctorBiophysics")
@@ -192,6 +193,7 @@ model UserPermissionLog {
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  changedByRelation User @relation("ChangedByRelation", fields: [changedBy], references: [id])
 
   @@index([userId])
   @@map("user_permission_logs")
