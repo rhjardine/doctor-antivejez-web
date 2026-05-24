@@ -401,3 +401,53 @@ export async function searchPatients({ query, userId, page = 1, limit = 10 }: { 
     return { success: false, error: 'Error al buscar pacientes', patients: [], totalPages: 0, currentPage: 1 };
   }
 }
+
+export async function reassignOrphanedPatients(sourceUserId: string, targetUserId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    // Solo un ADMIN puede realizar esta acción
+    if (session?.user?.role !== 'ADMIN') {
+      return { success: false, error: 'No autorizado. Se requiere rol de administrador.' };
+    }
+
+    const adminTenantId = session.user.tenantId;
+
+    return await prisma.$transaction(async (tx) => {
+      // Validar que ambos usuarios existan
+      const sourceUser = await tx.user.findUnique({ where: { id: sourceUserId } });
+      const targetUser = await tx.user.findUnique({ where: { id: targetUserId } });
+
+      if (!sourceUser || !targetUser) {
+        throw new Error('El usuario de origen o destino no existe.');
+      }
+
+      // Zero-Trust: Aislamiento Organizacional Cerrado (Multi-Tenant)
+      if (sourceUser.tenantId !== adminTenantId || targetUser.tenantId !== adminTenantId) {
+        throw new Error('Violación de seguridad: No se pueden cruzar expedientes entre distintas organizaciones (Tenants).');
+      }
+
+      // Reasignación masiva atómica
+      const updateResult = await tx.patient.updateMany({
+        where: { userId: sourceUserId },
+        data: { userId: targetUserId, version: { increment: 1 } },
+      });
+
+      // Registro de Auditoría (Trazabilidad HIPAA)
+      await tx.userPermissionLog.create({
+        data: {
+          userId: targetUserId,
+          changedBy: session.user.id,
+          module: 'reasignacion_pacientes',
+          oldValueInt: updateResult.count, // Conteo real de expedientes transferidos
+        }
+      });
+
+      return { success: true, count: updateResult.count };
+    });
+  } catch (error) {
+    console.error('Error en la reasignación de pacientes:', error);
+    const msg = error instanceof Error ? error.message : 'Error al reasignar los expedientes';
+    return { success: false, error: msg };
+  }
+}

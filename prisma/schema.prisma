@@ -875,3 +875,14 @@ model PatientGuideVersion {
   @@index([patientId])
   @@map("patient_guide_versions")
 }
+
+// =================================================================
+// Idempotency for Mobile API
+// =================================================================
+model IdempotencyKey {
+  key       String   @id
+  response  Json     // Guarda el cuerpo de la respuesta HTTP original
+  createdAt DateTime @default(now())
+
+  @@map("idempotency_keys")
+}

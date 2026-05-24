@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, User, Lock, Save, Eye, EyeOff, Users, ArrowRight, Cpu, HeartPulse, ShieldAlert, ClipboardList, Coins } from 'lucide-react';
+import { ShieldCheck, User, Lock, Save, Eye, EyeOff, Users, ArrowRight, Cpu, HeartPulse, ShieldAlert, ClipboardList, Coins, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateMyPassword } from '@/lib/actions/auth.actions';
 import { useSession } from 'next-auth/react';
-import { getAdminAuditLogs, getAdminCreditHistory } from '@/lib/actions/permissions.actions';
+import { getAdminAuditLogs, getAdminCreditHistory, getAdminTenantUsers } from '@/lib/actions/permissions.actions';
+import { reassignOrphanedPatients } from '@/lib/actions/patients.actions';
 import Link from 'next/link';
 
 export default function AjustesPage() {
@@ -17,6 +18,12 @@ export default function AjustesPage() {
   const [creditHistory, setCreditHistory] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
+  // Reassignment State
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [reassignSource, setReassignSource] = useState('');
+  const [reassignTarget, setReassignTarget] = useState('');
+  const [isReassigning, setIsReassigning] = useState(false);
+
   const isAdmin = session?.user?.role === 'ADMIN';
 
   useEffect(() => {
@@ -25,9 +32,10 @@ export default function AjustesPage() {
     const loadAuditData = async () => {
       setLogsLoading(true);
       try {
-        const [logsRes, creditRes] = await Promise.all([
+        const [logsRes, creditRes, usersRes] = await Promise.all([
           getAdminAuditLogs(),
-          getAdminCreditHistory()
+          getAdminCreditHistory(),
+          getAdminTenantUsers()
         ]);
 
         if (logsRes.success && logsRes.data) {
@@ -40,6 +48,14 @@ export default function AjustesPage() {
           setCreditHistory(creditRes.data);
         } else if (creditRes.error) {
           toast.error(creditRes.error);
+        }
+
+        if (usersRes.success && usersRes.data) {
+          const mappedUsers = usersRes.data.map((u: any) => ({
+            ...u,
+            isActive: u.status === 'ACTIVO' && u.deletedAt === null
+          }));
+          setUsersList(mappedUsers);
         }
       } catch (err) {
         console.error("Error loading audit logs:", err);
@@ -90,6 +106,40 @@ export default function AjustesPage() {
       toast.error("Error de conexión al actualizar las credenciales.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleReassign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reassignSource || !reassignTarget) {
+      toast.error("Seleccione médico de origen y destino.");
+      return;
+    }
+    if (reassignSource === reassignTarget) {
+      toast.error("El origen y destino no pueden ser el mismo médico.");
+      return;
+    }
+
+    const confirmTransfer = window.confirm("¿Está seguro de reasignar masivamente estos expedientes? Esta acción es auditable e irreversible.");
+    if (!confirmTransfer) return;
+
+    setIsReassigning(true);
+    try {
+      const result = await reassignOrphanedPatients(reassignSource, reassignTarget);
+      if (result.success && 'count' in result) {
+        toast.success(`Se reasignaron ${result.count} expedientes exitosamente.`);
+        setReassignSource('');
+        setReassignTarget('');
+        // Recargar auditoría
+        const logsRes = await getAdminAuditLogs();
+        if (logsRes.success && logsRes.data) setAuditLogs(logsRes.data);
+      } else {
+        toast.error((result as any).error || "Error en la reasignación masiva.");
+      }
+    } catch (err) {
+      toast.error("Error de red al intentar reasignar pacientes.");
+    } finally {
+      setIsReassigning(false);
     }
   };
 
@@ -252,9 +302,63 @@ export default function AjustesPage() {
 
       </div>
 
-      {/* SECCIÓN DE AUDITORÍA (SÓLO ADMIN) */}
+      {/* SECCIÓN DE AUDITORÍA Y ADMIN (SÓLO ADMIN) */}
       {isAdmin && (
         <div className="space-y-8 pt-8 border-t border-slate-100">
+
+          {/* CONSOLA DE REASIGNACIÓN MASIVA */}
+          <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-[#293b64] p-6 text-white flex items-center gap-3">
+              <RefreshCw size={20} className="text-[#23bcef]" />
+              <h3 className="text-sm font-black uppercase tracking-widest">Consola de Reasignación de Pacientes</h3>
+            </div>
+            <div className="p-8 space-y-6">
+              <p className="text-slate-500 text-sm font-medium">
+                Transfiera masivamente los expedientes clínicos de un profesional (ej. inactivo) a otro. Esta acción será registrada en la bitácora HIPAA.
+              </p>
+              <form onSubmit={handleReassign} className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Médico/Coach de Origen (Inactivo o Anterior)</label>
+                  <select 
+                    value={reassignSource} 
+                    onChange={e => setReassignSource(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-[#293b64] outline-none focus:border-[#23bcef] transition-all"
+                  >
+                    <option value="">-- Seleccionar Origen --</option>
+                    {usersList.filter(u => !u.isActive).map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email}) - Inactivo</option>
+                    ))}
+                    {usersList.filter(u => u.isActive).map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email}) - Activo</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Médico/Coach de Destino (Activo)</label>
+                  <select 
+                    value={reassignTarget} 
+                    onChange={e => setReassignTarget(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-[#293b64] outline-none focus:border-[#23bcef] transition-all"
+                  >
+                    <option value="">-- Seleccionar Destino --</option>
+                    {usersList.filter(u => u.isActive).map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="md:col-span-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isReassigning || !reassignSource || !reassignTarget}
+                    className="bg-[#293b64] text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-slate-200 hover:bg-[#1e2d52] transition-all flex items-center gap-2 uppercase text-xs tracking-widest disabled:opacity-50"
+                  >
+                    {isReassigning ? "Procesando transferencia..." : <><RefreshCw size={18} /> Transferir Expedientes Masivamente</>}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+
           <header className="flex items-center gap-3">
             <ShieldCheck size={28} className="text-[#293b64]" />
             <div>

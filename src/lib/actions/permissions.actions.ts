@@ -233,3 +233,32 @@ export async function getAdminCreditHistory() {
   }
 }
 
+/**
+ * Obtiene los usuarios del mismo tenant que el admin para la consola de reasignación.
+ */
+export async function getAdminTenantUsers() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return { success: false, error: 'No autorizado.' };
+  }
+
+  try {
+    const users = await db.user.findMany({
+      where: { tenantId: session.user.tenantId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        deletedAt: true,
+      },
+      orderBy: { name: 'asc' }
+    });
+    return { success: true, data: users };
+  } catch (error: any) {
+    console.error('[TENANT USERS FETCH ERROR]:', error.message);
+    return { success: false, error: 'Fallo al obtener usuarios del tenant.' };
+  }
+}
+
+
