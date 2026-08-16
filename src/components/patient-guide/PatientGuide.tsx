@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PatientWithDetails } from '@/types';
 import {
   GuideCategory, Selections, StandardGuideItem, MetabolicActivatorItem,
@@ -11,6 +11,8 @@ import {
 import { FaUser, FaCalendar, FaChevronDown, FaChevronUp, FaPlus, FaEye, FaPaperPlane, FaTrash, FaTimes, FaEnvelope, FaMobileAlt, FaPrint } from 'react-icons/fa';
 import { Loader2 } from 'lucide-react';
 import PatientGuidePreview from './PatientGuidePreview';
+import GuideSummaryPanel from './GuideSummaryPanel';
+import { summarizeGuide } from './guide-summary';
 import { toast } from 'sonner';
 import { savePatientGuide, sendGuideByEmail, getPatientGuideDetails } from '@/lib/actions/guide.actions';
 
@@ -318,6 +320,30 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
 
   const toggleCategory = (categoryId: string) =>
     setOpenCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
+
+  // ─── Panel "Guía en curso" (G1) ───────────────────────────────────────────
+  // Resumen derivado de `selections`. Se recalcula solo cuando cambia algo
+  // relevante, no en cada render del formulario.
+  const summary = useMemo(
+    () => summarizeGuide(guideData, selections, { homeopathicStructure, bachFlowersList }),
+    [guideData, selections]
+  );
+
+  /** Abre la sección del ítem y hace scroll hasta él. */
+  const handleJumpToItem = (categoryId: string, itemId: string) => {
+    setOpenCategories(prev => ({ ...prev, [categoryId]: true }));
+    // El scroll espera al render que despliega la sección.
+    requestAnimationFrame(() => {
+      const target =
+        document.getElementById(itemId) ??
+        document.getElementById(`cat-anchor-${categoryId}`);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
+
+  /** Quita la selección del ítem sin borrarlo del catálogo. */
+  const handleRemoveSelection = (itemId: string) =>
+    handleSelectionChange(itemId, 'selected', false);
 
   const handleSelectionChange = (itemId: string, field: string, value: any) => {
     setSelections(prev => {
@@ -772,15 +798,43 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
         <div className="flex items-center gap-4"><FaCalendar className="text-xl" /><input type="date" value={guideDate} onChange={e => setGuideDate(e.target.value)} className="bg-white/20 border-none rounded-md p-2 text-sm text-white" /></div>
       </div>
 
+      {/* ─── Cuerpo: formulario + panel "Guía en curso" (G1) ─────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
+        <div className="space-y-6 min-w-0">
+
       {/* Categories */}
-      {guideData.map((category) => (
-        <div key={category.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div onClick={() => toggleCategory(category.id)} className="w-full flex justify-between items-center p-4 cursor-pointer bg-primary-dark text-white rounded-t-lg">
-            <h3 className="font-semibold">{category.title}</h3>
-            {openCategories[category.id] ? <FaChevronUp /> : <FaChevronDown />}
-          </div>
+      {guideData.map((category) => {
+        const selectedCount =
+          summary.categories.find(c => c.id === category.id)?.count ?? 0;
+        return (
+        <div key={category.id} id={`cat-anchor-${category.id}`} className="bg-white rounded-lg shadow-sm border border-gray-200">
+          {/* Patrón de acordeón WAI-ARIA: el botón vive DENTRO del encabezado,
+              no al revés (un <button> solo admite contenido de tipo phrasing). */}
+          <h3>
+            <button
+              type="button"
+              onClick={() => toggleCategory(category.id)}
+              aria-expanded={Boolean(openCategories[category.id])}
+              aria-controls={`cat-panel-${category.id}`}
+              className="w-full flex justify-between items-center gap-3 p-4 cursor-pointer bg-primary-dark text-white rounded-t-lg text-left font-semibold"
+            >
+              <span>{category.title}</span>
+              <span className="flex items-center gap-3">
+                {selectedCount > 0 && (
+                  <span
+                    className="bg-white/20 rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums"
+                    title={`${selectedCount} ítem(s) seleccionado(s) en esta sección`}
+                  >
+                    <span className="sr-only">Ítems seleccionados: </span>
+                    {selectedCount}
+                  </span>
+                )}
+                {openCategories[category.id] ? <FaChevronUp aria-hidden="true" /> : <FaChevronDown aria-hidden="true" />}
+              </span>
+            </button>
+          </h3>
           {openCategories[category.id] && (
-            <div className="p-4 space-y-3">
+            <div id={`cat-panel-${category.id}`} className="p-4 space-y-3">
               {category.type === 'REMOCION' && (
                 <>
                   {(category.items as (RemocionItem | StandardGuideItem)[]).filter((i): i is RemocionItem => 'subType' in i).map(renderRemocionItem)}
@@ -816,12 +870,23 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
 
       {/* Observaciones */}
       <div className="card">
         <h3 className="font-semibold text-gray-800 mb-2">Observaciones</h3>
         <textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} className="input w-full" rows={4} placeholder="Notas adicionales para el paciente..." />
+      </div>
+
+        </div>
+
+        {/* Panel lateral: resumen siempre visible de lo prescrito */}
+        <GuideSummaryPanel
+          summary={summary}
+          onJumpToItem={handleJumpToItem}
+          onRemoveItem={handleRemoveSelection}
+        />
       </div>
 
       {/* Actions */}
