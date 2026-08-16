@@ -139,9 +139,22 @@ npm error Missing: vitest@3.2.7 from lock file
 
 **Consecuencia:** el workflow `.github/workflows/ci.yml` —que ejecuta `npm ci` antes de los tests obligatorios— **no podía completarse**. El protocolo de no regresión (§7) depende de ese workflow, así que la certificación no tendría dónde ejecutarse.
 
-`render-build.sh` usa `npm install` en vez de `npm ci`, por lo que **el despliegue de producción no estaba afectado**; el fallo era exclusivo de CI.
-
 **Resolución:** se sincronizó `package-lock.json`. Verificado: `npm ci` termina con exit 0.
+
+### 5.1 CORRECCIÓN — producción SÍ estaba afectada
+
+> Una versión anterior de este documento afirmaba que *"el despliegue de producción no estaba afectado, porque `render-build.sh` usa `npm install`"*. **Esa afirmación era incorrecta**, y el fallo de build en Render del 2026-08-15 lo demostró.
+
+`npm install` sobre un lockfile desincronizado **no es determinista**: npm resuelve por su cuenta las versiones que faltan. Así entró **vite 7** (ESM puro, `engines: ^20.19 || >=22.12`) en el entorno de Render, que corre una versión de Node anterior. El resultado fue:
+
+```
+failed to load config from /opt/render/project/src/vitest.config.ts
+Error [ERR_REQUIRE_ESM]: require() of ES Module vite/dist/node/index.js
+from vitest/dist/config.cjs not supported
+==> Build failed
+```
+
+El lockfile desincronizado no era un problema exclusivo de CI: era **la misma causa raíz de un fallo de despliegue**. La corrección completa está documentada en `docs/hotfix-build-render.md`.
 
 ---
 
