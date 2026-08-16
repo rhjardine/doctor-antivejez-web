@@ -5,8 +5,13 @@
     echo "🔄 Iniciando build para Render..."
 
     # 1. Instalar dependencias
+    # `npm ci` (no `npm install`): instala EXACTAMENTE lo que fija package-lock.json.
+    # Con `npm install` y un lockfile desincronizado, npm resolvía versiones nuevas
+    # por su cuenta en cada build — así entró vite 7 (ESM puro, exige Node >= 20.19)
+    # y el build reventó con ERR_REQUIRE_ESM al cargar la config de vitest.
+    # `npm ci` hace el build reproducible y falla de inmediato si el lock no cuadra.
     echo "📦 Instalando dependencias..."
-    npm install
+    npm ci
 
     # 2. Generar cliente Prisma
     # No es estrictamente necesario aquí, ya que 'migrate deploy' lo hace,

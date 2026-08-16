@@ -16,6 +16,9 @@
   "prisma": {
     "seed": "prisma generate && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
+  "overrides": {
+    "vite": "^6"
+  },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.48",
     "@aws-sdk/client-rekognition": "^3.1066.0",
