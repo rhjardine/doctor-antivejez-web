@@ -20,6 +20,21 @@ const signInSchema = z.object({
 
 export async function signUp(formData: z.infer<typeof signUpSchema>) {
   try {
+    // ─── S1: BLINDAJE ───────────────────────────────────────────────────────
+    // Una Server Action es un endpoint HTTP invocable por cualquiera. Sin este
+    // guard, un anónimo podía crear cuentas con role:"ADMIN" y obtener acceso
+    // total a las historias clínicas. El alta de profesionales es privativa de
+    // un administrador con sesión activa.
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
+      console.warn(
+        `[SECURITY] Alta de usuario denegada | actor=${session?.user?.id ?? 'anónimo'} ` +
+        `role=${session?.user?.role ?? 'ninguno'}`
+      );
+      return { success: false, error: 'No autorizado' };
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     const validatedData = signUpSchema.parse(formData);
 
     const existingUser = await prisma.user.findUnique({

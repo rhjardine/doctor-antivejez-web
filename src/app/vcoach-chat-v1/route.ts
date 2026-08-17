@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { validateMobileSession } from '@/lib/auth-guards';
+import { sanitizePatientContext } from '@/lib/ai/anonymize';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,23 +49,35 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Paciente no encontrado" }, { status: 404, headers: corsHeaders });
         }
 
+        // ─── S3: saneado obligatorio antes de construir el prompt ───────────
+        // Este endpoint sí exigía sesión, pero interpolaba el nombre real del
+        // paciente en el systemInstruction, que viaja a Google. El nombre no
+        // aporta nada clínico y es un identificador directo.
+        const contextoSeguro = sanitizePatientContext(patientContext);
+        const grupoSanguineo = contextoSeguro.bloodType ?? '?';
+        const gap =
+            typeof contextoSeguro.bioAge === 'number' &&
+            typeof contextoSeguro.chronologicalAge === 'number'
+                ? contextoSeguro.bioAge - contextoSeguro.chronologicalAge
+                : '?';
+        // ────────────────────────────────────────────────────────────────────
+
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
-            systemInstruction: `Eres el VCoach de "Doctor Antivejez", un experto en medicina preventiva, antienvejecimiento y nutrigenómica. 
+            systemInstruction: `Eres el VCoach de "Doctor Antivejez", un experto en medicina preventiva, antienvejecimiento y nutrigenómica.
             Tu misión es guiar al paciente hacia su regeneración celular basándote en sus biomarcadores.
             
-            DATOS CRÍTICOS DEL PACIENTE:
-            - Nombre: ${patientContext.name}
-            - Edad Cronológica: ${patientContext.chronoAge} años
-            - Edad Biológica: ${patientContext.bioAge} años
-            - BRECHA (GAP): ${patientContext.gap} años (Si es positivo, hay rezago; si es negativo, hay rejuvenecimiento).
-            - Grupo Sanguíneo: ${patientContext.bloodType} (Crucial para recomendaciones nutrigenómicas).
+            DATOS CRÍTICOS DEL PACIENTE (anonimizados — sin identificadores):
+            - Edad Cronológica: ${contextoSeguro.chronologicalAge ?? '?'} años
+            - Edad Biológica: ${contextoSeguro.bioAge ?? '?'} años
+            - BRECHA (GAP): ${gap} años (Si es positivo, hay rezago; si es negativo, hay rejuvenecimiento).
+            - Grupo Sanguíneo: ${grupoSanguineo} (Crucial para recomendaciones nutrigenómicas).
             
             REGLAS DE RESPUESTA:
             1. Sé motivador pero científico. 
             2. Usa los datos del paciente para personalizar cada consejo. Si su GAP es alto, enfatiza la urgencia de seguir la "Guía del Paciente".
-            3. En nutrición, respeta estrictamente las reglas del grupo ${patientContext.bloodType}.
+            3. En nutrición, respeta estrictamente las reglas del grupo ${grupoSanguineo}.
             4. Si te preguntan algo fuera de la medicina preventiva, redirige amablemente al paciente a consultar con su médico tratante.`
         });
 
