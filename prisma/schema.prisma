@@ -272,6 +272,7 @@ model Patient {
   geneticTests        GeneticTest[]
   appointments        Appointment[]
   guides              PatientGuide[]
+  protocolItemStatuses ProtocolItemStatus[]
   foodPlans           FoodPlan[]
   selectedDiets       DietType[]
   aiAnalyses          AIAnalysis[]
@@ -591,6 +592,33 @@ model PatientGuide {
   updatedAt DateTime @updatedAt
 
   @@map("patient_guides")
+}
+
+/// Adherencia del paciente a los ítems de su guía (B1).
+///
+/// Vive SEPARADA de PatientGuide a propósito. `PatientGuide.selections` es el
+/// registro clínico del médico: lo que prescribió. Este modelo es dato
+/// reportado por el paciente: qué ha cumplido. Mezclarlos permitiría que la app
+/// del paciente escribiera dentro de la prescripción, con riesgo de pisar
+/// ediciones del médico y sin dejar rastro de cuándo se marcó cada ítem.
+///
+/// `itemId` es el identificador del ítem tal como lo sirve la guía a la PWA
+/// (p. ej. "rem_1", "np_2"), no una FK: el catálogo aún vive en código y se
+/// migrará a GuideCategory/GuideItem en G7.
+model ProtocolItemStatus {
+  id        String  @id @default(cuid())
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  itemId String
+  status String // 'pending' | 'completed'
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([patientId, itemId])
+  @@index([patientId])
+  @@map("protocol_item_status")
 }
 
 // =================================================================
