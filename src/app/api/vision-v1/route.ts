@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { requireAnySession } from "@/lib/auth-guards";
+import { guardErrorResponse } from "@/lib/api-guards";
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +16,15 @@ export async function POST(req: Request) {
     if (rateLimitResponse) return rateLimitResponse;
 
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
+
+    // ─── S3: BLINDAJE ───────────────────────────────────────────────────────
+    // Endpoint anónimo que enviaba imágenes a Gemini con la clave de la clínica.
+    try {
+        await requireAnySession(req);
+    } catch (error) {
+        return guardErrorResponse(error, corsHeaders);
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     try {
         const body = await req.json();

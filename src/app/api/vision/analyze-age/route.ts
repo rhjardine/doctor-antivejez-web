@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { RekognitionClient, DetectFacesCommand } from '@aws-sdk/client-rekognition';
+import { requireAnySession } from '@/lib/auth-guards';
+import { guardErrorResponse } from '@/lib/api-guards';
 
 // Initialize the Rekognition client
 // The SDK automatically picks up AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION
@@ -13,6 +15,17 @@ const rekognition = new RekognitionClient({
 });
 
 export async function POST(request: Request) {
+  // ─── S3: BLINDAJE ─────────────────────────────────────────────────────────
+  // Procesa imágenes faciales: dato biométrico y categoría especial bajo el
+  // Art. 9 del GDPR. No puede estar abierto de forma anónima, y además consume
+  // la cuenta de AWS Rekognition de la clínica.
+  try {
+    await requireAnySession(request);
+  } catch (error) {
+    return guardErrorResponse(error);
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   try {
     const body = await request.json();
     const { image } = body;

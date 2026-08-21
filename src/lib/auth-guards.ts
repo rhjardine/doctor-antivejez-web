@@ -233,3 +233,100 @@ export async function validateMobileSession(req: Request): Promise<MobileTokenPa
 
   throw new Error('UNAUTHORIZED: Firma de sesión móvil inválida o expirada');
 }
+
+// ─── Guard mixto: PWA (Bearer) o Web (cookie NextAuth) ──────────────────────
+
+/**
+ * Identidad resuelta, venga de la PWA del paciente o de la sesión web del
+ * profesional. `kind` permite a quien llama aplicar reglas distintas por origen.
+ */
+export interface AnySessionIdentity {
+  id: string;
+  role: string;
+  tenantId: string | null;
+  kind: 'mobile' | 'web';
+}
+
+/**
+ * Guard para endpoints consumidos por AMBOS clientes (asistentes de IA, visión).
+ *
+ * Intenta primero el Bearer token de la PWA y, si no hay cabecera Authorization,
+ * cae a la sesión web de NextAuth. Nunca es anónimo: si ninguna vía resuelve una
+ * identidad, lanza UNAUTHORIZED.
+ *
+ * @throws Error UNAUTHORIZED si no hay ninguna sesión válida.
+ */
+export async function requireAnySession(req: Request): Promise<AnySessionIdentity> {
+  const authHeader = req.headers.get('authorization');
+
+  if (authHeader?.startsWith('Bearer ')) {
+    const mobile = await validateMobileSession(req);
+    return { ...mobile, kind: 'mobile' };
+  }
+
+  const session = await getServerSession(authOptions);
+  if (session?.user?.id) {
+    return {
+      id: session.user.id,
+      role: (session.user as any).role ?? 'MEDICO',
+      tenantId: (session.user as any).tenantId ?? null,
+      kind: 'web',
+    };
+  }
+
+  throw new Error(AUTH_ERRORS.UNAUTHORIZED);
+}
+
+// ─── Acceso a paciente desde una identidad ya resuelta ──────────────────────
+
+/**
+ * Verifica que una identidad (PWA o web) puede acceder a los datos del paciente.
+ *
+ * Reglas:
+ *  - Paciente desde la PWA → solo sus propios datos.
+ *  - ADMIN → acceso global.
+ *  - Profesional → mismo tenant, o ser el médico dueño del paciente.
+ *
+ * @throws Error NOT_FOUND | FORBIDDEN
+ */
+export async function assertPatientReadable(
+  identity: AnySessionIdentity,
+  patientId: string,
+): Promise<void> {
+  if (!cuidSchema.safeParse(patientId).success) {
+    throw new Error(AUTH_ERRORS.INVALID_ID);
+  }
+
+  // El paciente solo puede leerse a sí mismo.
+  if (identity.role === 'PATIENT') {
+    if (identity.id !== patientId) {
+      console.warn(
+        `[SECURITY WARN] IDOR blocked | actor=patient:${identity.id} target=patient:${patientId}`,
+      );
+      throw new Error(AUTH_ERRORS.FORBIDDEN);
+    }
+    return;
+  }
+
+  const patient = await prisma.patient.findUnique({
+    where: { id: patientId },
+    select: { userId: true, tenantId: true },
+  });
+
+  if (!patient) throw new Error(AUTH_ERRORS.NOT_FOUND);
+
+  const isAdmin = identity.role === 'ADMIN';
+  const isOwner = patient.userId === identity.id;
+  const isSameTenant = Boolean(
+    identity.tenantId && patient.tenantId && identity.tenantId === patient.tenantId,
+  );
+
+  if (!isAdmin && !isOwner && !isSameTenant) {
+    console.warn(
+      `[SECURITY WARN] IDOR blocked | actor=${identity.id} role=${identity.role} ` +
+      `actorTenant=${identity.tenantId ?? 'NULL'} | target=patient:${patientId} ` +
+      `ownerTenant=${patient.tenantId ?? 'NULL'}`,
+    );
+    throw new Error(AUTH_ERRORS.FORBIDDEN);
+  }
+}
