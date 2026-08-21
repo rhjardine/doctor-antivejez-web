@@ -7,6 +7,7 @@ import { getBiophysicsBoardsAndRanges, calculateAndSaveBiophysicsTest } from '..
 import { getAgeStatus, getStatusColor } from '../../utils/biofisica-calculations';
 import { calculatePreciseAge } from '../../utils/dateUtils';
 import { toast } from 'sonner';
+import DecimalField from './DecimalField';
 import { FaArrowLeft, FaCalculator, FaEdit, FaCheckCircle, FaUndo, FaSave } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
@@ -218,12 +219,12 @@ export default function EdadBiofisicaTestView({ patient, onBack, onTestComplete 
                   {/* Se reemplaza la clase 'input' por 'form-input-custom' para evitar conflictos de estilo. */}
                   {item.hasDimensions ? (
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="number" step="any" placeholder="Alto" value={(formValues[itemKey] as any)?.high ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'high')} className="form-input-custom" disabled={isSaved || processing} />
-                      <input type="number" step="any" placeholder="Largo" value={(formValues[itemKey] as any)?.long ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'long')} className="form-input-custom" disabled={isSaved || processing} />
-                      <input type="number" step="any" placeholder="Ancho" value={(formValues[itemKey] as any)?.width ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value), 'width')} className="form-input-custom" disabled={isSaved || processing} />
+                      <DecimalField placeholder="Alto" aria-label={`${item.label} — Alto`} value={(formValues[itemKey] as any)?.high} onValueChange={v => handleInputChange(item.key, v, 'high')} className="form-input-custom" disabled={isSaved || processing} />
+                      <DecimalField placeholder="Largo" aria-label={`${item.label} — Largo`} value={(formValues[itemKey] as any)?.long} onValueChange={v => handleInputChange(item.key, v, 'long')} className="form-input-custom" disabled={isSaved || processing} />
+                      <DecimalField placeholder="Ancho" aria-label={`${item.label} — Ancho`} value={(formValues[itemKey] as any)?.width} onValueChange={v => handleInputChange(item.key, v, 'width')} className="form-input-custom" disabled={isSaved || processing} />
                     </div>
                   ) : (
-                    <input type="number" step="any" value={(formValues[itemKey] as number) ?? ''} onChange={e => handleInputChange(item.key, e.target.value === '' ? undefined : parseFloat(e.target.value))} className="form-input-custom w-full" disabled={isSaved || processing} />
+                    <DecimalField aria-label={item.label} value={formValues[itemKey] as number | undefined} onValueChange={v => handleInputChange(item.key, v)} className="form-input-custom w-full" disabled={isSaved || processing} />
                   )}
                   {/* ===== FIN DE LA CORRECCIÓN DE EMERGENCIA ===== */}
 
