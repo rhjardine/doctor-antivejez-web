@@ -11,7 +11,9 @@
     "test:ui": "vitest --ui",
     "test:ci": "vitest run",
     "db:import-legacy": "tsx prisma/import-legacy.ts",
-    "db:fix-contacts": "tsx prisma/fix-legacy-contacts.ts"
+    "db:fix-contacts": "tsx prisma/fix-legacy-contacts.ts",
+    "voz:lexico": "tsx scripts/generate-clinical-lexicon.ts",
+    "voz:evaluar": "tsx scripts/evaluar-transcripcion.ts"
   },
   "prisma": {
     "seed": "prisma generate && ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
