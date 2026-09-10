@@ -13,6 +13,7 @@ import { Loader2 } from 'lucide-react';
 import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 import { savePatientGuide, sendGuideByEmail, getPatientGuideDetails } from '@/lib/actions/guide.actions';
+import DictationField from '@/components/voice/DictationField';
 
 // --- Activador Metabólico: Estructura Homeopática ---
 export const homeopathicStructure = {
@@ -822,6 +823,8 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
       <div className="card">
         <h3 className="font-semibold text-gray-800 mb-2">Observaciones</h3>
         <textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} className="input w-full" rows={4} placeholder="Notas adicionales para el paciente..." />
+        {/* El dictado no escribe aqui: propone, y setObservaciones solo corre si el medico acepta. */}
+        <DictationField patientId={patient.id} valor={observaciones} onAceptar={setObservaciones} />
       </div>
 
       {/* Actions */}
