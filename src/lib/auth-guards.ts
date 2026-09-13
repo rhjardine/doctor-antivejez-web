@@ -122,32 +122,21 @@ export async function validatePatientAccess(patientId: string): Promise<PatientA
   return { session, patient } as PatientAccessResult;
 }
 
-// ─── Convenience: Validate Test ID via Patient ──────────────────────────────
-
-/**
- * Para operaciones sobre tests (biofísica, bioquímica, etc.) donde se recibe
- * el testId y el patientId. Valida ambos IDs con Zod y luego verifica acceso
- * al paciente asociado.
- *
- * @param testId - ID del test (validado con Zod).
- * @param patientId - ID del paciente dueño del test (validado con Zod).
- * @returns Sesión autorizada + datos del paciente.
- */
-export async function validateTestAccess(
-  testId: string,
-  patientId: string
-): Promise<PatientAccessResult> {
-  // Fail-Fast: ambos IDs deben ser válidos
-  const testParse = cuidSchema.safeParse(testId);
-  const patientParse = cuidSchema.safeParse(patientId);
-
-  if (!testParse.success || !patientParse.success) {
-    throw new Error(AUTH_ERRORS.INVALID_ID);
-  }
-
-  // Delegar al guard de paciente (el test hereda el aislamiento del paciente)
-  return validatePatientAccess(patientId);
-}
+// ─── Retirada: validateTestAccess ───────────────────────────────────────────
+//
+// Existía una función `validateTestAccess(testId, patientId)` cuyo comentario
+// prometía que «el test hereda el aislamiento del paciente». No lo hacía:
+// validaba el formato de `testId` con Zod y después lo ignoraba, autorizando
+// únicamente el `patientId` que le pasara quien llamase. Su único consumidor
+// (`deleteBiophysicsTest`) borraba a continuación por `testId` sin contrastarlo,
+// de modo que quien tuviera acceso legítimo a un paciente podía borrar el test
+// histórico de cualquier otro.
+//
+// No se ha corregido: se ha retirado. Una función genérica no puede verificar la
+// pertenencia sin saber a qué modelo pertenece el `testId`, y dejar el nombre en
+// pie invitaría a cometer el mismo error. El patrón correcto —resolver el
+// registro y autorizar el `patientId` que sale de él— vive en cada acción, que
+// sí sabe sobre qué modelo opera.
 
 // ─── Convenience: Validate Appointment via Patient ──────────────────────────
 

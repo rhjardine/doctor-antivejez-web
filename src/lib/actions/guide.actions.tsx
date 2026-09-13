@@ -333,11 +333,33 @@ export async function getPatientGuideDetails(guideId: string) {
 export async function deletePatientGuide(guideId: string, patientId: string) {
   try {
     if (!guideId || !patientId) return { success: false, error: 'Faltan parámetros requeridos.' };
-    // ── IDOR GUARD (Centralizado) ─────────────────────────────────────────────────────────────
-    await validatePatientAccess(patientId);
-    // ────────────────────────────────────────────────────────────────────────────
+
+    // ── IDOR GUARD ────────────────────────────────────────────────────────────
+    // Se resuelve el dueño real de la guía ANTES de autorizar. El patrón anterior
+    // autorizaba el `patientId` recibido y borraba `guideId` sin contrastarlos:
+    // quien tuviera acceso a un paciente podía borrar la guía de cualquier otro.
+    // Es el mismo patrón que ya usan getPatientGuideDetails y los borrados de
+    // bioquímica y ortomolecular.
+    const guide = await prisma.patientGuide.findUnique({
+      where: { id: guideId },
+      select: { patientId: true },
+    });
+
+    if (!guide) return { success: false, error: 'No se encontró la guía.' };
+
+    if (guide.patientId !== patientId) {
+      console.warn(
+        `[SECURITY WARN] Borrado cruzado bloqueado | ` +
+        `guia=${guideId} duenoReal=${guide.patientId} recibido=${patientId}`
+      );
+      return { success: false, error: 'La guía no pertenece a este paciente.' };
+    }
+
+    await validatePatientAccess(guide.patientId);
+    // ──────────────────────────────────────────────────────────────────────────
+
     await prisma.patientGuide.delete({ where: { id: guideId } });
-    revalidatePath(`/historias/${patientId}`);
+    revalidatePath(`/historias/${guide.patientId}`);
     return { success: true, message: 'Guía eliminada exitosamente.' };
   } catch (error) {
     console.error('[deletePatientGuide] Error:', error);

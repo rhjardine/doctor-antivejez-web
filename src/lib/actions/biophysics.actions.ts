@@ -23,7 +23,7 @@ interface CalculateAndSaveParams {
  */
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { validatePatientAccess, validateTestAccess } from '@/lib/auth-guards';
+import { validatePatientAccess } from '@/lib/auth-guards';
 
 export async function calculateAndSaveBiophysicsTest(params: CalculateAndSaveParams) {
   try {
@@ -163,12 +163,38 @@ export async function getBiophysicsBoardsAndRanges(): Promise<BoardWithRanges[]>
 
 export async function deleteBiophysicsTest(testId: string, patientId: string) {
   try {
-    const { session } = await validateTestAccess(testId, patientId);
+    // El patientId que llega de quien llama NO autoriza nada por si mismo.
+    //
+    // El patron anterior autorizaba `patientId` y despues borraba `testId` sin
+    // contrastarlos: quien tuviera acceso legitimo a UN paciente podia borrar el
+    // test historico de CUALQUIER otro. Ahora se resuelve el dueno real del test
+    // y se autoriza sobre ese, que es el unico dato que no puede falsificarse.
+    const test = await prisma.biophysicsTest.findUnique({
+      where: { id: testId },
+      select: { patientId: true },
+    });
+
+    if (!test) {
+      return { success: false, error: 'Test no encontrado.' };
+    }
+
+    // El patientId recibido debe coincidir con el dueno real. Si no coincide, o
+    // la interfaz tiene un error o alguien esta probando IDs ajenos; en ambos
+    // casos no se borra.
+    if (test.patientId !== patientId) {
+      console.warn(
+        `[SECURITY WARN] Borrado cruzado bloqueado | ` +
+        `test=${testId} duenoReal=${test.patientId} recibido=${patientId}`
+      );
+      return { success: false, error: 'El test no pertenece a este paciente.' };
+    }
+
+    await validatePatientAccess(test.patientId);
 
     await prisma.biophysicsTest.delete({
       where: { id: testId },
     });
-    revalidatePath(`/historias/${patientId}`);
+    revalidatePath(`/historias/${test.patientId}`);
     revalidatePath('/dashboard');
     return { success: true };
   } catch (error) {
