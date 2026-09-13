@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateDualText } from "@/lib/ai/router";
+import { requireAnySession } from "@/lib/auth-guards";
+import { guardErrorResponse } from "@/lib/api-guards";
+import { sanitizePatientContext } from "@/lib/ai/anonymize";
 
 export const dynamic = 'force-dynamic';
 
@@ -19,17 +22,28 @@ export async function POST(req: Request) {
 
     const corsHeaders = getCorsHeaders(req, "POST, OPTIONS");
 
+    // ─── S3: BLINDAJE ───────────────────────────────────────────────────────
+    try {
+        await requireAnySession(req);
+    } catch (error) {
+        return guardErrorResponse(error, corsHeaders);
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     try {
         const { message, history, patientContext } = await req.json();
 
-        const systemPrompt = `Eres el VCoach de Doctor Antivejez. 
-    Paciente: ${patientContext?.name || 'Paciente'}. 
-    Edad Bio: ${patientContext?.bioAge || '?'}. 
-    Grupo Sanguíneo: ${patientContext?.bloodType || '?'}.
-    
+        // Saneado obligatorio: fuera nombre y cualquier otro identificador.
+        const contexto = sanitizePatientContext(patientContext);
+        const grupoSanguineo = contexto.bloodType ?? '?';
+
+        const systemPrompt = `Eres el VCoach de Doctor Antivejez.
+    Edad Bio: ${contexto.bioAge ?? '?'}.
+    Grupo Sanguíneo: ${grupoSanguineo}.
+
     Responde de manera concisa, médica y motivadora.
-    Usa el contexto del paciente para personalizar la respuesta.
-    Si pregunta sobre alimentos, verifica compatibilidad con su grupo sanguíneo ${patientContext?.bloodType || '?'}.`;
+    Usa el contexto clínico para personalizar la respuesta.
+    Si pregunta sobre alimentos, verifica compatibilidad con su grupo sanguíneo ${grupoSanguineo}.`;
 
         // Convert history to CoreMessage format for AI SDK
         const messages = [

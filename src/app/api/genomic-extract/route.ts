@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { extractGenomicData } from "@/lib/ai/genomic-parser";
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { requireAnySession, assertPatientReadable } from "@/lib/auth-guards";
+import { guardErrorResponse } from "@/lib/api-guards";
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +50,17 @@ export async function POST(req: Request) {
                 { status: 400, headers: corsHeaders }
             );
         }
+
+        // ── S3: BLINDAJE — sesión + propiedad del paciente ──────
+        // Sin esto, cualquiera en Internet podía enumerar pacientes por ID e
+        // inyectar informes de laboratorio falsos en historias clínicas reales.
+        try {
+            const identity = await requireAnySession(req);
+            await assertPatientReadable(identity, patientId);
+        } catch (error) {
+            return guardErrorResponse(error, corsHeaders);
+        }
+        // ────────────────────────────────────────────────────────
 
         // ── Verify patient exists ───────────────────────────────
         const patient = await prisma.patient.findUnique({

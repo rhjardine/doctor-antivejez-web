@@ -1,13 +1,37 @@
 'use server';
 
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { Contact, Channel } from '@/components/campaigns/NewCampaignWizard';
 import { getSmsProvider, getEmailProvider, getWhatsAppProvider } from '@/lib/services/notificationService';
 import { revalidatePath } from 'next/cache';
 
 export async function getContactsFromDB() {
   try {
+    // ─── S6: BLINDAJE ───────────────────────────────────────────────────────
+    // Devolvía nombre, email y teléfono de TODOS los pacientes de TODAS las
+    // clínicas, sin sesión. Ahora exige autenticación y aísla por tenant.
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false, error: 'No autorizado' };
+    }
+
+    const { role, tenantId, id: userId } = session.user;
+    const isAdmin = role === 'ADMIN';
+
+    // Mismo criterio de scoping que patients.actions y dashboard.actions:
+    // ADMIN ve todo; con tenant, su clínica; sin tenant, solo sus pacientes.
+    const scopeFilter: Prisma.PatientWhereInput = isAdmin
+      ? { deletedAt: null }
+      : tenantId
+        ? { tenantId, deletedAt: null }
+        : { userId, deletedAt: null };
+    // ────────────────────────────────────────────────────────────────────────
+
     const patients = await prisma.patient.findMany({
+      where: scopeFilter,
       select: {
         id: true,
         firstName: true,
