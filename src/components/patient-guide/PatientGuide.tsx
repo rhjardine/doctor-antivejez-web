@@ -721,7 +721,10 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
           <div className="mt-2 pl-9 space-y-2">
             {isNutraceutico ? (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <input type="number" placeholder="Dosis" value={sel.qty ?? ''} onChange={e => handleSelectionChange(item.id, 'qty', e.target.value)} className="input text-sm py-1" min="1" max="10" />
+                <input type="text" inputMode="decimal" autoComplete="off" aria-label="Dosis"
+                  placeholder="Dosis" value={sel.qty ?? ''}
+                  onChange={e => handleSelectionChange(item.id, 'qty', e.target.value)}
+                  className="input text-sm py-1" />
                 <select value={sel.doseType ?? ''} onChange={e => handleSelectionChange(item.id, 'doseType', e.target.value as any)} className="input text-sm py-1">
                   <option value="">Tipo...</option>
                   <option value="Capsulas">Cápsulas</option>
