@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { indexarEstados, estadoDeItem } from "@/lib/protocol-status";
 import { calculateAge } from '@/utils/date';
 import { getCorsHeaders, handleCorsPreflightOrReject } from "@/lib/cors";
 import { validateMobileSession } from '@/lib/auth-guards';
@@ -82,7 +83,7 @@ export async function GET(req: Request) {
             for (const item of items) ITEM_MAP[item.id] = { name: item.name, catId };
         }
 
-        const serializeForPWA = (rawSelections: any): any[] => {
+        const serializeForPWA = (rawSelections: any, estados: Map<string, 'pending' | 'completed'>): any[] => {
             if (!rawSelections || typeof rawSelections !== 'object') return [];
             const protocols: any[] = [];
             const now = new Date().toISOString();
@@ -138,7 +139,8 @@ export async function GET(req: Request) {
                     schedule,
                     timeSlot,
                     observations,
-                    status: 'pending',
+                    // B1: estado real persistido; 'pending' solo si nunca se marco.
+                    status: estadoDeItem(estados, itemId),
                     prescribedAt: now,
                     updatedAt: now,
                     // Alias fields in case the PWA code expects different names
@@ -161,8 +163,23 @@ export async function GET(req: Request) {
         console.log(`[mobile-profile] Patient: ${patient.id}, ChronologicalAge: ${currentChronologicalAge}, BiologicalAge: ${bioAge}`);
 
         const latestGuide = patient.guides[0];
+
+        // ─── B1: estado de adherencia persistido ────────────────────────────
+        // Sin esto, el paciente marcaba un item, el PATCH lo guardaba, y al
+        // reentrar volvia a verlo pendiente porque aqui se fijaba 'pending'
+        // para todos. Es la otra mitad de la persistencia.
+        const estadosPersistidos = indexarEstados(
+            latestGuide
+                ? await db.protocolItemStatus.findMany({
+                    where: { patientId: patient.id },
+                    select: { itemId: true, status: true },
+                })
+                : []
+        );
+        // ────────────────────────────────────────────────────────────────────
+
         const protocolItems = latestGuide
-            ? serializeForPWA(latestGuide.selections as any)
+            ? serializeForPWA(latestGuide.selections as any, estadosPersistidos)
             : [];
         const serializedGuide = latestGuide
             ? {
