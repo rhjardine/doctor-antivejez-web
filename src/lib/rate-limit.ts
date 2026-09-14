@@ -1,40 +1,20 @@
 // src/lib/rate-limit.ts
 // ============================================================================
-// Motor de Throttling In-Memory (Zero Dependencies)
+// Limitador de peticiones — algoritmo de ventana fija
 //
-// Implementación nativa usando Map de Node.js con auto-expiración.
-// NO requiere Redis, Upstash, ni ningún servicio externo.
+// El ALMACÉN del contador vive en rate-limit-store.ts y es conmutable:
+// memoria por defecto, Redis cuando el entorno lo configura. Este módulo solo
+// aporta el algoritmo y la traducción a respuestas HTTP.
 //
-// Limitación conocida: en arquitecturas multi-instancia (horizontal scaling),
-// cada instancia mantiene su propio Map. Para un único Web Service en Render,
-// esto es perfectamente adecuado y determinista.
+// La API pública (checkRateLimit, checkAuthRateLimit, resetRateLimit) no
+// cambia: los 8 consumidores existentes siguen funcionando sin tocarse.
 // ============================================================================
 
 import { NextResponse } from "next/server";
-
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+import { getRateLimitStore } from "./rate-limit-store";
 
 const DEFAULT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
 const DEFAULT_MAX_ATTEMPTS = 5;            // 5 intentos por ventana
-
-// ── Limpieza periódica para evitar Memory Leaks ────────────────────────────
-// Cada 5 minutos, eliminamos entradas cuya ventana ya expiró.
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-
-if (typeof globalThis !== "undefined") {
-  const g = globalThis as any;
-  if (!g.__rateLimitCleanupStarted) {
-    g.__rateLimitCleanupStarted = true;
-    setInterval(() => {
-      const now = Date.now();
-      rateLimitMap.forEach((record, key) => {
-        if (now > record.resetTime) {
-          rateLimitMap.delete(key);
-        }
-      });
-    }, CLEANUP_INTERVAL_MS).unref();
-  }
-}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -51,6 +31,17 @@ function parseWindow(window: string): number {
   }
 }
 
+/**
+ * Extrae la IP del cliente de la cabecera x-forwarded-for.
+ *
+ * Se toma el primer valor, que es el cliente original; los siguientes son los
+ * proxies intermedios.
+ */
+export function extraerIpCliente(req: Request): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  return forwarded?.split(",")[0]?.trim() || "anonymous";
+}
+
 // ── Configuración ───────────────────────────────────────────────────────────
 
 export interface RateLimitConfig {
@@ -59,46 +50,8 @@ export interface RateLimitConfig {
   prefix?: string;
 }
 
-// ── Core: checkRateLimitInternal ────────────────────────────────────────────
-
-function checkRateLimitInternal(
-  identifier: string,
-  maxAttempts: number = DEFAULT_MAX_ATTEMPTS,
-  windowMs: number = DEFAULT_WINDOW_MS
-): { success: boolean; retryAfter?: number; remaining: number; limit: number; reset: number } {
-  const now = Date.now();
-  const key = identifier;
-  const record = rateLimitMap.get(key);
-
-  if (record) {
-    if (now > record.resetTime) {
-      // Ventana expirada → reiniciar
-      const resetTime = now + windowMs;
-      rateLimitMap.set(key, { count: 1, resetTime });
-      return { success: true, remaining: maxAttempts - 1, limit: maxAttempts, reset: resetTime };
-    }
-
-    if (record.count >= maxAttempts) {
-      // Excedió los intentos
-      const retryAfter = Math.ceil((record.resetTime - now) / 1000);
-      return { success: false, retryAfter, remaining: 0, limit: maxAttempts, reset: record.resetTime };
-    }
-
-    // Incrementar contador
-    record.count += 1;
-    rateLimitMap.set(key, record);
-    return { success: true, remaining: maxAttempts - record.count, limit: maxAttempts, reset: record.resetTime };
-  }
-
-  // Primer intento
-  const resetTime = now + windowMs;
-  rateLimitMap.set(key, { count: 1, resetTime });
-  return { success: true, remaining: maxAttempts - 1, limit: maxAttempts, reset: resetTime };
-}
-
 // ── API Pública: checkRateLimit (para API Routes) ──────────────────────────
-// Firma compatible con los endpoints existentes (alma, genomic-extract, vcoach, etc.)
-// Recibe Request, extrae IP, retorna NextResponse | null.
+// Recibe Request, extrae IP, retorna NextResponse (429) o null si hay margen.
 
 export async function checkRateLimit(
   req: Request,
@@ -109,11 +62,11 @@ export async function checkRateLimit(
   const windowMs = config?.window ? parseWindow(config.window) : 60 * 1000; // default 1 min para APIs
   const prefix = config?.prefix ?? "ratelimit:api";
 
-  const forwarded = req.headers.get("x-forwarded-for");
-  const ip = identifier || forwarded?.split(",")[0]?.trim() || "anonymous";
+  const ip = identifier || extraerIpCliente(req);
   const key = `${prefix}:${ip}`;
 
-  const result = checkRateLimitInternal(key, maxAttempts, windowMs);
+  const store = await getRateLimitStore();
+  const result = await store.hit(key, maxAttempts, windowMs);
 
   if (!result.success) {
     return new NextResponse(
@@ -138,7 +91,7 @@ export async function checkRateLimit(
 }
 
 // ── API Pública: checkAuthRateLimit (para NextAuth authorize) ──────────────
-// Firma compatible con auth.ts. Usa prefijos para aislar contadores por email/IP.
+// Usa prefijos para aislar contadores por email y por IP de forma independiente.
 
 export async function checkAuthRateLimit(
   identifier: string,
@@ -149,13 +102,11 @@ export async function checkAuthRateLimit(
   const prefix = config?.prefix ?? "ratelimit:auth";
   const key = `${prefix}:${identifier}`;
 
-  const result = checkRateLimitInternal(key, maxAttempts, windowMs);
+  const store = await getRateLimitStore();
+  const result = await store.hit(key, maxAttempts, windowMs);
 
   if (!result.success) {
-    return {
-      blocked: true,
-      retryAfterSeconds: result.retryAfter ?? 60,
-    };
+    return { blocked: true, retryAfterSeconds: result.retryAfter ?? 60 };
   }
 
   return { blocked: false };
@@ -163,6 +114,7 @@ export async function checkAuthRateLimit(
 
 // ── API Pública: resetRateLimit ─────────────────────────────────────────────
 
-export function resetRateLimit(identifier: string) {
-  rateLimitMap.delete(identifier);
+export async function resetRateLimit(identifier: string): Promise<void> {
+  const store = await getRateLimitStore();
+  await store.reset(identifier);
 }
