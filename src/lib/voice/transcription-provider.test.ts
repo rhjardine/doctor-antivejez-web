@@ -41,6 +41,33 @@ describe('seleccionarProveedor', () => {
     expect(aviso).toHaveBeenCalled();
   });
 
+  it('devuelve whisper-local cuando se pide y hay URL', () => {
+    const p = seleccionarProveedor({
+      [VAR_PROVEEDOR]: 'whisper-local',
+      WHISPER_URL: 'http://whisper:10000',
+    });
+    expect(p.nombre).toBe('whisper-local');
+  });
+
+  it('pedir whisper-local sin URL degrada a echo, no lanza', () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const p = seleccionarProveedor({ [VAR_PROVEEDOR]: 'whisper-local' });
+    expect(p.nombre).toBe('echo');
+    expect(aviso).toHaveBeenCalled();
+  });
+
+  it('whisper-local NO usa OPENAI_API_KEY: el audio no sale a terceros', () => {
+    // Si el autoalojado cayera a la API de OpenAI por tener la clave puesta,
+    // la decision de no exponer PHI quedaria anulada en silencio.
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const p = seleccionarProveedor({
+      [VAR_PROVEEDOR]: 'whisper-local',
+      OPENAI_API_KEY: 'sk-presente',
+    });
+    expect(p.nombre).toBe('echo');
+    expect(aviso).toHaveBeenCalled();
+  });
+
   it('un valor desconocido cae a echo, no a un proveedor externo', () => {
     expect(seleccionarProveedor({ [VAR_PROVEEDOR]: 'deepgram' }).nombre).toBe('echo');
   });

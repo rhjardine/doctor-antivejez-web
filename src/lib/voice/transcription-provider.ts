@@ -80,6 +80,59 @@ export function crearProveedorWhisper(apiKey: string): TranscriptionProvider {
   };
 }
 
+/**
+ * Adaptador de Whisper AUTOALOJADO.
+ *
+ * Es el unico que transcribe de verdad sin que el audio salga de la
+ * infraestructura propia, y por eso es el camino elegido: cierra la cuestion
+ * del acuerdo de tratamiento de datos en vez de gestionarla.
+ *
+ * El servicio vive en services/whisper/ y se despliega aparte.
+ */
+export function crearProveedorWhisperLocal(
+  baseUrl: string,
+  token?: string
+): TranscriptionProvider {
+  const url = `${baseUrl.replace(/\/+$/, '')}/transcribe`;
+
+  return {
+    nombre: 'whisper-local',
+    async transcribir(audio, tipoMime) {
+      const inicio = Date.now();
+
+      const cuerpo = new FormData();
+      cuerpo.append(
+        'audio',
+        new Blob([new Uint8Array(audio)], { type: tipoMime }),
+        'dictado.webm'
+      );
+
+      // Un dictado que tarda mas de un minuto ya no sirve en consulta: se corta
+      // y se informa, en vez de dejar al medico mirando un boton girando.
+      const corte = AbortSignal.timeout(60_000);
+
+      const respuesta = await fetch(url, {
+        method: 'POST',
+        body: cuerpo,
+        headers: token ? { 'X-Whisper-Token': token } : undefined,
+        signal: corte,
+      });
+
+      if (!respuesta.ok) {
+        throw new Error(`whisper-local respondio ${respuesta.status}`);
+      }
+
+      const datos = (await respuesta.json()) as { texto?: string; modelo?: string };
+
+      return {
+        texto: datos.texto ?? '',
+        proveedor: `whisper-local:${datos.modelo ?? '?'}`,
+        latenciaMs: Date.now() - inicio,
+      };
+    },
+  };
+}
+
 /** Nombre de la variable que elige adaptador. */
 export const VAR_PROVEEDOR = 'DICTADO_VOZ_PROVEEDOR';
 
@@ -95,6 +148,18 @@ export function seleccionarProveedor(
   entorno: Record<string, string | undefined> = process.env
 ): TranscriptionProvider {
   const solicitado = (entorno[VAR_PROVEEDOR] ?? 'echo').trim().toLowerCase();
+
+  if (solicitado === 'whisper-local') {
+    const baseUrl = entorno.WHISPER_URL;
+    if (!baseUrl) {
+      console.warn(
+        `[dictado] ${VAR_PROVEEDOR}=whisper-local pero falta WHISPER_URL. ` +
+        `Se usa el adaptador 'echo': no se transcribira audio real.`
+      );
+      return crearProveedorEco();
+    }
+    return crearProveedorWhisperLocal(baseUrl, entorno.WHISPER_TOKEN);
+  }
 
   if (solicitado === 'whisper') {
     const apiKey = entorno.OPENAI_API_KEY;

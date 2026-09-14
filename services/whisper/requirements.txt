@@ -1,0 +1,6 @@
+# Versiones fijadas: el build debe ser reproducible, y una actualizacion
+# silenciosa del modelo cambiaria la transcripcion clinica sin que nadie lo note.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+faster-whisper==1.1.1

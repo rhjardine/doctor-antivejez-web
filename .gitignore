@@ -40,3 +40,9 @@ next-env.d.ts
 *.tar.gz
 
 /dist
+# Servicio Whisper autoalojado (Python)
+__pycache__/
+*.pyc
+
+# Manifiesto generado por npm run voz:corpus
+docs/voz/manifiesto-real.json
