@@ -1,0 +1,3 @@
+# Audio de trabajo: no se versiona.
+audio/*
+!audio/.gitkeep

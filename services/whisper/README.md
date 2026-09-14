@@ -1,0 +1,106 @@
+# Servicio Whisper autoalojado
+
+Transcribe los dictados clínicos **sin que el audio salga de la infraestructura propia**.
+Esa es su única razón de ser: cierra la cuestión del acuerdo de tratamiento de datos
+en lugar de gestionarla. No hay tercero a quien confiar PHI, ni contrato que negociar.
+
+---
+
+## Qué hace
+
+| Endpoint | Para qué |
+|---|---|
+| `GET /health` | Estado, modelo cargado, nº de términos de sesgo, si exige token |
+| `POST /transcribe` | Multipart con campo `audio` → `{texto, latenciaMs, modelo}` |
+
+El modelo se carga **una vez al arrancar**, no por petición. Cargarlo en cada
+dictado añadiría decenas de segundos a cada uno.
+
+## El sesgo del vademécum
+
+Lo que distingue este servicio de un Whisper genérico es el `initial_prompt`:
+se le pasan los nombres propios del vademécum para sesgar el decodificador.
+
+Es la diferencia entre `Transfer Tri Factor` y «transferencia de factores».
+
+Los términos salen de `src/lib/voice/clinical-lexicon.generated.json`, que se
+genera del catálogo real de la Guía con `npm run voz:lexico`. **El mismo archivo
+alimenta el sesgo del transcriptor y el medidor que lo evalúa** — si fueran dos
+listas distintas, las cifras de B1 no significarían nada. Hay un test que lo verifica.
+
+El presupuesto de `initial_prompt` es de ~224 tokens, así que no caben los 162
+términos: entran 43, priorizando los nombres de producto que un modelo genérico
+siempre falla. **Cuando la medición revele que pierde otro de forma sistemática,
+se añade a `TERMINOS_SESGO_PRIORITARIO`** en `lexicon-extractor.ts`. Ese es el
+bucle de realimentación: el sesgo aprende de lo medido, no de lo que yo suponga.
+
+## Construir
+
+El contexto de build es la **raíz del repositorio**, no este directorio — así el
+servicio consume el mismo JSON generado sin copias que se desincronicen:
+
+```bash
+docker build -f services/whisper/Dockerfile -t whisper-antivejez .
+docker run -p 10000:10000 -e WHISPER_TOKEN=un-secreto whisper-antivejez
+```
+
+En Render (Docker): **Root Directory** vacío · **Dockerfile Path** `services/whisper/Dockerfile`.
+
+## Variables
+
+| Variable | Por defecto | Qué hace |
+|---|---|---|
+| `WHISPER_MODELO` | `small` | Tamaño del modelo. Es también `ARG` del Dockerfile: se descarga en el build |
+| `WHISPER_IDIOMA` | `es` | Sin esto, los nombres en inglés del vademécum disparan cambios de idioma |
+| `WHISPER_TOKEN` | *(vacío)* | Token compartido. **Vacío = sin autenticación**, y avisa al arrancar |
+| `WHISPER_MAX_BYTES` | `5242880` | Tope por dictado (5 MB) |
+
+Y en el servicio web de Next.js, para que lo use:
+
+```bash
+DICTADO_VOZ_ENABLED=true
+NEXT_PUBLIC_DICTADO_VOZ_ENABLED=true
+DICTADO_VOZ_PROVEEDOR=whisper-local
+WHISPER_URL=https://<este-servicio>
+WHISPER_TOKEN=<el mismo secreto>
+```
+
+## Dimensionado — léalo antes de elegir plan
+
+`faster-whisper` con cuantización `int8` sobre CPU. Cifras **aproximadas**,
+a verificar en su despliegue concreto:
+
+| Modelo | RAM aprox. | Precisión en terminología |
+|---|---|---|
+| `tiny` / `base` | 0,3–0,5 GB | Insuficiente: destroza los nombres de producto |
+| `small` | ~1 GB | Punto de partida razonable — **es el que hay que medir** |
+| `medium` | ~2–2,5 GB | Notablemente mejor con nombres propios, bastante más lento |
+
+**El plan actual del servicio web (512 MB, 0,5 CPU) no puede alojarlo.** Este
+servicio necesita el suyo propio, y eso cuesta dinero. No conviene elegir modelo
+por intuición: mida primero con `small` y decida con la cifra delante.
+
+## Cómo medir
+
+```bash
+# 1. El Dr. graba 15–20 dictados con terminología del vademécum,
+#    SIN nombre ni dato de ningún paciente real.
+# 2. Transcribir el corpus y construir el manifiesto:
+DICTADO_VOZ_PROVEEDOR=whisper-local WHISPER_URL=http://localhost:10000 \
+  npm run voz:corpus -- docs/voz/corpus/referencias.json docs/voz/corpus/audio
+
+# 3. Medir el recall clínico:
+npm run voz:evaluar -- docs/voz/manifiesto-real.json
+```
+
+El umbral propuesto está en `docs/voz/b1-evaluacion-transcripcion.md` §7.
+Lo fija el médico, porque es quien asume la consecuencia de un error.
+
+## Lo que este servicio NO resuelve
+
+- **No hay arranque instantáneo.** Cargar el modelo lleva su tiempo; si el
+  servicio se suspende por inactividad, el primer dictado del día espera.
+  Para uso clínico conviene que no se suspenda.
+- **No mide su propia precisión.** Para eso está `npm run voz:evaluar`.
+- **No sustituye la confirmación humana.** El médico sigue revisando la
+  propuesta antes de que nada entre en la historia clínica.

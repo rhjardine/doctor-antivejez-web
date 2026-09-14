@@ -1,0 +1,33 @@
+[
+  {
+    "_nota": "PLANTILLA. Sustituya estas entradas por los dictados reales del Dr. NINGUNA debe contener nombre, cédula, fecha de nacimiento ni dato identificable de un paciente. La 'referencia' es lo que se dijo, transcrito por una persona; es la verdad contra la que se mide.",
+    "id": "d01",
+    "archivo": "d01.webm",
+    "referencia": "Indicar MegaGH4 una cápsula en ayunas y StemCell Enhancer dos veces al día",
+    "terminosEsperados": [
+      { "termino": "MegaGH4", "alias": ["mega gh 4"] },
+      { "termino": "StemCell Enhancer" }
+    ],
+    "duracionSegundos": 12
+  },
+  {
+    "id": "d02",
+    "archivo": "d02.webm",
+    "referencia": "Agregar Transfer Tri Factor como modulador celular y Telomeros tres veces por semana",
+    "terminosEsperados": [
+      { "termino": "Transfer Tri Factor" },
+      { "termino": "Telomeros" }
+    ],
+    "duracionSegundos": 10
+  },
+  {
+    "id": "d03",
+    "archivo": "d03.webm",
+    "referencia": "Aplicar Exosoma Serum mañana y noche y agregar Oligocell en gotas",
+    "terminosEsperados": [
+      { "termino": "Exosoma Serum" },
+      { "termino": "Oligocell" }
+    ],
+    "duracionSegundos": 8
+  }
+]
