@@ -1,0 +1,75 @@
+{
+  "_nota": "EJEMPLO ILUSTRATIVO. Los textos son sintéticos y no contienen datos de ningún paciente real. Los proveedores se llaman 'proveedor-a/b/c' a propósito: estas cifras NO son una medición de Whisper, Deepgram ni Azure. Sirven solo para mostrar el formato del manifiesto y la salida del informe.",
+  "dictados": [
+    {
+      "id": "d01",
+      "referencia": "Para el control de hoy indico MegaGH4 una cápsula en ayunas y StemCell Enhancer dos veces al día",
+      "terminosEsperados": [
+        { "termino": "MegaGH4", "alias": ["mega gh 4"] },
+        { "termino": "StemCell Enhancer" }
+      ],
+      "duracionSegundos": 12,
+      "transcripciones": {
+        "proveedor-a": { "texto": "para el control de hoy indico megagh4 una capsula en ayunas y stemcell enhancer dos veces al dia", "latenciaMs": 1400, "costeUsd": 0.0012 },
+        "proveedor-b": { "texto": "para el control de hoy indico mega gh 4 una capsula en ayunas y stem cell enhancer dos veces al dia", "latenciaMs": 900, "costeUsd": 0.0009 },
+        "proveedor-c": { "texto": "para el control de hoy indico megage cuatro una capsula en ayunas y stemcel enhancer dos veces al dia", "latenciaMs": 700, "costeUsd": 0.0005 }
+      }
+    },
+    {
+      "id": "d02",
+      "referencia": "Agregar Transfer Tri Factor como modulador celular y Telomeros tres veces por semana",
+      "terminosEsperados": [
+        { "termino": "Transfer Tri Factor" },
+        { "termino": "Telomeros" }
+      ],
+      "duracionSegundos": 10,
+      "transcripciones": {
+        "proveedor-a": { "texto": "agregar transfer tri factor como modulador celular y telomeros tres veces por semana", "latenciaMs": 1200, "costeUsd": 0.001 },
+        "proveedor-b": { "texto": "agregar transfer tri factor como modulador celular y telomeras tres veces por semana", "latenciaMs": 850, "costeUsd": 0.00075 },
+        "proveedor-c": { "texto": "agregar transferencia de factores como modulador celular y telomeros tres veces por semana", "latenciaMs": 640, "costeUsd": 0.0004 }
+      }
+    },
+    {
+      "id": "d03",
+      "referencia": "Indicar Detoxificación Alcalina durante diez días y luego Plasma Marino una tacita en ayunas",
+      "terminosEsperados": [
+        { "termino": "Detoxificación Alcalina" },
+        { "termino": "Plasma Marino" }
+      ],
+      "duracionSegundos": 11,
+      "transcripciones": {
+        "proveedor-a": { "texto": "indicar detoxificacion alcalina durante diez dias y luego plasma marino una tacita en ayunas", "latenciaMs": 1350, "costeUsd": 0.0011 },
+        "proveedor-b": { "texto": "indicar detoxificacion alcalina durante diez dias y luego plasma marino una tacita en ayunas", "latenciaMs": 880, "costeUsd": 0.0008 },
+        "proveedor-c": { "texto": "indicar detoxificacion alcalina durante diez dias y luego plasma marino una tacita en ayunas", "latenciaMs": 660, "costeUsd": 0.00045 }
+      }
+    },
+    {
+      "id": "d04",
+      "referencia": "Sumar Inmuno Modulador en suero y Osteo Articular para la molestia de rodilla",
+      "terminosEsperados": [
+        { "termino": "Inmuno Modulador" },
+        { "termino": "Osteo Articular" }
+      ],
+      "duracionSegundos": 9,
+      "transcripciones": {
+        "proveedor-a": { "texto": "sumar inmuno modulador en suero y osteo articular para la molestia de rodilla", "latenciaMs": 1100, "costeUsd": 0.0009 },
+        "proveedor-b": { "texto": "sumar inmuno estimulante en suero y osteo articular para la molestia de rodilla", "latenciaMs": 820, "costeUsd": 0.0007 },
+        "proveedor-c": { "texto": "sumar inmunomodulador en suero y osteoarticular para la molestia de rodilla", "latenciaMs": 590, "costeUsd": 0.0004 }
+      }
+    },
+    {
+      "id": "d05",
+      "referencia": "Aplicar Exosoma Serum mañana y noche y agregar Oligocell en gotas",
+      "terminosEsperados": [
+        { "termino": "Exosoma Serum" },
+        { "termino": "Oligocell" }
+      ],
+      "duracionSegundos": 8,
+      "transcripciones": {
+        "proveedor-a": { "texto": "aplicar exosoma serum manana y noche y agregar oligocell en gotas", "latenciaMs": 1050, "costeUsd": 0.0008 },
+        "proveedor-b": { "texto": "aplicar exosoma serum manana y noche y agregar oligo cell en gotas", "latenciaMs": 790, "costeUsd": 0.0006 },
+        "proveedor-c": { "texto": "aplicar exosomas erum manana y noche y agregar oligo sel en gotas", "latenciaMs": 560, "costeUsd": 0.00035 }
+      }
+    }
+  ]
+}
