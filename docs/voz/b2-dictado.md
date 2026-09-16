@@ -33,21 +33,34 @@ Apagado por defecto. **Mergear B2 no activa nada.**
 ```bash
 DICTADO_VOZ_ENABLED="true"              # servidor — es la que autoriza
 NEXT_PUBLIC_DICTADO_VOZ_ENABLED="true"  # cliente — solo decide si se pinta el botón
-DICTADO_VOZ_PROVEEDOR="echo"            # "echo" o "whisper"
+DICTADO_VOZ_PROVEEDOR="whisper-local"   # "echo" | "whisper-local" | "whisper-openai"
+WHISPER_URL="https://<servicio-whisper>"  # obligatoria con whisper-local
+WHISPER_TOKEN="<el mismo secreto del servicio Whisper>"
 ```
 
 Las dos variables de flag son necesarias, y no es redundancia: la del cliente decide si el botón se dibuja; la del servidor decide si la transcripción ocurre. `NEXT_PUBLIC_*` viaja al navegador y ahí es manipulable, así que **nunca autoriza nada**.
 
-### Los dos adaptadores
+### Los tres adaptadores
 
 | Adaptador | Qué hace | ¿Sale audio del sistema? |
 |---|---|---|
 | `echo` (por defecto) | Devuelve un texto de prueba con el tamaño recibido | **No** |
-| `whisper` | OpenAI Whisper (`whisper-1`, `language: 'es'`) | Sí |
+| `whisper-local` | El servicio autoalojado de `services/whisper/` | **No** — se queda en la infraestructura propia |
+| `whisper-openai` | OpenAI Whisper (`whisper-1`, `language: 'es'`) | Sí, hacia un tercero |
 
-Pedir `whisper` sin `OPENAI_API_KEY` **degrada a `echo` con un aviso**, no lanza: un fallo de configuración debe apagar el dictado, no tumbar la Guía del paciente.
+Una configuración incompleta **degrada a `echo` con un aviso**, no lanza: un fallo de configuración debe apagar el dictado, no tumbar la Guía del paciente. Eso incluye `whisper-local` sin `WHISPER_URL`, `whisper-openai` sin `OPENAI_API_KEY`, y cualquier valor no reconocido.
 
-> ⚠️ **`whisper` no se enciende en consulta real hasta que exista BAA/DPA firmado**, o hasta usar Whisper autoalojado. El audio de un dictado clínico es PHI aunque no se pronuncie el nombre del paciente. Con `echo` el prototipo se prueba y se demuestra entero sin que salga un byte hacia terceros.
+> ⚠️ **El nombre `whisper` a secas es ambiguo y está desaconsejado.** Significaba OpenAI, y en la primera puesta en producción se puso creyendo que apuntaba al servicio autoalojado. Resultado: el audio nunca salió del servicio web —no había clave—, el dictado cayó a `echo`, y el médico interpretó dos veces el texto de prueba como un error del sistema. El alias sigue funcionando para no romper despliegues, pero **avisa en los logs y no se resuelve nunca hacia `whisper-local`**: adivinar la intención con PHI de por medio sería peor que degradar.
+
+> ⚠️ **`whisper-openai` no se enciende en consulta real hasta que exista BAA/DPA firmado.** El audio de un dictado clínico es PHI aunque no se pronuncie el nombre del paciente. `whisper-local` existe precisamente para no tener que negociar ese acuerdo.
+
+### Cómo saber qué adaptador está corriendo
+
+Sin leer el texto dictado, que es PHI:
+
+- **En la pantalla**: si el texto no procede del audio, la propuesta muestra un aviso rojo, *«Esto NO es lo que usted dictó»*, aparte del contenido. No basta con que el texto se explique a sí mismo — eso ya se probó y se leyó como una avería.
+- **En los logs del servicio web**: `[dictado] transcripcion ok | proveedor=…`. Si dice `echo`, no hubo transcripción.
+- **En los logs del servicio Whisper**: debe aparecer un `POST /transcribe` por cada dictado. Si no aparece ninguno, el servicio web ni siquiera lo está llamando.
 
 ---
 

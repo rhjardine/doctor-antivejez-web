@@ -42,6 +42,9 @@ servicio consume el mismo JSON generado sin copias que se desincronicen:
 ```bash
 docker build -f services/whisper/Dockerfile -t whisper-antivejez .
 docker run -p 10000:10000 -e WHISPER_TOKEN=un-secreto whisper-antivejez
+
+# Para otro tamaño de modelo hay que reconstruir, no basta con la variable:
+docker build -f services/whisper/Dockerfile --build-arg WHISPER_MODELO=small -t whisper-antivejez .
 ```
 
 En Render (Docker): **Root Directory** vacío · **Dockerfile Path** `services/whisper/Dockerfile`.
@@ -50,7 +53,16 @@ En Render (Docker): **Root Directory** vacío · **Dockerfile Path** `services/w
 
 | Variable | Por defecto | Qué hace |
 |---|---|---|
-| `WHISPER_MODELO` | `small` | Tamaño del modelo. Es también `ARG` del Dockerfile: se descarga en el build |
+| `WHISPER_MODELO` | `base` | Tamaño del modelo. Es también `ARG` del Dockerfile: se descarga en el build |
+| `WHISPER_MODELO_PREDESCARGADO` | *(lo fija el Dockerfile)* | Testigo del modelo que trae la imagen. No se define a mano |
+
+> ⚠️ **Cambiar `WHISPER_MODELO` en el panel del proveedor no basta.** La variable de
+> servicio pisa el `ENV` de la imagen en tiempo de ejecución, pero el modelo
+> predescargado sigue siendo el del build: el servicio arranca bajándose el nuevo
+> **en cada arranque en frío**. Hay que reconstruir con
+> `--build-arg WHISPER_MODELO=<tamaño>`. Esto ocurrió en silencio en el primer
+> despliegue; ahora el arranque lo avisa y `/health` lo expone en
+> `modeloEnImagen`.
 | `WHISPER_IDIOMA` | `es` | Sin esto, los nombres en inglés del vademécum disparan cambios de idioma |
 | `WHISPER_TOKEN` | *(vacío)* | Token compartido. **Vacío = sin autenticación**, y avisa al arrancar |
 | `WHISPER_MAX_BYTES` | `5242880` | Tope por dictado (5 MB) |

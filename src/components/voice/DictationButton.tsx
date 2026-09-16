@@ -20,8 +20,14 @@ import { transcribirDictado } from '@/lib/actions/voice.actions';
 
 interface DictationButtonProps {
   patientId: string;
-  /** Se llama con el texto transcrito. El componente padre decide que hacer con el. */
-  onTranscripcion: (texto: string) => void;
+  /**
+   * Se llama con el texto transcrito. El componente padre decide que hacer con el.
+   *
+   * `simulado` es cierto cuando el texto NO sale del audio, sino del adaptador de
+   * prueba. Se propaga en vez de esconderse: quien pinte la propuesta tiene que
+   * poder advertirlo.
+   */
+  onTranscripcion: (texto: string, simulado: boolean) => void;
   disabled?: boolean;
 }
 
@@ -67,7 +73,7 @@ export default function DictationButton({
           toast.error(respuesta.error ?? 'No se pudo transcribir el dictado.');
           return;
         }
-        onTranscripcion(respuesta.texto);
+        onTranscripcion(respuesta.texto, respuesta.simulado ?? false);
       } catch (error) {
         console.error('[dictado] error al enviar:', error);
         toast.error('No se pudo enviar el dictado.');

@@ -19,6 +19,11 @@ interface DictationProposalProps {
   textoExistente: string;
   /** Transcripcion recibida del proveedor. */
   textoDictado: string;
+  /**
+   * El texto NO procede del audio: lo genero el adaptador de prueba porque la
+   * configuracion del proveedor esta incompleta.
+   */
+  simulado?: boolean;
   /** Se llama con el texto final solo si el medico acepta. */
   onAceptar: (textoFinal: string) => void;
   onDescartar: () => void;
@@ -27,6 +32,7 @@ interface DictationProposalProps {
 export default function DictationProposal({
   textoExistente,
   textoDictado,
+  simulado = false,
   onAceptar,
   onDescartar,
 }: DictationProposalProps) {
@@ -43,6 +49,26 @@ export default function DictationProposal({
       <p className="mb-2 text-sm font-semibold text-amber-900">
         Propuesta de dictado — revise antes de aceptar
       </p>
+
+      {/*
+        El adaptador de prueba ya devuelve un texto que se explica a si mismo,
+        y aun asi se leyo dos veces como un error del sistema. El aviso va
+        aparte del contenido, en rojo y nombrando la variable que hay que
+        corregir, para que el diagnostico no dependa de leer el texto.
+      */}
+      {simulado && (
+        <div role="alert" className="mb-3 rounded border border-red-400 bg-red-50 p-2">
+          <p className="text-sm font-semibold text-red-800">
+            Esto NO es lo que usted dictó
+          </p>
+          <p className="mt-1 text-xs text-red-700">
+            El dictado está en modo de prueba: no se transcribió el audio. Para
+            transcripción real, <code>DICTADO_VOZ_PROVEEDOR</code> debe valer{' '}
+            <code>whisper-local</code> y <code>WHISPER_URL</code> debe apuntar al
+            servicio de Whisper.
+          </p>
+        </div>
+      )}
 
       <label className="mb-1 block text-xs font-medium text-amber-900" htmlFor="dictado-editable">
         Texto transcrito (puede corregirlo)

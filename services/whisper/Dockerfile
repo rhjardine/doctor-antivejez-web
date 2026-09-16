@@ -31,8 +31,24 @@ COPY src/lib/voice/clinical-lexicon.generated.json ./clinical-lexicon.generated.
 # El modelo se descarga en el build, no en el arranque. Si se descargara al
 # arrancar, el primer dictado del dia esperaria varios minutos y el medico
 # pensaria que esta roto.
-ARG WHISPER_MODELO=small
+#
+# El valor por defecto es 'base' porque es lo que cabe en el plan de 512 MB en
+# el que corre hoy el servicio. Para otro tamano hay que reconstruir la imagen:
+#
+#   docker build -f services/whisper/Dockerfile --build-arg WHISPER_MODELO=small .
+#
+# NO basta con cambiar WHISPER_MODELO en el panel del proveedor. Una variable de
+# servicio pisa el ENV de la imagen en tiempo de ejecucion, pero no cambia el
+# modelo que se predescargo: el servicio arrancaria descargando el nuevo en cada
+# arranque en frio. Eso ya paso, en silencio, y por eso app.py ahora lo detecta.
+ARG WHISPER_MODELO=base
 ENV WHISPER_MODELO=${WHISPER_MODELO}
+
+# Se conserva aparte el modelo REALMENTE predescargado. Sirve de testigo: es la
+# unica forma que tiene el arranque de saber si la variable de servicio diverge
+# de la imagen, porque WHISPER_MODELO puede haber sido sobrescrito.
+ENV WHISPER_MODELO_PREDESCARGADO=${WHISPER_MODELO}
+
 RUN python -c "from faster_whisper import WhisperModel; WhisperModel('${WHISPER_MODELO}', device='cpu', compute_type='int8')"
 
 ENV PORT=10000

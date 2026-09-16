@@ -19,8 +19,14 @@ interface DictationFieldProps {
   onAceptar: (nuevoValor: string) => void;
 }
 
+interface Propuesta {
+  texto: string;
+  /** El texto no procede del audio: lo genero el adaptador de prueba. */
+  simulado: boolean;
+}
+
 export default function DictationField({ patientId, valor, onAceptar }: DictationFieldProps) {
-  const [propuesta, setPropuesta] = useState<string | null>(null);
+  const [propuesta, setPropuesta] = useState<Propuesta | null>(null);
 
   // Con el flag apagado no se pinta nada. La Server Action lo comprueba tambien
   // por su cuenta: esto solo evita ofrecer un boton que el servidor rechazaria.
@@ -30,14 +36,15 @@ export default function DictationField({ patientId, valor, onAceptar }: Dictatio
     <div className="mt-2">
       <DictationButton
         patientId={patientId}
-        onTranscripcion={setPropuesta}
+        onTranscripcion={(texto, simulado) => setPropuesta({ texto, simulado })}
         disabled={propuesta !== null}
       />
 
       {propuesta !== null && (
         <DictationProposal
           textoExistente={valor}
-          textoDictado={propuesta}
+          textoDictado={propuesta.texto}
+          simulado={propuesta.simulado}
           onAceptar={(textoFinal) => {
             onAceptar(textoFinal);
             setPropuesta(null);
