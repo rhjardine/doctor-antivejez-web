@@ -13,6 +13,15 @@ export interface ResultadoTranscripcion {
   /** Nombre del adaptador que produjo el texto. Se registra, nunca se infiere. */
   proveedor: string;
   latenciaMs: number;
+  /**
+   * Cierto cuando el texto NO procede del audio: es una simulacion.
+   *
+   * Viaja hasta la interfaz a proposito. Durante la primera prueba en produccion
+   * el unico indicio de que el adaptador era 'echo' estaba dentro del propio
+   * texto devuelto, y se leyo dos veces como un error del sistema. Un texto que
+   * se explica a si mismo no basta: la pantalla tiene que decirlo aparte.
+   */
+  simulado?: boolean;
 }
 
 export interface TranscriptionProvider {
@@ -40,6 +49,7 @@ export function crearProveedorEco(): TranscriptionProvider {
           `${audio.byteLength} bytes recibidos (${tipoMime}).`,
         proveedor: 'echo',
         latenciaMs: 0,
+        simulado: true,
       };
     },
   };
@@ -137,19 +147,48 @@ export function crearProveedorWhisperLocal(
 export const VAR_PROVEEDOR = 'DICTADO_VOZ_PROVEEDOR';
 
 /**
+ * Valores admitidos, en su forma canonica.
+ *
+ * 'whisper' a secas NO esta aqui: sigue funcionando como alias de
+ * 'whisper-openai', pero no se documenta ni se sugiere. Ver ALIAS_AMBIGUOS.
+ */
+export const PROVEEDORES_VALIDOS = ['echo', 'whisper-local', 'whisper-openai'] as const;
+
+/**
+ * Nombres heredados que se aceptan pero avisan.
+ *
+ * 'whisper' significaba OpenAI, y se confundio en produccion con el servicio
+ * autoalojado, que se llama 'whisper-local'. El resultado fue que el audio
+ * nunca salio del servicio web y el medico vio un texto de prueba dos veces.
+ * El nombre ambiguo fue un error de diseno mio; se corrige renombrando el
+ * canonico y dejando el viejo funcionando con un aviso, no rompiendolo.
+ */
+const ALIAS_AMBIGUOS: Record<string, string> = { whisper: 'whisper-openai' };
+
+/**
  * Elige el adaptador segun el entorno.
  *
- * Cae a 'echo' cuando se pide Whisper sin clave, en vez de lanzar: un fallo de
- * configuracion debe degradar el dictado, no tumbar la Guia del paciente.
- * El valor por defecto tambien es 'echo' — hacia falta pedir Whisper de forma
- * explicita para que el audio salga a un tercero.
+ * Cae a 'echo' cuando la configuracion esta incompleta, en vez de lanzar: un
+ * fallo de configuracion debe degradar el dictado, no tumbar la Guia del
+ * paciente. El valor por defecto tambien es 'echo' — hace falta pedir un
+ * proveedor real de forma explicita para que se transcriba audio, y pedir
+ * 'whisper-openai' de forma explicita para que salga hacia un tercero.
  */
 export function seleccionarProveedor(
   entorno: Record<string, string | undefined> = process.env
 ): TranscriptionProvider {
-  const solicitado = (entorno[VAR_PROVEEDOR] ?? 'echo').trim().toLowerCase();
+  const pedido = (entorno[VAR_PROVEEDOR] ?? 'echo').trim().toLowerCase();
 
-  if (solicitado === 'whisper-local') {
+  const canonico = ALIAS_AMBIGUOS[pedido] ?? pedido;
+  if (canonico !== pedido) {
+    console.warn(
+      `[dictado] ${VAR_PROVEEDOR}='${pedido}' es un nombre ambiguo y se interpreta ` +
+      `como '${canonico}' (OpenAI, el audio SALE de la infraestructura propia). ` +
+      `Para el servicio autoalojado el valor es 'whisper-local'.`
+    );
+  }
+
+  if (canonico === 'whisper-local') {
     const baseUrl = entorno.WHISPER_URL;
     if (!baseUrl) {
       console.warn(
@@ -161,16 +200,27 @@ export function seleccionarProveedor(
     return crearProveedorWhisperLocal(baseUrl, entorno.WHISPER_TOKEN);
   }
 
-  if (solicitado === 'whisper') {
+  if (canonico === 'whisper-openai') {
     const apiKey = entorno.OPENAI_API_KEY;
     if (!apiKey) {
       console.warn(
-        `[dictado] ${VAR_PROVEEDOR}=whisper pero falta OPENAI_API_KEY. ` +
+        `[dictado] ${VAR_PROVEEDOR}=${canonico} pero falta OPENAI_API_KEY. ` +
         `Se usa el adaptador 'echo': no se transcribira audio real.`
       );
       return crearProveedorEco();
     }
     return crearProveedorWhisper(apiKey);
+  }
+
+  // Un valor no reconocido caia a 'echo' en absoluto silencio. Una errata como
+  // 'whisper_local' o 'Whisper Local' dejaba el dictado simulado sin que nada lo
+  // dijera en los logs, que es justo como se pierde una tarde de diagnostico.
+  if (canonico !== 'echo') {
+    console.warn(
+      `[dictado] ${VAR_PROVEEDOR}='${pedido}' no es un valor reconocido. ` +
+      `Se usa el adaptador 'echo': no se transcribira audio real. ` +
+      `Valores admitidos: ${PROVEEDORES_VALIDOS.join(', ')}.`
+    );
   }
 
   return crearProveedorEco();

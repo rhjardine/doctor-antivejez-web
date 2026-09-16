@@ -20,6 +20,12 @@ export interface RespuestaTranscripcion {
   ok: boolean;
   texto?: string;
   proveedor?: string;
+  /**
+   * Cierto cuando el texto no procede del audio, sino del adaptador de prueba.
+   * La interfaz lo advierte de forma destacada: no basta con que el propio texto
+   * lo diga, porque en produccion eso se leyo como un error del sistema.
+   */
+  simulado?: boolean;
   error?: string;
 }
 
@@ -76,7 +82,12 @@ export async function transcribirDictado(
       `bytes=${audio.size} latenciaMs=${resultado.latenciaMs}`
     );
 
-    return { ok: true, texto: resultado.texto, proveedor: resultado.proveedor };
+    return {
+      ok: true,
+      texto: resultado.texto,
+      proveedor: resultado.proveedor,
+      simulado: resultado.simulado ?? false,
+    };
   } catch (error) {
     console.error('[dictado] fallo del proveedor:', (error as Error).message);
     return { ok: false, error: 'No se pudo transcribir el dictado. Intente de nuevo.' };

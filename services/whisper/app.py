@@ -21,7 +21,10 @@ from faster_whisper import WhisperModel
 logging.basicConfig(level=logging.INFO, format="[whisper] %(levelname)s %(message)s")
 log = logging.getLogger("whisper")
 
-MODELO = os.environ.get("WHISPER_MODELO", "small")
+# Por defecto 'base': es lo que cabe en el plan de 512 MB donde corre hoy.
+# El Dockerfile siempre define WHISPER_MODELO, asi que este valor solo aplica
+# ejecutando fuera de contenedor.
+MODELO = os.environ.get("WHISPER_MODELO", "base")
 IDIOMA = os.environ.get("WHISPER_IDIOMA", "es")
 TOKEN = os.environ.get("WHISPER_TOKEN", "")
 MAX_BYTES = int(os.environ.get("WHISPER_MAX_BYTES", 5 * 1024 * 1024))
@@ -36,6 +39,21 @@ if _lexico.exists():
 else:
     SESGO = ""
     log.warning("Sin clinical-lexicon.generated.json: se transcribe SIN sesgo de vademecum")
+
+# El Dockerfile predescarga un modelo concreto y deja su nombre aqui. Si la
+# variable de servicio pide otro, el modelo NO esta en la imagen y se baja de
+# internet en cada arranque en frio: el primer dictado del dia se hace esperar
+# y el fallo no se parece en nada a su causa. Se avisa antes de cargarlo.
+PREDESCARGADO = os.environ.get("WHISPER_MODELO_PREDESCARGADO", "")
+if PREDESCARGADO and PREDESCARGADO != MODELO:
+    log.warning(
+        "WHISPER_MODELO='%s' pero la imagen trae predescargado '%s': se descargara "
+        "en cada arranque en frio. Reconstruya la imagen con "
+        "--build-arg WHISPER_MODELO=%s",
+        MODELO,
+        PREDESCARGADO,
+        MODELO,
+    )
 
 # El modelo se carga UNA vez al arrancar. Cargarlo por peticion anadiria
 # decenas de segundos a cada dictado.
@@ -72,6 +90,10 @@ def health():
         "idioma": IDIOMA,
         "terminosSesgo": len(SESGO.split(", ")) if SESGO else 0,
         "autenticacion": bool(TOKEN),
+        # Expuesto a proposito: permite comprobar la divergencia imagen/servicio
+        # desde fuera, sin tener que rebuscar en los logs de arranque.
+        "modeloPredescargado": PREDESCARGADO or None,
+        "modeloEnImagen": (not PREDESCARGADO) or PREDESCARGADO == MODELO,
     }
 
 
