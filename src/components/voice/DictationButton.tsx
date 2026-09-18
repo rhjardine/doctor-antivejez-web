@@ -17,6 +17,7 @@ import { FaMicrophone, FaStop } from 'react-icons/fa';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { transcribirDictado } from '@/lib/actions/voice.actions';
+import { interpretarRespuesta } from '@/lib/voice/dictation-outcome';
 
 interface DictationButtonProps {
   patientId: string;
@@ -67,13 +68,22 @@ export default function DictationButton({
       try {
         const formData = new FormData();
         formData.append('audio', audio, 'dictado.webm');
-        const respuesta = await transcribirDictado(patientId, formData);
+        // Sin desestructurar ni leer propiedades: una Server Action cuyo POST
+        // no llega a ejecutarse entrega `undefined`, y tocar `.ok` aqui lanzaba
+        // un TypeError que ocultaba la causa real. interpretarRespuesta lo
+        // distingue y esta probada aparte.
+        const resultado = interpretarRespuesta(await transcribirDictado(patientId, formData));
 
-        if (!respuesta.ok || !respuesta.texto) {
-          toast.error(respuesta.error ?? 'No se pudo transcribir el dictado.');
+        if (resultado.tipo === 'error') {
+          if (resultado.sinRespuesta) {
+            // Sin contenido del dictado: solo el hecho de que no hubo respuesta.
+            console.error('[dictado] la Server Action no devolvio respuesta (revise la pestaña Red)');
+          }
+          toast.error(resultado.mensaje);
           return;
         }
-        onTranscripcion(respuesta.texto, respuesta.simulado ?? false);
+
+        onTranscripcion(resultado.texto, resultado.simulado);
       } catch (error) {
         console.error('[dictado] error al enviar:', error);
         toast.error('No se pudo enviar el dictado.');
