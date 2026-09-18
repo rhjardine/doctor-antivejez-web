@@ -130,3 +130,42 @@ describe('camino feliz', () => {
     expect(registrado).toContain('proveedor=falso');
   });
 });
+
+describe('transcripción degenerada', () => {
+  // El caso real: el médico dictó dos minutos y whisper-local devolvió la lista
+  // del vademécum repetida en bucle. Entregarle eso COMO SI fueran sus palabras
+  // es peor que decirle que falló.
+  const BUCLE = Array(14)
+    .fill('Adrenales, Aceite de ricino, Adrenales, Antiviral c-Limón, Aceite de ricino,')
+    .join(' ');
+
+  it('se rechaza en vez de devolverse como si fuera el dictado', async () => {
+    transcribir.mockResolvedValue({ texto: BUCLE, proveedor: 'falso', latenciaMs: 37112 });
+    const r = await transcribirDictado(PACIENTE, audioValido());
+    expect(r.ok).toBe(false);
+    expect(r.texto).toBeUndefined();
+    expect(r.error).toBeTruthy();
+  });
+
+  it('el rechazo se registra con métricas, nunca con el texto', async () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    transcribir.mockResolvedValue({ texto: BUCLE, proveedor: 'falso', latenciaMs: 37112 });
+    await transcribirDictado(PACIENTE, audioValido());
+
+    const registrado = aviso.mock.calls.flat().join(' ');
+    expect(registrado).toContain('degenerada');
+    expect(registrado).toContain('variedad=');
+    // El contenido sigue siendo PHI aunque sea basura del modelo.
+    expect(registrado).not.toContain('Adrenales');
+  });
+
+  it('un dictado normal no se ve afectado por la comprobación', async () => {
+    transcribir.mockResolvedValue({
+      texto: 'La paciente refiere mejoría del sueño; se mantiene MegaGH4 dos cápsulas en ayunas.',
+      proveedor: 'falso',
+      latenciaMs: 5,
+    });
+    const r = await transcribirDictado(PACIENTE, audioValido());
+    expect(r.ok).toBe(true);
+  });
+});

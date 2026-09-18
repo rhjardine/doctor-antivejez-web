@@ -15,6 +15,10 @@ import { validatePatientAccess } from '@/lib/auth-guards';
 import { dictadoHabilitadoEnServidor } from '@/lib/voice/dictation-flag';
 import { seleccionarProveedor } from '@/lib/voice/transcription-provider';
 import { MAX_BYTES_DICTADO, mimeAceptado } from '@/lib/voice/audio-constraints';
+import {
+  diagnosticarTranscripcion,
+  MENSAJE_DEGENERADA,
+} from '@/lib/voice/transcription-sanity';
 
 export interface RespuestaTranscripcion {
   ok: boolean;
@@ -74,6 +78,25 @@ export async function transcribirDictado(
     const proveedor = seleccionarProveedor();
     const bytes = new Uint8Array(await audio.arrayBuffer());
     const resultado = await proveedor.transcribir(bytes, audio.type);
+
+    // Un decodificador puede entrar en bucle y devolver la misma secuencia una
+    // y otra vez. Paso en produccion: un dictado de dos minutos volvio como la
+    // lista del vademecum repetida, sin relacion con lo que se dijo. Entregarle
+    // eso a un medico COMO SI fueran sus palabras es peor que decirle que fallo,
+    // asi que se descarta aqui, sea cual sea el proveedor.
+    const diagnostico = diagnosticarTranscripcion(resultado.texto);
+    if (diagnostico.degenerada) {
+      // Se registran las metricas, nunca el texto: explican el rechazo sin
+      // volcar PHI en los logs.
+      console.warn(
+        `[dictado] transcripcion descartada por degenerada | ` +
+        `proveedor=${resultado.proveedor} palabras=${diagnostico.palabras} ` +
+        `variedad=${diagnostico.variedad.toFixed(3)} ` +
+        `cuotaTrigrama=${diagnostico.cuotaTrigrama.toFixed(3)} ` +
+        `latenciaMs=${resultado.latenciaMs}`
+      );
+      return { ok: false, error: MENSAJE_DEGENERADA };
+    }
 
     // Se registra que hubo un dictado y con que proveedor, nunca su contenido:
     // el texto es PHI y no tiene por que acabar en los logs de Render.
