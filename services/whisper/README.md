@@ -108,6 +108,43 @@ npm run voz:evaluar -- docs/voz/manifiesto-real.json
 El umbral propuesto está en `docs/voz/b1-evaluacion-transcripcion.md` §7.
 Lo fija el médico, porque es quien asume la consecuencia de un error.
 
+## El bucle de repetición — leído caro, documentado aquí
+
+En la primera prueba real el médico dictó dos minutos y recibió esto:
+
+```
+Adrenales, Aceite de ricino, Adrenales, Antiviral c-Limón, Aceite de ricino,
+Adrenales, Antiviral c-Limón, Aceite de ricino, Adrenales, ...
+```
+
+No era su voz. El modelo continuaba **la lista del vademécum que este servicio le
+pasa como `initial_prompt`**. Tres causas, las tres de configuración:
+
+1. **`temperature=0.0` a secas.** La escalera de temperaturas no es «creatividad»:
+   es la red de seguridad de Whisper. Si un segmento sale degenerado
+   (`compression_ratio` sobre el umbral, o *logprob* media muy baja) se reintenta
+   con la siguiente temperatura. Con un solo valor no hay peldaños y la salida
+   degenerada se devuelve tal cual.
+2. **`condition_on_previous_text` por omisión en `True`.** Cada segmento recibe
+   como contexto lo decodificado antes, así que un bucle se hereda y se sostiene
+   solo durante todo el audio.
+3. **El `initial_prompt` era una lista pelada separada por comas.** El prompt es
+   *contexto precedente*, no un diccionario: el modelo continúa su patrón. Ahora
+   va enmarcado en una frase con punto final.
+
+Además hay una segunda línea de defensa **en la aplicación**, no aquí:
+`src/lib/voice/transcription-sanity.ts` mide variedad léxica y repetición de
+trigramas, y descarta la transcripción antes de enseñársela al médico. Un modelo
+siempre puede tropezar; entregarle una pared de nombres repetidos *como si fueran
+sus palabras* es peor que decirle que falló.
+
+## Latencia medida
+
+Primer dato real, no estimación: **406 KB de audio (≈2 min) → 37 s** con `base`
+en 0,5 CPU. Es utilizable para dictados cortos y molesto para los largos. Conviene
+tenerlo delante al decidir si se sube de modelo: `small` acierta más, pero sobre
+el mismo plan tardaría bastante más.
+
 ## Lo que este servicio NO resuelve
 
 - **No hay arranque instantáneo.** Cargar el modelo lleva su tiempo; si el

@@ -34,10 +34,24 @@ MAX_BYTES = int(os.environ.get("WHISPER_MAX_BYTES", 5 * 1024 * 1024))
 _lexico = pathlib.Path(__file__).parent / "clinical-lexicon.generated.json"
 if _lexico.exists():
     _datos = json.loads(_lexico.read_text(encoding="utf-8"))
-    SESGO = ", ".join(_datos.get("prompt", []))
-    log.info("Sesgo de vocabulario: %d terminos", len(_datos.get("prompt", [])))
+    _terminos = _datos.get("prompt", [])
+    # El initial_prompt es CONTEXTO PRECEDENTE, no un diccionario: el modelo
+    # continua el patron de lo que lee. Una lista pelada separada por comas le
+    # invita a seguir emitiendo elementos de esa lista, y eso fue exactamente lo
+    # que ocurrio en produccion: el dictado volvio como "Adrenales, Aceite de
+    # ricino, Antiviral c-Limon, ..." en bucle, sin relacion con lo dictado.
+    #
+    # Se enmarca como una frase con sujeto y punto final. El punto importa: sin
+    # el, el modelo cree que la enumeracion sigue abierta y la continua.
+    SESGO = (
+        "Consulta de medicina antienvejecimiento. "
+        "Se mencionan productos del vademecum: " + ", ".join(_terminos) + "."
+    ) if _terminos else ""
+    N_TERMINOS_SESGO = len(_terminos)
+    log.info("Sesgo de vocabulario: %d terminos", N_TERMINOS_SESGO)
 else:
     SESGO = ""
+    N_TERMINOS_SESGO = 0
     log.warning("Sin clinical-lexicon.generated.json: se transcribe SIN sesgo de vademecum")
 
 # El Dockerfile predescarga un modelo concreto y deja su nombre aqui. Si la
@@ -88,7 +102,9 @@ def health():
         "estado": "ok",
         "modelo": MODELO,
         "idioma": IDIOMA,
-        "terminosSesgo": len(SESGO.split(", ")) if SESGO else 0,
+        # Se cuenta la lista de origen, no se deduce partiendo SESGO: ahora el
+        # prompt lleva una frase alrededor y esa cuenta saldria mal.
+        "terminosSesgo": N_TERMINOS_SESGO,
         "autenticacion": bool(TOKEN),
         # Expuesto a proposito: permite comprobar la divergencia imagen/servicio
         # desde fuera, sin tener que rebuscar en los logs de arranque.
@@ -124,9 +140,24 @@ async def transcribe(
                 # Sesga el decodificador hacia el vademecum. Es la diferencia
                 # entre "Transfer Tri Factor" y "transferencia de factores".
                 initial_prompt=SESGO or None,
-                # Sin temperatura: en dictado clinico se quiere la transcripcion
-                # mas probable, no una variante creativa.
-                temperature=0.0,
+                # La escalera de temperaturas NO es "creatividad": es la red de
+                # seguridad de Whisper. Cuando un segmento sale degenerado
+                # —compression_ratio por encima del umbral, o logprob media
+                # demasiado baja— se reintenta con la siguiente temperatura.
+                # Estaba puesto en 0.0 a secas, que deja la escalera sin
+                # peldanos: no habia a donde reintentar y la salida degenerada
+                # se devolvia tal cual. Ese fue el bucle que vio el medico.
+                temperature=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                # Umbrales explicitos, no por omision: son los que deciden que
+                # un segmento es degenerado y hay que reintentarlo.
+                compression_ratio_threshold=2.4,
+                log_prob_threshold=-1.0,
+                # Por defecto es True: cada segmento recibe como contexto lo que
+                # se decodifico antes. Si un segmento entra en bucle, el
+                # siguiente lo hereda y el bucle se sostiene solo durante todo
+                # el audio. Apagarlo cuesta algo de coherencia entre frases y
+                # evita que un tropiezo contamine el dictado entero.
+                condition_on_previous_text=False,
                 vad_filter=True,
             )
             texto = " ".join(s.text.strip() for s in segmentos).strip()
