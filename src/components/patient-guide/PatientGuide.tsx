@@ -14,6 +14,7 @@ import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 import { savePatientGuide, sendGuideByEmail, getPatientGuideDetails } from '@/lib/actions/guide.actions';
 import DictationField from '@/components/voice/DictationField';
+import { retiradosSeleccionados } from '@/lib/guide/retired-items';
 
 // --- Activador Metabólico: Estructura Homeopática ---
 export const homeopathicStructure = {
@@ -176,29 +177,10 @@ const initialGuideData: GuideCategory[] = [
       { id: 'terapia_19', name: 'Shot Umbilical' },
     ]
   },
-  {
-    id: 'cat_bioneural', title: 'Terapia BioNeural', type: 'BIONEURAL',
-    items: [
-      { id: 'bn_1', name: 'Adrenales' }, { id: 'bn_2', name: 'Articular' }, { id: 'bn_3', name: 'Cerebro' },
-      { id: 'bn_4', name: 'Circulación Arterial' }, { id: 'bn_5', name: 'Circulación Micro' },
-      { id: 'bn_6', name: 'Circulación Venosa' }, { id: 'bn_7', name: 'Corazón' },
-      { id: 'bn_8', name: 'Disco' }, { id: 'bn_9', name: 'Energética General' },
-      { id: 'bn_10', name: 'Gastrointestinal' }, { id: 'bn_11', name: 'Hígado' },
-      { id: 'bn_12', name: 'Huesos' }, { id: 'bn_13', name: 'Inmuno Estimulante' },
-      { id: 'bn_14', name: 'Inmuno Modulador' }, { id: 'bn_15', name: 'Linfático' },
-      { id: 'bn_16', name: 'Médula Espinal' }, { id: 'bn_17', name: 'Médula Ósea' },
-      { id: 'bn_18', name: 'Mucosa' }, { id: 'bn_19', name: 'Musculatura' },
-      { id: 'bn_20', name: 'Páncreas' }, { id: 'bn_21', name: 'Piel' },
-      { id: 'bn_22', name: 'Próstata' }, { id: 'bn_23', name: 'Reproductivo Femenino' },
-      { id: 'bn_24', name: 'Reproductivo Masculino' }, { id: 'bn_25', name: 'Respiratorio' },
-      { id: 'bn_26', name: 'Riñón' }, { id: 'bn_27', name: 'Sexual Femenina' },
-      { id: 'bn_28', name: 'Sexual Masculina' }, { id: 'bn_29', name: 'Tiroides' },
-      { id: 'bn_30', name: 'Vacuna Antivejez' }, { id: 'bn_31', name: 'Vejiga' },
-      { id: 'bn_32', name: 'Vértigo' }, { id: 'bn_33', name: 'Vías Biliares' },
-      { id: 'bn_34', name: 'Visión' }, { id: 'bn_35', name: 'Estreptococo' },
-      { id: 'bn_36', name: 'Placenta Embrionaria' }, { id: 'bn_37', name: 'Psicoestabilizante' },
-    ]
-  },
+  // La categoria 'Terapia BioNeural' se retiro del catalogo a peticion del
+  // medico. Sus 37 items NO se borraron: viven en src/lib/guide/retired-items.ts
+  // en solo lectura, porque el JSON de una guia no guarda los nombres y sin esa
+  // tabla las guias ya emitidas dejarian de poder mostrarse e imprimirse.
   { id: 'cat_control_terapia', title: 'Control de Terapia', type: 'STANDARD', items: [] }
 ];
 
@@ -846,6 +828,43 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
           )}
         </div>
       ))}
+
+      {/*
+        Items retirados del catalogo que esta guia ya tenia prescritos.
+        Solo aparece si los hay, asi que en una guia nueva no se ve nada. Es de
+        solo lectura a proposito: lo prescrito en su dia se sigue leyendo, pero
+        no se puede volver a prescribir ni modificar.
+      */}
+      {(() => {
+        const retirados = retiradosSeleccionados(selections);
+        if (retirados.length === 0) return null;
+        return (
+          <div className="card border-l-4 border-amber-400 bg-amber-50/40">
+            <h3 className="font-semibold text-gray-800 mb-1">
+              Terapias retiradas del catálogo
+            </h3>
+            <p className="text-xs text-gray-600 mb-3">
+              Se prescribieron en esta guía y se conservan tal cual. Ya no pueden
+              seleccionarse en guías nuevas.
+            </p>
+            <ul className="space-y-1">
+              {retirados.map(item => {
+                const datos = selections[item.id] as BioNeuralFormItem | undefined;
+                return (
+                  <li key={item.id} className="text-sm text-gray-700 flex flex-wrap gap-x-2">
+                    <span className="font-medium">{item.nombre}</span>
+                    <span className="text-gray-400">· {item.categoriaTitulo}</span>
+                    {datos?.dosis && <span className="text-gray-600">· {datos.dosis}</span>}
+                    {datos?.observacion && (
+                      <span className="text-gray-500 italic">· {datos.observacion}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })()}
 
       {/* Observaciones */}
       <div className="card">

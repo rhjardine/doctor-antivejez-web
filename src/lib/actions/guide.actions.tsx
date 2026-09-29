@@ -10,6 +10,7 @@ import { PatientWithDetails } from '@/types';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { validatePatientAccess } from '@/lib/auth-guards';
+import { itemRetirado } from '@/lib/guide/retired-items';
 
 // Mapa: ID de categoría web → ProtocolCategory en la PWA
 const CATEGORY_MAP: Record<string, string> = {
@@ -63,9 +64,15 @@ function serializeGuideToProtocol(selections: Selections, guideData: GuideCatego
     const sel = selRaw as any;
     if (!sel?.selected) continue;
 
-    const catId = itemCategoryMap[itemId] || 'cat_nutra_primarios';
+    // Los items retirados del catalogo se resuelven contra su tabla ANTES de
+    // caer en los valores por defecto. Sin esto, reguardar una guia antigua le
+    // mostraria al paciente el identificador crudo ("bn_7") como nombre de su
+    // terapia, y encima archivado bajo Nutraceuticos Primarios.
+    const retirado = itemRetirado(itemId);
+
+    const catId = retirado?.categoriaId ?? itemCategoryMap[itemId] ?? 'cat_nutra_primarios';
     const category = CATEGORY_MAP[catId] || 'PRIMARY_NUTRACEUTICALS';
-    const itemName = itemNameMap[itemId] || itemId;
+    const itemName = retirado?.nombre ?? itemNameMap[itemId] ?? itemId;
 
     let dose = '';
     let schedule = '';
