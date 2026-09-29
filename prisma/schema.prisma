@@ -155,18 +155,18 @@ model User {
   role          Role      @default(MEDICO)
   status        String    @default("ACTIVO")
   deletedAt     DateTime? // Soft Delete — null = activo, fecha = eliminado lógicamente
-  tenantId      String?   // Multi-Tenant — ID de la clínica/organización. Null = usuario sin tenant asignado
+  tenantId      String? // Multi-Tenant — ID de la clínica/organización. Null = usuario sin tenant asignado
   accounts      Account[]
   sessions      Session[]
   patients      Patient[]
 
   // Campos de Control de Acceso y Cuotas (RBAC/ABAC)
-  permissions   Json?
-  availableTests Int      @default(0)
+  permissions    Json?
+  availableTests Int   @default(0)
 
   // Ledger Pattern: Créditos por tipo de test
-  creditTransactions CreditTransaction[]
-  permissionLogs     UserPermissionLog[]
+  creditTransactions    CreditTransaction[]
+  permissionLogs        UserPermissionLog[]
   changedPermissionLogs UserPermissionLog[] @relation("ChangedByRelation")
 
   // Relaciones inversas: Tests realizados por este médico
@@ -176,7 +176,8 @@ model User {
   conductedGeneticTests        GeneticTest[]        @relation("DoctorGenetics")
 
   // Historial de versiones de guías creadas por este profesional
-  createdGuideVersions PatientGuideVersion[]
+  createdGuideVersions  PatientGuideVersion[]
+  categoriasGuiaCreadas GuideCustomCategory[]
 
   @@map("users")
 }
@@ -192,7 +193,7 @@ model UserPermissionLog {
   newValueInt Int?
   createdAt   DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
   changedByRelation User @relation("ChangedByRelation", fields: [changedBy], references: [id])
 
   @@index([userId])
@@ -233,7 +234,7 @@ model Patient {
   id               String   @id @default(cuid())
   controlNumber    Int      @default(autoincrement())
   userId           String
-  tenantId         String?  // Multi-Tenant — ID de la clínica. Null = registro legacy sin tenant asignado
+  tenantId         String? // Multi-Tenant — ID de la clínica. Null = registro legacy sin tenant asignado
   photo            String?
   nationality      String
   identification   String   @unique
@@ -265,18 +266,18 @@ model Patient {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime? // Soft Delete — null = activo, fecha = eliminado lógicamente
 
-  user                User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  biophysicsTests     BiophysicsTest[]
-  biochemistryTests   BiochemistryTest[]
-  orthomolecularTests OrthomolecularTest[]
-  geneticTests        GeneticTest[]
-  appointments        Appointment[]
-  guides              PatientGuide[]
+  user                 User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  biophysicsTests      BiophysicsTest[]
+  biochemistryTests    BiochemistryTest[]
+  orthomolecularTests  OrthomolecularTest[]
+  geneticTests         GeneticTest[]
+  appointments         Appointment[]
+  guides               PatientGuide[]
   protocolItemStatuses ProtocolItemStatus[]
-  foodPlans           FoodPlan[]
-  selectedDiets       DietType[]
-  aiAnalyses          AIAnalysis[]
-  alimentacion        AlimentacionNutrigenomica?
+  foodPlans            FoodPlan[]
+  selectedDiets        DietType[]
+  aiAnalyses           AIAnalysis[]
+  alimentacion         AlimentacionNutrigenomica?
 
   // ✅ ADICIÓN 2/3: Nueva relación para los tests de NLR
   nlrTests         NlrTest[]
@@ -842,23 +843,23 @@ model CampaignMessage {
 // Modelos para el Módulo de Captación Pública (Growth Engine)
 // =================================================================
 model PublicLead {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   name         String
   phone        String?
   country      String?
   testScore    Int?
   testCategory String?
   ageBotAge    Int?
-  source       String   @default("FUNNEL")
+  source       String    @default("FUNNEL")
   utmSource    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  converted    Boolean  @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  converted    Boolean   @default(false)
   convertedAt  DateTime?
 
   // Optional FK to Patient when lead converts to patient
-  patientId    String?
+  patientId String?
 
   // Relation to booking requests
   bookings BookingRequest[]
@@ -871,7 +872,7 @@ model PublicLead {
 model BookingRequest {
   id            String   @id @default(cuid())
   leadId        String
-  bookingType   String   // 'basica' | 'profunda'
+  bookingType   String // 'basica' | 'profunda'
   status        String   @default("PENDING")
   amount        Float?
   paymentStatus String   @default("PENDING")
@@ -896,9 +897,9 @@ model PatientGuideVersion {
   createdById String
   createdBy   User     @relation(fields: [createdById], references: [id])
   version     Int      @default(1)
-  data        Json     // Almacena el snapshot completo de la guía (nutrición, suplementos, etc.)
+  data        Json // Almacena el snapshot completo de la guía (nutrición, suplementos, etc.)
   createdAt   DateTime @default(now())
-  notes       String?  // Notas aclaratorias del médico sobre por qué se archiva o cambia
+  notes       String? // Notas aclaratorias del médico sobre por qué se archiva o cambia
 
   @@index([patientId])
   @@map("patient_guide_versions")
@@ -909,8 +910,42 @@ model PatientGuideVersion {
 // =================================================================
 model IdempotencyKey {
   key       String   @id
-  response  Json     // Guarda el cuerpo de la respuesta HTTP original
+  response  Json // Guarda el cuerpo de la respuesta HTTP original
   createdAt DateTime @default(now())
 
   @@map("idempotency_keys")
+}
+
+/// Categorias de la Guia del Paciente creadas por el medico.
+///
+/// Son GLOBALES: una vez creada, la categoria aparece en la Guia de todos los
+/// pacientes. Es lo que el medico espera al "crear una categoria" — tener que
+/// recrearla paciente a paciente no tendria sentido.
+///
+/// Los ITEMS dentro de ellas siguen siendo por guia, con el mecanismo de
+/// "Anadir nuevo producto" que ya persiste su nombre. Una categoria global con
+/// productos distintos por paciente es justo el caso de uso: "Suplementos
+/// importados" contiene cosas distintas para cada persona.
+///
+/// Archivar en lugar de borrar: una categoria puede estar referenciada por
+/// guias ya emitidas a traves de los ids de sus items, y borrarla dejaria esos
+/// items sin sitio donde pintarse. Es el mismo problema que el de BioNeural.
+model GuideCustomCategory {
+  id    String @id @default(cuid())
+  /// Lo que ve el medico. Unico para que no acabe con dos categorias iguales.
+  title String @unique
+
+  /// Posicion entre las categorias fijas del catalogo. Mayor va despues.
+  orden     Int     @default(0)
+  /// Archivada deja de ofrecerse en guias nuevas, pero se sigue pudiendo pintar.
+  archivada Boolean @default(false)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([archivada])
+  @@map("guide_custom_categories")
 }

@@ -16,6 +16,8 @@ import { savePatientGuide, sendGuideByEmail, getPatientGuideDetails } from '@/li
 import DictationField from '@/components/voice/DictationField';
 import { retiradosSeleccionados } from '@/lib/guide/retired-items';
 import { marcaDeItemPersonalizado, extraerItemsPersonalizados, personalizadosSinNombre } from '@/lib/guide/custom-items';
+import { listarCategoriasPersonalizadas, crearCategoriaPersonalizada } from '@/lib/actions/guide-categories.actions';
+import { idCategoriaPersonalizada, validarTituloCategoria } from '@/lib/guide/category-rules';
 
 // --- Activador Metabólico: Estructura Homeopática ---
 export const homeopathicStructure = {
@@ -284,6 +286,57 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
   const [isSaving, setIsSaving] = useState(false);
   const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
   const [isLoadingGuide, setIsLoadingGuide] = useState(false);
+  const [nuevaCategoria, setNuevaCategoria] = useState('');
+  const [creandoCategoria, setCreandoCategoria] = useState(false);
+
+  // Categorias creadas por el medico. Son globales, asi que se cargan siempre,
+  // no solo al abrir una guia historica. Si la consulta falla la Guia sigue
+  // funcionando con el catalogo fijo: una categoria que no carga no puede
+  // impedir prescribir.
+  useEffect(() => {
+    let vigente = true;
+    listarCategoriasPersonalizadas()
+      .then(categorias => {
+        if (!vigente || categorias.length === 0) return;
+        setGuideData(prev => {
+          const presentes = new Set(prev.map(c => c.id));
+          const nuevas = categorias
+            .filter(c => !presentes.has(idCategoriaPersonalizada(c.id)))
+            .map<GuideCategory>(c => ({
+              id: idCategoriaPersonalizada(c.id),
+              title: c.title,
+              // STANDARD les da los campos habituales y el "Anadir nuevo item".
+              type: 'STANDARD',
+              items: [],
+            }));
+          return nuevas.length > 0 ? [...prev, ...nuevas] : prev;
+        });
+      })
+      .catch(() => { /* el catalogo fijo basta para trabajar */ });
+    return () => { vigente = false; };
+  }, []);
+
+  const handleCrearCategoria = async () => {
+    const titulo = nuevaCategoria.trim();
+    const problema = validarTituloCategoria(titulo);
+    if (problema) { toast.error(problema); return; }
+
+    setCreandoCategoria(true);
+    try {
+      const r = await crearCategoriaPersonalizada(titulo);
+      if (!r.success || !r.categoria) {
+        toast.error(r.error || 'No se pudo crear la categoría.');
+        return;
+      }
+      const id = idCategoriaPersonalizada(r.categoria.id);
+      setGuideData(prev => [...prev, { id, title: r.categoria!.title, type: 'STANDARD', items: [] }]);
+      setOpenCategories(prev => ({ ...prev, [id]: true }));
+      setNuevaCategoria('');
+      toast.success(`Categoría «${r.categoria.title}» creada. Estará disponible para todos los pacientes.`);
+    } finally {
+      setCreandoCategoria(false);
+    }
+  };
 
   useEffect(() => {
     if (guideIdToLoad) {
@@ -868,6 +921,39 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
           )}
         </div>
       ))}
+
+      {/*
+        Crear una categoria nueva.
+        Es GLOBAL: aparecera en la Guia de todos los pacientes, no solo en esta.
+        Se dice en pantalla para que no sorprenda despues.
+      */}
+      <div className="card border-dashed border-2 border-gray-300">
+        <h3 className="font-semibold text-gray-800 mb-1">Crear categoría nueva</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Se añadirá a la Guía de <strong>todos los pacientes</strong>. Los productos
+          dentro de ella se añaden por paciente, como en el resto de categorías.
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={nuevaCategoria}
+            onChange={e => setNuevaCategoria(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCrearCategoria(); } }}
+            placeholder="Nombre de la categoría..."
+            maxLength={60}
+            className="input flex-grow"
+            disabled={creandoCategoria}
+          />
+          <button
+            type="button"
+            onClick={handleCrearCategoria}
+            disabled={creandoCategoria || nuevaCategoria.trim() === ''}
+            className="btn-primary py-2 px-4 flex items-center gap-2 text-sm disabled:opacity-50"
+          >
+            <FaPlus /> {creandoCategoria ? 'Creando...' : 'Crear categoría'}
+          </button>
+        </div>
+      </div>
 
       {/*
         Items retirados del catalogo que esta guia ya tenia prescritos.

@@ -11,6 +11,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { validatePatientAccess } from '@/lib/auth-guards';
 import { itemRetirado } from '@/lib/guide/retired-items';
+import { esCategoriaPersonalizada } from '@/lib/guide/category-rules';
 
 // Mapa: ID de categoría web → ProtocolCategory en la PWA
 const CATEGORY_MAP: Record<string, string> = {
@@ -71,7 +72,13 @@ function serializeGuideToProtocol(selections: Selections, guideData: GuideCatego
     const retirado = itemRetirado(itemId);
 
     const catId = retirado?.categoriaId ?? itemCategoryMap[itemId] ?? 'cat_nutra_primarios';
-    const category = CATEGORY_MAP[catId] || 'PRIMARY_NUTRACEUTICALS';
+
+    // Las categorias que crea el medico no estan en CATEGORY_MAP, y caer en el
+    // 'PRIMARY_NUTRACEUTICALS' por defecto las archivaria bajo un epigrafe
+    // equivocado en la app del paciente. Se les da su propio valor.
+    const category = esCategoriaPersonalizada(catId)
+      ? 'CUSTOM'
+      : (CATEGORY_MAP[catId] || 'PRIMARY_NUTRACEUTICALS');
     const itemName = retirado?.nombre ?? itemNameMap[itemId] ?? itemId;
 
     let dose = '';
@@ -443,4 +450,4 @@ export async function getPatientGuideVersionDetails(versionId: string) {
     const msg = error instanceof Error ? error.message : 'Error al cargar los detalles de la versión.';
     return { success: false, error: msg };
   }
-}
+}
