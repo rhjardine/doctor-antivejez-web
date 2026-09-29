@@ -203,6 +203,20 @@ const initialGuideData: GuideCategory[] = [
 ];
 
 // --- Sub-components for Metabolic Activator ---
+/**
+ * Categorias cuyas subsecciones se pintan como columnas contiguas, no apiladas.
+ *
+ * 'Perfiles Constitucionales' esta aqui porque Neuro y Vegetativo NO son dos
+ * categorias distintas: en el folleto impreso del consultorio son dos columnas
+ * del mismo bloque, y el medico pidio que en pantalla se vean igual.
+ *
+ * Es un cambio de PRESENTACION unicamente. Las etiquetas 'Neuro' y 'Vegetativo'
+ * siguen llegando a renderCheckbox como subcategoria, porque de ellas se deriva
+ * el itemId: fundirlas en una lista plana cambiaria los identificadores y las
+ * guias ya guardadas dejarian de encontrar sus marcas.
+ */
+const CATEGORIAS_EN_COLUMNAS = new Set(['Perfiles Constitucionales']);
+
 const HomeopathySelector = ({ selections, handleSelectionChange }: { selections: Selections, handleSelectionChange: Function }) => {
   const renderCheckbox = (name: string, category: string, subCategory?: string) => {
     const uniquePrefix = subCategory ? `${category}_${subCategory}` : category;
@@ -224,6 +238,17 @@ const HomeopathySelector = ({ selections, handleSelectionChange }: { selections:
           {Array.isArray(subItems) ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
               {subItems.map(item => renderCheckbox(item, category))}
+            </div>
+          ) : CATEGORIAS_EN_COLUMNAS.has(category) ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+              {Object.entries(subItems).map(([subCategory, items]) => (
+                <div key={subCategory}>
+                  <h6 className="font-semibold text-gray-600 mb-2">{subCategory}</h6>
+                  <div className="space-y-2">
+                    {items.map(item => renderCheckbox(item, category, subCategory))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-3">
