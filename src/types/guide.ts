@@ -54,6 +54,17 @@ export interface GuideCategory {
 }
 
 export interface StandardFormItem {
+  /**
+   * Nombre del producto cuando lo añadió el médico a mano.
+   *
+   * Viaja dentro de la selección porque `selections` es lo único que se
+   * persiste: el catálogo en memoria muere al recargar. Sin esto, el producto
+   * desaparecía de la guía la siguiente vez que se abría.
+   * Sólo lo llevan los ítems con id `new_...`; ver src/lib/guide/custom-items.ts.
+   */
+  nombrePersonalizado?: string;
+  /** Categoría a la que se añadió. Explícita, no deducida del id, que se rompería al renombrar. */
+  categoriaPersonalizada?: string;
   selected?: boolean;
   qty?: string;
   doseType?: 'Capsulas' | 'Tabletas';

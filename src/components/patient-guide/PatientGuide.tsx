@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { savePatientGuide, sendGuideByEmail, getPatientGuideDetails } from '@/lib/actions/guide.actions';
 import DictationField from '@/components/voice/DictationField';
 import { retiradosSeleccionados } from '@/lib/guide/retired-items';
+import { marcaDeItemPersonalizado, extraerItemsPersonalizados, personalizadosSinNombre } from '@/lib/guide/custom-items';
 
 // --- Activador Metabólico: Estructura Homeopática ---
 export const homeopathicStructure = {
@@ -293,6 +294,35 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
           const loadedSelections = result.data.selections as Selections;
           setSelections(loadedSelections);
           setObservaciones(result.data.observations || '');
+
+          // Se reconstruyen los productos que el medico anadio a mano. Sin esto
+          // vuelven las marcas pero no los nombres, y el producto no se pinta:
+          // el medico ve una guia incompleta sin saber que falta algo.
+          const personalizados = extraerItemsPersonalizados(loadedSelections);
+          if (personalizados.length > 0) {
+            setGuideData(prev => prev.map(cat => {
+              const suyos = personalizados.filter(p => p.categoriaId === cat.id);
+              if (suyos.length === 0) return cat;
+              const yaPresentes = new Set((cat.items as StandardGuideItem[]).map(i => i.id));
+              const nuevos = suyos
+                .filter(p => !yaPresentes.has(p.id))
+                .map(p => ({ id: p.id, name: p.nombre }));
+              return nuevos.length > 0
+                ? { ...cat, items: [...(cat.items as StandardGuideItem[]), ...nuevos] }
+                : cat;
+            }));
+          }
+
+          // Guias anteriores a esta correccion: la marca quedo guardada pero el
+          // nombre se perdio y no hay forma de recuperarlo. Se avisa en vez de
+          // dejar que el item se esfume en silencio, que es el fallo original.
+          const huerfanos = personalizadosSinNombre(loadedSelections);
+          if (huerfanos.length > 0) {
+            toast.warning(
+              `Esta guía tiene ${huerfanos.length} producto(s) añadido(s) a mano cuyo ` +
+              `nombre no se guardó. Habrá que volver a escribirlos.`
+            );
+          }
           setGuideDate(new Date(result.data.createdAt).toISOString().split('T')[0]);
 
           // Collect all selected item IDs
@@ -350,6 +380,16 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
     setGuideData(prev => prev.map(cat =>
       cat.id === categoryId ? { ...cat, items: [...(cat.items as StandardGuideItem[]), { id, name }] } : cat
     ));
+
+    // El nombre se siembra tambien en `selections`, y no por duplicar: guideData
+    // es estado de React y muere al recargar. `selections` es lo UNICO que se
+    // persiste, asi que si el nombre no viaja aqui, el producto desaparece de la
+    // guia la proxima vez que se abra. Es exactamente lo que venia pasando.
+    setSelections(prev => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? {}), ...marcaDeItemPersonalizado(name, categoryId) },
+    }));
+
     setNewItemInputs(prev => ({ ...prev, [categoryId]: '' }));
   };
 
