@@ -14,6 +14,10 @@ import PatientGuidePreview from './PatientGuidePreview';
 import { toast } from 'sonner';
 import { savePatientGuide, sendGuideByEmail, getPatientGuideDetails } from '@/lib/actions/guide.actions';
 import DictationField from '@/components/voice/DictationField';
+import { retiradosSeleccionados } from '@/lib/guide/retired-items';
+import { marcaDeItemPersonalizado, extraerItemsPersonalizados, personalizadosSinNombre } from '@/lib/guide/custom-items';
+import { listarCategoriasPersonalizadas, crearCategoriaPersonalizada } from '@/lib/actions/guide-categories.actions';
+import { idCategoriaPersonalizada, validarTituloCategoria } from '@/lib/guide/category-rules';
 
 // --- Activador Metabólico: Estructura Homeopática ---
 export const homeopathicStructure = {
@@ -176,33 +180,28 @@ const initialGuideData: GuideCategory[] = [
       { id: 'terapia_19', name: 'Shot Umbilical' },
     ]
   },
-  {
-    id: 'cat_bioneural', title: 'Terapia BioNeural', type: 'BIONEURAL',
-    items: [
-      { id: 'bn_1', name: 'Adrenales' }, { id: 'bn_2', name: 'Articular' }, { id: 'bn_3', name: 'Cerebro' },
-      { id: 'bn_4', name: 'Circulación Arterial' }, { id: 'bn_5', name: 'Circulación Micro' },
-      { id: 'bn_6', name: 'Circulación Venosa' }, { id: 'bn_7', name: 'Corazón' },
-      { id: 'bn_8', name: 'Disco' }, { id: 'bn_9', name: 'Energética General' },
-      { id: 'bn_10', name: 'Gastrointestinal' }, { id: 'bn_11', name: 'Hígado' },
-      { id: 'bn_12', name: 'Huesos' }, { id: 'bn_13', name: 'Inmuno Estimulante' },
-      { id: 'bn_14', name: 'Inmuno Modulador' }, { id: 'bn_15', name: 'Linfático' },
-      { id: 'bn_16', name: 'Médula Espinal' }, { id: 'bn_17', name: 'Médula Ósea' },
-      { id: 'bn_18', name: 'Mucosa' }, { id: 'bn_19', name: 'Musculatura' },
-      { id: 'bn_20', name: 'Páncreas' }, { id: 'bn_21', name: 'Piel' },
-      { id: 'bn_22', name: 'Próstata' }, { id: 'bn_23', name: 'Reproductivo Femenino' },
-      { id: 'bn_24', name: 'Reproductivo Masculino' }, { id: 'bn_25', name: 'Respiratorio' },
-      { id: 'bn_26', name: 'Riñón' }, { id: 'bn_27', name: 'Sexual Femenina' },
-      { id: 'bn_28', name: 'Sexual Masculina' }, { id: 'bn_29', name: 'Tiroides' },
-      { id: 'bn_30', name: 'Vacuna Antivejez' }, { id: 'bn_31', name: 'Vejiga' },
-      { id: 'bn_32', name: 'Vértigo' }, { id: 'bn_33', name: 'Vías Biliares' },
-      { id: 'bn_34', name: 'Visión' }, { id: 'bn_35', name: 'Estreptococo' },
-      { id: 'bn_36', name: 'Placenta Embrionaria' }, { id: 'bn_37', name: 'Psicoestabilizante' },
-    ]
-  },
+  // La categoria 'Terapia BioNeural' se retiro del catalogo a peticion del
+  // medico. Sus 37 items NO se borraron: viven en src/lib/guide/retired-items.ts
+  // en solo lectura, porque el JSON de una guia no guarda los nombres y sin esa
+  // tabla las guias ya emitidas dejarian de poder mostrarse e imprimirse.
   { id: 'cat_control_terapia', title: 'Control de Terapia', type: 'STANDARD', items: [] }
 ];
 
 // --- Sub-components for Metabolic Activator ---
+/**
+ * Categorias cuyas subsecciones se pintan como columnas contiguas, no apiladas.
+ *
+ * 'Perfiles Constitucionales' esta aqui porque Neuro y Vegetativo NO son dos
+ * categorias distintas: en el folleto impreso del consultorio son dos columnas
+ * del mismo bloque, y el medico pidio que en pantalla se vean igual.
+ *
+ * Es un cambio de PRESENTACION unicamente. Las etiquetas 'Neuro' y 'Vegetativo'
+ * siguen llegando a renderCheckbox como subcategoria, porque de ellas se deriva
+ * el itemId: fundirlas en una lista plana cambiaria los identificadores y las
+ * guias ya guardadas dejarian de encontrar sus marcas.
+ */
+const CATEGORIAS_EN_COLUMNAS = new Set(['Perfiles Constitucionales']);
+
 const HomeopathySelector = ({ selections, handleSelectionChange }: { selections: Selections, handleSelectionChange: Function }) => {
   const renderCheckbox = (name: string, category: string, subCategory?: string) => {
     const uniquePrefix = subCategory ? `${category}_${subCategory}` : category;
@@ -224,6 +223,17 @@ const HomeopathySelector = ({ selections, handleSelectionChange }: { selections:
           {Array.isArray(subItems) ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
               {subItems.map(item => renderCheckbox(item, category))}
+            </div>
+          ) : CATEGORIAS_EN_COLUMNAS.has(category) ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+              {Object.entries(subItems).map(([subCategory, items]) => (
+                <div key={subCategory}>
+                  <h6 className="font-semibold text-gray-600 mb-2">{subCategory}</h6>
+                  <div className="space-y-2">
+                    {items.map(item => renderCheckbox(item, category, subCategory))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-3">
@@ -276,6 +286,57 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
   const [isSaving, setIsSaving] = useState(false);
   const [guideDate, setGuideDate] = useState(new Date().toISOString().split('T')[0]);
   const [isLoadingGuide, setIsLoadingGuide] = useState(false);
+  const [nuevaCategoria, setNuevaCategoria] = useState('');
+  const [creandoCategoria, setCreandoCategoria] = useState(false);
+
+  // Categorias creadas por el medico. Son globales, asi que se cargan siempre,
+  // no solo al abrir una guia historica. Si la consulta falla la Guia sigue
+  // funcionando con el catalogo fijo: una categoria que no carga no puede
+  // impedir prescribir.
+  useEffect(() => {
+    let vigente = true;
+    listarCategoriasPersonalizadas()
+      .then(categorias => {
+        if (!vigente || categorias.length === 0) return;
+        setGuideData(prev => {
+          const presentes = new Set(prev.map(c => c.id));
+          const nuevas = categorias
+            .filter(c => !presentes.has(idCategoriaPersonalizada(c.id)))
+            .map<GuideCategory>(c => ({
+              id: idCategoriaPersonalizada(c.id),
+              title: c.title,
+              // STANDARD les da los campos habituales y el "Anadir nuevo item".
+              type: 'STANDARD',
+              items: [],
+            }));
+          return nuevas.length > 0 ? [...prev, ...nuevas] : prev;
+        });
+      })
+      .catch(() => { /* el catalogo fijo basta para trabajar */ });
+    return () => { vigente = false; };
+  }, []);
+
+  const handleCrearCategoria = async () => {
+    const titulo = nuevaCategoria.trim();
+    const problema = validarTituloCategoria(titulo);
+    if (problema) { toast.error(problema); return; }
+
+    setCreandoCategoria(true);
+    try {
+      const r = await crearCategoriaPersonalizada(titulo);
+      if (!r.success || !r.categoria) {
+        toast.error(r.error || 'No se pudo crear la categoría.');
+        return;
+      }
+      const id = idCategoriaPersonalizada(r.categoria.id);
+      setGuideData(prev => [...prev, { id, title: r.categoria!.title, type: 'STANDARD', items: [] }]);
+      setOpenCategories(prev => ({ ...prev, [id]: true }));
+      setNuevaCategoria('');
+      toast.success(`Categoría «${r.categoria.title}» creada. Estará disponible para todos los pacientes.`);
+    } finally {
+      setCreandoCategoria(false);
+    }
+  };
 
   useEffect(() => {
     if (guideIdToLoad) {
@@ -286,6 +347,35 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
           const loadedSelections = result.data.selections as Selections;
           setSelections(loadedSelections);
           setObservaciones(result.data.observations || '');
+
+          // Se reconstruyen los productos que el medico anadio a mano. Sin esto
+          // vuelven las marcas pero no los nombres, y el producto no se pinta:
+          // el medico ve una guia incompleta sin saber que falta algo.
+          const personalizados = extraerItemsPersonalizados(loadedSelections);
+          if (personalizados.length > 0) {
+            setGuideData(prev => prev.map(cat => {
+              const suyos = personalizados.filter(p => p.categoriaId === cat.id);
+              if (suyos.length === 0) return cat;
+              const yaPresentes = new Set((cat.items as StandardGuideItem[]).map(i => i.id));
+              const nuevos = suyos
+                .filter(p => !yaPresentes.has(p.id))
+                .map(p => ({ id: p.id, name: p.nombre }));
+              return nuevos.length > 0
+                ? { ...cat, items: [...(cat.items as StandardGuideItem[]), ...nuevos] }
+                : cat;
+            }));
+          }
+
+          // Guias anteriores a esta correccion: la marca quedo guardada pero el
+          // nombre se perdio y no hay forma de recuperarlo. Se avisa en vez de
+          // dejar que el item se esfume en silencio, que es el fallo original.
+          const huerfanos = personalizadosSinNombre(loadedSelections);
+          if (huerfanos.length > 0) {
+            toast.warning(
+              `Esta guía tiene ${huerfanos.length} producto(s) añadido(s) a mano cuyo ` +
+              `nombre no se guardó. Habrá que volver a escribirlos.`
+            );
+          }
           setGuideDate(new Date(result.data.createdAt).toISOString().split('T')[0]);
 
           // Collect all selected item IDs
@@ -343,6 +433,16 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
     setGuideData(prev => prev.map(cat =>
       cat.id === categoryId ? { ...cat, items: [...(cat.items as StandardGuideItem[]), { id, name }] } : cat
     ));
+
+    // El nombre se siembra tambien en `selections`, y no por duplicar: guideData
+    // es estado de React y muere al recargar. `selections` es lo UNICO que se
+    // persiste, asi que si el nombre no viaja aqui, el producto desaparece de la
+    // guia la proxima vez que se abra. Es exactamente lo que venia pasando.
+    setSelections(prev => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? {}), ...marcaDeItemPersonalizado(name, categoryId) },
+    }));
+
     setNewItemInputs(prev => ({ ...prev, [categoryId]: '' }));
   };
 
@@ -821,6 +921,76 @@ export default function PatientGuide({ patient, guideIdToLoad }: PatientGuidePro
           )}
         </div>
       ))}
+
+      {/*
+        Crear una categoria nueva.
+        Es GLOBAL: aparecera en la Guia de todos los pacientes, no solo en esta.
+        Se dice en pantalla para que no sorprenda despues.
+      */}
+      <div className="card border-dashed border-2 border-gray-300">
+        <h3 className="font-semibold text-gray-800 mb-1">Crear categoría nueva</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Se añadirá a la Guía de <strong>todos los pacientes</strong>. Los productos
+          dentro de ella se añaden por paciente, como en el resto de categorías.
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={nuevaCategoria}
+            onChange={e => setNuevaCategoria(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCrearCategoria(); } }}
+            placeholder="Nombre de la categoría..."
+            maxLength={60}
+            className="input flex-grow"
+            disabled={creandoCategoria}
+          />
+          <button
+            type="button"
+            onClick={handleCrearCategoria}
+            disabled={creandoCategoria || nuevaCategoria.trim() === ''}
+            className="btn-primary py-2 px-4 flex items-center gap-2 text-sm disabled:opacity-50"
+          >
+            <FaPlus /> {creandoCategoria ? 'Creando...' : 'Crear categoría'}
+          </button>
+        </div>
+      </div>
+
+      {/*
+        Items retirados del catalogo que esta guia ya tenia prescritos.
+        Solo aparece si los hay, asi que en una guia nueva no se ve nada. Es de
+        solo lectura a proposito: lo prescrito en su dia se sigue leyendo, pero
+        no se puede volver a prescribir ni modificar.
+      */}
+      {(() => {
+        const retirados = retiradosSeleccionados(selections);
+        if (retirados.length === 0) return null;
+        return (
+          <div className="card border-l-4 border-amber-400 bg-amber-50/40">
+            <h3 className="font-semibold text-gray-800 mb-1">
+              Terapias retiradas del catálogo
+            </h3>
+            <p className="text-xs text-gray-600 mb-3">
+              Se prescribieron en esta guía y se conservan tal cual. Ya no pueden
+              seleccionarse en guías nuevas.
+            </p>
+            <ul className="space-y-1">
+              {retirados.map(item => {
+                const datos = selections[item.id] as BioNeuralFormItem | undefined;
+                return (
+                  <li key={item.id} className="text-sm text-gray-700 flex flex-wrap gap-x-2">
+                    <span className="font-medium">{item.nombre}</span>
+                    <span className="text-gray-400">· {item.categoriaTitulo}</span>
+                    {datos?.dosis && <span className="text-gray-600">· {datos.dosis}</span>}
+                    {datos?.observacion && (
+                      <span className="text-gray-500 italic">· {datos.observacion}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })()}
 
       {/* Observaciones */}
       <div className="card">

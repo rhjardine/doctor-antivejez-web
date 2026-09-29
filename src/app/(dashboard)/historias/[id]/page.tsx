@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getPatientDetails } from '@/lib/actions/patients.actions';
 import { toast } from 'sonner';
@@ -56,6 +56,19 @@ export default function PatientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('resumen');
   const [activeTestView, setActiveTestView] = useState<ActiveTestView>('main');
+
+  // Cabecera fija con el nombre del paciente.
+  //
+  // El médico pidió no perder de vista de quién es la historia mientras baja por
+  // un test o por la Guía. La cabecera grande mide bastante y fijarla entera se
+  // comería la pantalla, así que se fija una barra delgada que sólo aparece
+  // cuando la cabecera grande deja de verse.
+  //
+  // Se inserta DESPUÉS de la cabecera en el DOM a propósito: así, al aparecer,
+  // sólo empuja hacia abajo lo que viene después y nunca devuelve la cabecera a
+  // la vista, que es como estas barras acaban parpadeando en un bucle.
+  const cabeceraRef = useRef<HTMLDivElement>(null);
+  const [cabeceraALaVista, setCabeceraALaVista] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [guideView, setGuideView] = useState<GuideView>('form');
   const [guideToLoad, setGuideToLoad] = useState<string | null>(null);
@@ -102,6 +115,22 @@ export default function PatientDetailPage() {
   useEffect(() => {
     if (patientId) loadPatient();
   }, [patientId, loadPatient]);
+
+  // Se vuelve a enganchar cuando el paciente termina de cargar: antes de eso la
+  // cabecera todavía no existe en el DOM y no habría nada que observar.
+  useEffect(() => {
+    const nodo = cabeceraRef.current;
+    if (!nodo || typeof IntersectionObserver === 'undefined') return;
+
+    const observador = new IntersectionObserver(
+      ([entrada]) => setCabeceraALaVista(entrada.isIntersecting),
+      // El contenedor que hace scroll es el <main> del layout, que ocupa la
+      // ventana entera; por eso basta con la raíz por defecto.
+      { threshold: 0 }
+    );
+    observador.observe(nodo);
+    return () => observador.disconnect();
+  }, [patient?.id]);
 
   const handleUpdateSuccess = () => {
     setIsEditing(false);
@@ -174,7 +203,7 @@ export default function PatientDetailPage() {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-8 text-white shadow-xl shadow-primary/10 relative overflow-hidden">
+      <div ref={cabeceraRef} className="bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-8 text-white shadow-xl shadow-primary/10 relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex items-center space-x-6">
             <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 border-4 border-white/30 shadow-2xl">
@@ -206,6 +235,35 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
+
+      {!cabeceraALaVista && (
+        <div
+          // -mx-6 compensa el padding del <main> para que la barra llegue a los
+          // bordes. z-30 la deja por encima del contenido pero por debajo de
+          // modales y menús desplegables.
+          className="sticky top-0 z-30 -mx-6 px-6 py-2.5 bg-primary text-white shadow-lg
+                     flex items-center justify-between gap-4 animate-fadeIn"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0 text-xs font-black">
+              {patient.firstName[0]}{patient.lastName[0]}
+            </span>
+            <span className="font-bold truncate">
+              {patient.firstName} {patient.lastName}
+            </span>
+            <span className="text-white/70 text-sm flex-shrink-0 hidden sm:inline">
+              {patient.chronologicalAge} años · {patient.identification}
+            </span>
+          </div>
+          <button
+            onClick={() => router.push('/historias')}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg border border-white/20 text-sm font-bold flex-shrink-0"
+          >
+            <FaArrowLeft />
+            <span className="hidden sm:inline">Volver</span>
+          </button>
+        </div>
+      )}
 
       <div className="border-b border-gray-200">
         <div className="overflow-x-auto pb-2 custom-scrollbar-tabs">

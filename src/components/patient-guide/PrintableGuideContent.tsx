@@ -17,6 +17,7 @@ import {
 } from '@/types/guide';
 import { FaSyringe, FaCapsules, FaSpa, FaLeaf, FaVial, FaDna, FaStethoscope, FaUserMd } from 'react-icons/fa';
 import { homeopathicStructure, bachFlowersList } from './PatientGuide';
+import { retiradosSeleccionados } from '@/lib/guide/retired-items';
 
 // --- Subcomponentes internos ---
 const GuideListItem = ({ name, details }: { name: string; details?: string | null }) => (
@@ -209,6 +210,29 @@ const PrintableGuideContent = forwardRef<HTMLDivElement, PrintableGuideContentPr
                             </div>
                         );
                     })}
+
+                    {/*
+                        Terapias retiradas del catálogo que esta guía prescribió.
+                        Sin esto, imprimir hoy una guía antigua la devolvería
+                        incompleta: el nombre no está en el JSON de la guía, sale
+                        del catálogo, y esos ítems ya no están en él.
+                    */}
+                    {(() => {
+                        const retirados = retiradosSeleccionados(selections);
+                        if (retirados.length === 0) return null;
+                        return (
+                            <div className="break-inside-avoid pt-4">
+                                <CategoryTitle title="Terapia BioNeural" icon={<FaUserMd />} showIcon={showIcons} />
+                                <ul className="ml-10 space-y-1">
+                                    {retirados.map(item => {
+                                        const datos = selections[item.id] as { dosis?: string; observacion?: string } | undefined;
+                                        const detalle = [datos?.dosis, datos?.observacion].filter(Boolean).join(' - ');
+                                        return <GuideListItem key={item.id} name={item.nombre} details={detalle || null} />;
+                                    })}
+                                </ul>
+                            </div>
+                        );
+                    })()}
 
                     {observaciones && (
                         <div className="break-inside-avoid pt-4">

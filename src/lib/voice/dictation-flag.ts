@@ -15,6 +15,23 @@ export const VAR_FLAG_SERVIDOR = 'DICTADO_VOZ_ENABLED';
 export const VAR_FLAG_CLIENTE = 'NEXT_PUBLIC_DICTADO_VOZ_ENABLED';
 
 /**
+ * Suspension temporal del dictado, distinta de tenerlo apagado.
+ *
+ * Apagado (VAR_FLAG_CLIENTE en false) significa "esta funcion no existe para
+ * este despliegue" y no se pinta nada. Suspendido significa "existe, pero ahora
+ * mismo no se puede usar", y entonces el boton SI se pinta, deshabilitado y
+ * explicando por que. El medico pidio justo eso al desactivar el servicio de
+ * Whisper en Render por lento: prefiere ver el boton apagado con su motivo a
+ * que desaparezca sin explicacion.
+ */
+export const VAR_FLAG_SUSPENDIDO = 'NEXT_PUBLIC_DICTADO_VOZ_SUSPENDIDO';
+
+/** Lo que se lee al pasar el cursor por el boton. Dice el motivo, no solo que no funciona. */
+export const MOTIVO_SUSPENSION =
+  'Dictado por voz suspendido temporalmente: el servicio de transcripción resultaba ' +
+  'demasiado lento para usarlo en consulta. Se reactivará al cambiar a un modelo más rápido.';
+
+/**
  * Interpreta el valor de un flag. Solo 'true' y '1' encienden.
  * Cualquier otra cosa —incluidas 'yes', 'on' o basura— deja el dictado apagado:
  * ante la duda, la funcion que envia audio a un tercero se queda quieta.
@@ -46,4 +63,16 @@ export function dictadoHabilitadoEnServidor(
  */
 export function dictadoHabilitadoEnCliente(): boolean {
   return flagEncendido(process.env.NEXT_PUBLIC_DICTADO_VOZ_ENABLED);
+}
+
+/**
+ * Si el dictado esta suspendido de forma temporal.
+ *
+ * Igual que la anterior, se lee como acceso literal a process.env y no por
+ * indice: Next solo sustituye `process.env.NEXT_PUBLIC_X` cuando aparece
+ * escrito asi. Con `process.env[variable]` no hay sustitucion y en el navegador
+ * saldria siempre `undefined`, con lo que el aviso no se mostraria nunca.
+ */
+export function dictadoSuspendidoEnCliente(): boolean {
+  return flagEncendido(process.env.NEXT_PUBLIC_DICTADO_VOZ_SUSPENDIDO);
 }
