@@ -182,6 +182,13 @@ export async function getPatientDetails(id: string) {
         orthomolecularTests: {
           orderBy: { testDate: 'desc' },
         },
+        // Faltaba, aunque `PatientWithDetails` lo declaraba y el `as` de la
+        // ficha lo daba por hecho: `patient.geneticTests` llegaba undefined. La
+        // pestana de genetica no lo notaba porque mostraba un informe de ejemplo
+        // en su lugar; al pasar a leer el registro real, hace falta traerlo.
+        geneticTests: {
+          orderBy: { testDate: 'desc' },
+        },
         user: {
           select: {
             id: true,

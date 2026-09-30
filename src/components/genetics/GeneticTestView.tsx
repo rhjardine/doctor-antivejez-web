@@ -2,13 +2,22 @@
 'use client';
 
 import React from 'react';
-import { FaArrowLeft, FaPrint, FaPlus, FaUpload } from 'react-icons/fa';
+import { FaArrowLeft, FaPrint, FaPlus, FaUpload, FaDna } from 'react-icons/fa';
 import type { TelotestReport } from '@/types/genetics';
 import { formatDate } from '@/utils/date';
 import { Button } from '@/components/ui/button';
 
 interface GeneticTestViewProps {
-  report: TelotestReport;
+  /**
+   * El informe del último test genético del paciente, o null si no tiene
+   * ninguno.
+   *
+   * `null` es un valor legítimo y hay que representarlo. Antes esta prop
+   * recibía siempre un informe de ejemplo con el nombre, la fecha de nacimiento
+   * y los tratamientos de una persona concreta dentro, y se mostraba en la
+   * ficha de cualquier paciente.
+   */
+  report: TelotestReport | null;
   onBack: () => void;
   onNewTest?: () => void;
   onUploadPdf?: () => void;
@@ -22,8 +31,6 @@ const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title
 );
 
 const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNewTest, onUploadPdf }) => {
-  const { patient, results, interpretation, therapeuticResults, generalRecommendations, references } = report;
-
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'API': return 'bg-red-100 text-red-800';
@@ -62,12 +69,44 @@ const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNew
               <FaUpload size={14} /> Subir PDF
             </Button>
           )}
-          <Button onClick={handlePrint} className="flex-1 md:flex-none gap-2 bg-slate-900 hover:bg-slate-800 shadow-md shadow-slate-200 text-white font-bold">
-            <FaPrint size={14} /> Imprimir / Guardar PDF
-          </Button>
+          {report && (
+            <Button onClick={handlePrint} className="flex-1 md:flex-none gap-2 bg-slate-900 hover:bg-slate-800 shadow-md shadow-slate-200 text-white font-bold">
+              <FaPrint size={14} /> Imprimir / Guardar PDF
+            </Button>
+          )}
         </div>
       </div>
 
+      {!report ? (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+          <FaDna className="text-5xl text-slate-300 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-900 mb-2">
+            Este paciente no tiene ningún test genético registrado
+          </h2>
+          <p className="text-slate-500 max-w-md mx-auto">
+            Registre los resultados del laboratorio con «Nuevo Test», o suba el
+            informe en PDF para extraerlos.
+          </p>
+        </div>
+      ) : (
+        <ContenidoDelInforme report={report} getCategoryColor={getCategoryColor} />
+      )}
+    </div>
+  );
+};
+
+/**
+ * El informe en si. Separado para que el estado vacio no tenga que atravesar
+ * cinco secciones con condicionales dentro.
+ */
+const ContenidoDelInforme: React.FC<{
+  report: TelotestReport;
+  getCategoryColor: (category: string) => string;
+}> = ({ report, getCategoryColor }) => {
+  const { patient, results, interpretation, therapeuticResults, generalRecommendations, references } = report;
+
+  return (
+    <>
       <Section title="Datos del Paciente">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div><strong className="block text-slate-500 uppercase text-[10px] tracking-widest mb-1">Nombre</strong> <span className="font-bold text-slate-900">{patient.firstName} {patient.lastName}</span></div>
@@ -92,12 +131,15 @@ const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNew
             <p className={`text-3xl font-black ${results.agingDifference <= 0 ? 'text-green-700' : 'text-red-700'}`}>{results.agingDifference > 0 ? `+${results.agingDifference}` : results.agingDifference} años</p>
           </div>
         </div>
-        <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
-          <h3 className="font-bold text-primary uppercase text-sm tracking-wider mb-2">Interpretación</h3>
-          <p className="text-slate-700 text-base leading-relaxed">{interpretation}</p>
-        </div>
+        {interpretation.trim() !== '' && (
+          <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+            <h3 className="font-bold text-primary uppercase text-sm tracking-wider mb-2">Interpretación</h3>
+            <p className="text-slate-700 text-base leading-relaxed">{interpretation}</p>
+          </div>
+        )}
       </Section>
 
+      {therapeuticResults.length > 0 && (
       <Section title="Resultados Terapéuticos Sugeridos">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
           {therapeuticResults.map(rec => (
@@ -110,7 +152,9 @@ const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNew
           ))}
         </div>
       </Section>
+      )}
 
+      {generalRecommendations.length > 0 && (
       <Section title="Recomendaciones Generales">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {generalRecommendations.map(rec => (
@@ -128,6 +172,7 @@ const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNew
           ))}
         </div>
       </Section>
+      )}
 
       <Section title="Referencias Científicas">
         <ul className="space-y-2 text-sm">
@@ -139,7 +184,7 @@ const GeneticTestView: React.FC<GeneticTestViewProps> = ({ report, onBack, onNew
           ))}
         </ul>
       </Section>
-    </div>
+    </>
   );
 };
 
