@@ -5,6 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import { checkAuthRateLimit } from "./rate-limit";
+import { decidirEntradaGoogle, normalizarCorreo } from "./auth-google-gate";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -134,6 +135,41 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    /**
+     * Puerta del proveedor de Google.
+     *
+     * Sin este callback, PrismaAdapter da de alta al usuario la primera vez que
+     * entra con Google, con los valores por defecto del esquema: MEDICO, ACTIVO
+     * y sin tenant. Es decir, auto-registro abierto desde internet.
+     *
+     * El proveedor de credenciales ya valido en su `authorize()`, asi que aqui
+     * solo se filtra Google. Se exige usuario existente y activo.
+     */
+    async signIn({ user, account }) {
+      if (account?.provider !== "google") return true;
+
+      const correo = normalizarCorreo(user.email);
+      const existente = correo
+        ? await db.user.findUnique({
+            where: { email: correo },
+            // Solo lo necesario para decidir; nada de datos personales.
+            select: { status: true, deletedAt: true },
+          })
+        : null;
+
+      const decision = decidirEntradaGoogle(user.email, existente);
+      if (!decision.permitido) {
+        // Se registra el motivo para poder investigar un intento sospechoso.
+        // A quien intenta entrar no se le dice cual fue: distinguir "no existe"
+        // de "inactivo" le confirmaria que otros correos si existen.
+        console.warn(
+          `[SECURITY] Entrada por Google rechazada | motivo=${decision.motivo} correo=${correo ?? "(vacio)"}`
+        );
+        return false;
+      }
+      return true;
+    },
+
     async session({ token, session }) {
       if (token) {
         session.user.id = token.id;
