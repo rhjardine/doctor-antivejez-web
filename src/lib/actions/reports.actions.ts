@@ -3,7 +3,8 @@
 
 import { prisma } from '@/lib/db';
 import { ReportData, ReportType, TimeRange, PatientReport, ProfessionalReport } from '@/types/reports';
-import { requireSession } from '@/lib/auth-guards';
+import { requireSession, AUTH_ERRORS } from '@/lib/auth-guards';
+import { puedeUsarModulo } from '@/lib/permissions';
 import {
   alcanceDePacientes,
   alcanceDeProfesionales,
@@ -55,6 +56,20 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
   // base de pacientes entera a quien la invocara, con `passwordHash` incluido.
   // El unico control estaba en el cliente (reportes/page.tsx), que no protege nada.
   const { session } = await requireSession();
+
+  // El permiso se comprueba AQUI, no solo en el cliente.
+  //
+  // `reportes/page.tsx` tenia el rol escrito a mano y contradecia a la matriz de
+  // permisos, de modo que nadie podia generar un reporte. Arreglar solo el
+  // cliente habria repetido el error que acaba de cerrarse en este mismo
+  // archivo: una comprobacion en el navegador no protege nada, porque una
+  // Server Action exportada es un endpoint HTTP.
+  if (!puedeUsarModulo(session.user, 'reportes')) {
+    console.warn(
+      `[SECURITY] Reporte denegado | actor=${session.user.id} role=${session.user.role}`
+    );
+    throw new Error(AUTH_ERRORS.FORBIDDEN);
+  }
 
   // Mismo alcance que usa el listado de pacientes. Se resuelve una vez y se
   // aplica a TODAS las ramas: el fallo original fue filtrar en unos sitios si y

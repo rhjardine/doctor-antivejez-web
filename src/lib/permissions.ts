@@ -117,3 +117,32 @@ export function resolvePermissions(
 export function canGrantModule(module: ModuleKey): boolean {
   return !ADMIN_ONLY_MODULES.includes(module);
 }
+
+/** Lo que se necesita de la sesión para decidir un permiso. */
+export interface SesionParaPermiso {
+  role?: string | null;
+  permissions?: Record<string, boolean> | null;
+}
+
+/**
+ * ¿Puede esta sesión usar este módulo?
+ *
+ * Existe porque el Módulo de Reportes tenía el rol escrito a mano en el cliente
+ * —`if (session.user.role !== 'MEDICO')`— y esa condición contradecía a la
+ * matriz de permisos de este mismo archivo, que da `reportes` a ADMIN y a
+ * ADMINISTRATIVO y se lo niega a MEDICO. Es decir: los dos únicos roles que
+ * llegaban a la pantalla eran justo los que el botón rechazaba, y el único que
+ * el botón aceptaba no podía llegar. Nadie podía generar un reporte.
+ *
+ * Un rol ausente o desconocido cae en el caso más restrictivo, no en el más
+ * amplio: `resolvePermissions` ya usa MEDICO como reserva.
+ */
+export function puedeUsarModulo(
+  sesion: SesionParaPermiso | null | undefined,
+  modulo: ModuleKey
+): boolean {
+  if (!sesion?.role) return false;
+
+  const permisos = resolvePermissions(sesion.role as UserRole, sesion.permissions);
+  return permisos[modulo] === true;
+}
