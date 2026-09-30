@@ -23,11 +23,23 @@ const biophysicsFindMany = vi.fn();
 const omicFindMany = vi.fn();
 const omicAggregate = vi.fn();
 
-vi.mock('@/lib/auth-guards', () => ({
-  requireSession: () => requireSession(),
-}));
+vi.mock('@/lib/auth-guards', async () => {
+  // AUTH_ERRORS es el real: si se simulara, se comprobaria el rechazo contra un
+  // codigo inventado y la prueba pasaria aunque el codigo cambiara.
+  const real = await vi.importActual<typeof import('@/lib/auth-guards')>('@/lib/auth-guards');
+  return {
+    AUTH_ERRORS: real.AUTH_ERRORS,
+    requireSession: () => requireSession(),
+  };
+});
+
+// `@/lib/auth` se simula porque el `auth-guards` real lo arrastra al importarlo,
+// y con el vendria toda la configuracion de NextAuth.
+vi.mock('@/lib/auth', () => ({ authOptions: {} }));
+vi.mock('next-auth', () => ({ getServerSession: vi.fn() }));
 
 vi.mock('@/lib/db', () => ({
+  db: {},
   prisma: {
     patient: {
       findMany: (a: unknown) => patientFindMany(a),
@@ -45,7 +57,15 @@ vi.mock('@/lib/db', () => ({
 
 import { generateReport } from './reports.actions';
 
-const MEDICO = { session: { user: { id: 'medico-1', role: 'MEDICO', tenantId: null } } };
+// El rol que usa la mayoria de las pruebas necesita tener concedido el modulo,
+// porque `generateReport` comprueba el permiso ademas de la sesion. MEDICO no lo
+// tiene por defecto, asi que se le concede explicitamente: lo que estas pruebas
+// verifican es el ALCANCE, no el permiso —eso vive en permissions.test.ts.
+const MEDICO = {
+  session: {
+    user: { id: 'medico-1', role: 'MEDICO', tenantId: null, permissions: { reportes: true } },
+  },
+};
 
 /** Recorre un objeto de Prisma y junta todas las claves, a cualquier profundidad. */
 function clavesProfundas(valor: unknown, acumulado: string[] = []): string[] {
@@ -78,6 +98,40 @@ const TODOS = [
   'ri_bio',
   'professional_analytics',
 ] as const;
+
+describe('generateReport — permiso del modulo', () => {
+  it('un rol sin el modulo concedido no genera reportes, aunque tenga sesion', async () => {
+    // MEDICO no tiene `reportes` en la matriz por defecto. El cliente lo
+    // comprobaba a mano y ademas al reves; ahora decide el servidor.
+    requireSession.mockResolvedValue({
+      session: { user: { id: 'medico-3', role: 'MEDICO', tenantId: null, permissions: null } },
+    });
+
+    await expect(generateReport('patient_attendance', 'all')).rejects.toThrow(/FORBIDDEN/);
+    expect(patientFindMany).not.toHaveBeenCalled();
+  });
+
+  // No falla contra el codigo anterior, y no pretende hacerlo: el guardia nuevo
+  // es lo que podria bloquear de mas. El fallo de produccion estaba en el
+  // cliente, y quien lo captura es `permissions.test.ts`.
+  it('el guardia nuevo NO bloquea a ADMIN', async () => {
+    requireSession.mockResolvedValue({
+      session: { user: { id: 'admin-1', role: 'ADMIN', tenantId: null, permissions: null } },
+    });
+
+    await expect(generateReport('patient_attendance', 'all')).resolves.toBeTruthy();
+    expect(patientFindMany).toHaveBeenCalled();
+  });
+
+  it('el permiso se comprueba ANTES de consultar la base', async () => {
+    requireSession.mockResolvedValue({
+      session: { user: { id: 'coach-1', role: 'COACH', tenantId: null, permissions: null } },
+    });
+
+    await expect(generateReport('professional_analytics', 'all')).rejects.toThrow(/FORBIDDEN/);
+    expect(patientCount).not.toHaveBeenCalled();
+  });
+});
 
 describe('generateReport — sesion obligatoria', () => {
   it('sin sesion no responde, y no toca la base', async () => {
@@ -177,7 +231,9 @@ describe('generateReport — aislamiento entre profesionales', () => {
 
   it('un MEDICO con clinica alcanza la suya, y nada mas', async () => {
     requireSession.mockResolvedValue({
-      session: { user: { id: 'medico-2', role: 'MEDICO', tenantId: 'clinica-a' } },
+      session: {
+        user: { id: 'medico-2', role: 'MEDICO', tenantId: 'clinica-a', permissions: { reportes: true } },
+      },
     });
 
     await generateReport('patient_attendance', 'all');

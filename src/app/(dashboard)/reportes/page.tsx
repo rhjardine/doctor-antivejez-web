@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { FaFilePdf, FaFilter, FaUsers, FaChartLine, FaUserMd, FaAward } from 'react-icons/fa';
 import { toast } from 'sonner';
 import { generateReport } from '@/lib/actions/reports.actions';
+import { puedeUsarModulo } from '@/lib/permissions';
 import { ReportData, ReportType, TimeRange, PatientReport, ProfessionalReport } from '@/types/reports';
 import { formatDate } from '@/utils/date';
 import { SmartReports } from '@/components/medical/SmartReports';
@@ -53,8 +54,18 @@ export default function ReportesPage() {
   const [loading, setLoading] = useState(false);
 
   const handleGenerateReport = async () => {
-    if (session?.user?.role !== 'MEDICO') {
-      toast.error('Acceso denegado: Solo personal médico puede generar analíticas.');
+    // Se consulta la matriz de permisos, no un rol escrito a mano.
+    //
+    // La condición anterior comparaba el rol de la sesión con el de médico, y
+    // contradecía a `permissions.ts`, que da `reportes` a ADMIN y a
+    // ADMINISTRATIVO y se lo niega a MEDICO: los dos roles que llegaban a esta
+    // pantalla eran justo los que el botón rechazaba, y el único que el botón
+    // aceptaba no podía llegar. Nadie podía generar un reporte.
+    //
+    // Esta comprobación es solo para dar un mensaje decente: quien decide es
+    // `generateReport`, en el servidor.
+    if (!puedeUsarModulo(session?.user, 'reportes')) {
+      toast.error('Acceso denegado: su usuario no tiene habilitado el módulo de reportes.');
       return;
     }
     setLoading(true);
