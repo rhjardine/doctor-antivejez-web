@@ -3,6 +3,13 @@
 
 import { prisma } from '@/lib/db';
 import { ReportData, ReportType, TimeRange, PatientReport, ProfessionalReport } from '@/types/reports';
+import { requireSession } from '@/lib/auth-guards';
+import {
+  alcanceDePacientes,
+  alcanceDeProfesionales,
+  CAMPOS_PACIENTE_SEGUROS,
+  CAMPOS_PROFESIONAL_SEGUROS,
+} from '@/lib/scope/patient-scope';
 
 /**
  * Obtiene la fecha de inicio para un rango de tiempo determinado.
@@ -43,23 +50,34 @@ function getStartDate(range: TimeRange): Date {
  * @returns Los datos del reporte.
  */
 export async function generateReport(reportType: ReportType, timeRange: TimeRange): Promise<ReportData> {
+  // Una Server Action exportada es un endpoint HTTP. Este modulo no comprobaba
+  // sesion en ninguna de sus 331 lineas, asi que `generateReport` devolvia la
+  // base de pacientes entera a quien la invocara, con `passwordHash` incluido.
+  // El unico control estaba en el cliente (reportes/page.tsx), que no protege nada.
+  const { session } = await requireSession();
+
+  // Mismo alcance que usa el listado de pacientes. Se resuelve una vez y se
+  // aplica a TODAS las ramas: el fallo original fue filtrar en unos sitios si y
+  // en otros no.
+  const alcance = alcanceDePacientes({
+    id: session.user.id,
+    role: session.user.role,
+    tenantId: session.user.tenantId,
+  });
+
   const startDate = getStartDate(timeRange);
 
   switch (reportType) {
     case 'patient_attendance':
       const patients = await prisma.patient.findMany({
-        where: {
-          createdAt: {
-            gte: startDate,
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        include: {
-          user: {
-            select: { name: true },
-          },
+        where: { ...alcance, createdAt: { gte: startDate } },
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+        // `select` explicito, no `include` suelto: sin esto Prisma devuelve TODOS
+        // los escalares de Patient, y ahi va `passwordHash`.
+        select: {
+          ...CAMPOS_PACIENTE_SEGUROS,
+          user: { select: { name: true } },
         },
       });
       return { type: 'patient_attendance', data: patients as PatientReport[] };
@@ -68,13 +86,15 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
       // Lógica de ejemplo: pacientes con más de 5 tests (simulando adherencia)
       const adherentPatients = await prisma.patient.findMany({
         where: {
+          ...alcance,
           biophysicsTests: {
             some: {
               createdAt: { gte: startDate }
             }
           },
         },
-        include: {
+        select: {
+          ...CAMPOS_PACIENTE_SEGUROS,
           _count: {
             select: { biophysicsTests: true },
           },
@@ -92,17 +112,23 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
     case 'patient_evolution':
       const allPatientsWithTests = await prisma.patient.findMany({
         where: {
+          ...alcance,
           biophysicsTests: {
-            some: {} // Asegura que el paciente tenga al menos un test
+            some: { testDate: { gte: startDate } }
           }
         },
-        include: {
+        select: {
+          ...CAMPOS_PACIENTE_SEGUROS,
           biophysicsTests: {
-            orderBy: {
-              testDate: 'asc',
-            },
+            where: { testDate: { gte: startDate } },
+            orderBy: { testDate: 'asc' },
+            // Solo lo que usa el calculo de evolucion.
+            select: { biologicalAge: true, testDate: true },
           },
         },
+        // Sin `take`, esto traia todos los pacientes con todos sus tests a
+        // memoria de Node y recortaba despues en JavaScript.
+        take: 500,
       });
 
       const evolutionData = allPatientsWithTests.map(patient => {
@@ -116,9 +142,17 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
       return { type: 'patient_evolution', data: evolutionData as PatientReport[] };
 
     case 'professional_performance':
+      // Los profesionales tambien se acotan: un ADMINISTRATIVO de una clinica no
+      // tiene por que ver la plantilla de otra.
+      const alcanceProfesionales = alcanceDeProfesionales({
+        id: session.user.id,
+        role: session.user.role,
+        tenantId: session.user.tenantId,
+      });
+
       const professionals = await prisma.user.findMany({
-        // ... (existing logic)
         where: {
+          ...alcanceProfesionales,
           role: 'MEDICO',
           patients: {
             some: {
@@ -130,7 +164,10 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
             }
           }
         },
-        include: {
+        // `include` devolvia todos los escalares de User, y ahi va `password`.
+        // Es la misma fuga que en Patient, con otro nombre de columna.
+        select: {
+          ...CAMPOS_PROFESIONAL_SEGUROS,
           _count: {
             select: {
               patients: {
@@ -159,13 +196,15 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
       // 1. Fetch Adherence Data (Omics)
       // Bypass Prisma Client type check for newly added model
       const omicTransactions = await (prisma as any).omicTransaction.findMany({
-        where: { date: { gte: startDate } },
+        // Se acota a traves del paciente: OmicTransaction no tiene tenantId
+        // propio, asi que la frontera hay que atravesarla por la relacion.
+        where: { date: { gte: startDate }, patient: alcance },
         orderBy: { date: 'asc' }
       });
 
       // 2. Fetch Rejuvenation Data (BioTests)
       const tests = await prisma.biophysicsTest.findMany({
-        where: { testDate: { gte: startDate } },
+        where: { testDate: { gte: startDate }, patient: alcance },
         select: { testDate: true, chronologicalAge: true, biologicalAge: true },
         orderBy: { testDate: 'asc' }
       });
@@ -260,18 +299,19 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
 
     case 'professional_analytics':
       // 1. Core Metrics
-      const totalPatientsCount = await prisma.patient.count();
+      const totalPatientsCount = await prisma.patient.count({ where: alcance });
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
       const newPatientsThisMonth = await prisma.patient.count({
-        where: { createdAt: { gte: startOfMonth } }
+        where: { ...alcance, createdAt: { gte: startOfMonth } }
       });
       const prevMonthGrowth = totalPatientsCount > 0 ? (newPatientsThisMonth / totalPatientsCount) * 100 : 0;
 
       // 2. Bio-Age Delta (Aggregated/Anonymous)
       const testsWithDelta = await prisma.biophysicsTest.findMany({
+        where: { patient: alcance },
         select: { chronologicalAge: true, biologicalAge: true }
       });
       const totalDelta = testsWithDelta.reduce((acc, t) => acc + (t.chronologicalAge - t.biologicalAge), 0);
@@ -280,6 +320,7 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
       // 3. Gender Distribution (groupBy)
       const genderStats = await (prisma as any).patient.groupBy({
         by: ['gender'],
+        where: alcance,
         _count: { gender: true },
       });
 
@@ -298,19 +339,29 @@ export async function generateReport(reportType: ReportType, timeRange: TimeRang
       ];
 
       // 5. Adherence Filtering (🔒 PRIVACY HANDSHAKE)
-      let adherenceTransactions = { _avg: { pointsEarned: 0 } };
+      // Dos arreglos aqui:
+      //
+      // 1. Faltaba el alcance: la media se calculaba sobre los pacientes de TODA
+      //    la plataforma, asi que la "adherencia" que veia un profesional
+      //    incluia a los pacientes de otras consultas.
+      //
+      // 2. El `catch` anterior repetia la consulta SIN el filtro de
+      //    consentimiento y lo llamaba "Anonymous Mode". Si el error hubiese
+      //    sido de tabla ausente, el reintento habria fallado igual; lo unico
+      //    que podia conseguir era agregar datos de pacientes que no
+      //    consintieron compartirlos. Ante el error ahora no se mide.
+      let adherenceTransactions: { _avg: { pointsEarned: number | null } } = {
+        _avg: { pointsEarned: 0 },
+      };
       try {
         adherenceTransactions = await (prisma as any).omicTransaction.aggregate({
           where: {
-            patient: { shareDataConsent: true } // 🔒 STRICT PRIVACY FILTER
+            patient: { ...alcance, shareDataConsent: true }, // 🔒 alcance + consentimiento
           },
           _avg: { pointsEarned: true }
         });
       } catch (e) {
-        console.warn("Table or Column shareDataConsent missing, falling back to all data (Anonymous Mode)");
-        adherenceTransactions = await (prisma as any).omicTransaction.aggregate({
-          _avg: { pointsEarned: true }
-        });
+        console.warn('[reports] No se pudo agregar la adherencia; se informa 0 en lugar de medir sin consentimiento.');
       }
 
       return {

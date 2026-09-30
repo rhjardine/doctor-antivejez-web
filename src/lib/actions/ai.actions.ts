@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import openai from '@/lib/openai';
 import { PatientWithDetails } from '@/types';
 import { anonymizePatientData } from '@/lib/ai/anonymize';
+import { validatePatientAccess } from '@/lib/auth-guards';
+import { mensajeDeErrorDeAcceso } from '@/lib/scope/access-errors';
 
 // La función buildClinicalPrompt no necesita cambios.
 function buildClinicalPrompt(anonymizedData: any): string {
@@ -33,7 +35,12 @@ export async function generateClinicalSummary(patientId: string) {
   console.log(`[AI_ACTION] Iniciando análisis para paciente ID: ${patientId}`);
 
   try {
-    // ✅ CORRECCIÓN DEFINITIVA: Se restaura la consulta completa a la base de datos.
+    // Esta accion no comprobaba nada: era un resumen clinico con IA de
+    // CUALQUIER paciente —biofisica, bioquimica, ortomolecular y sus 3 ultimas
+    // guias— para quien invocara el endpoint. El guard va antes de la consulta,
+    // no despues: si no hay acceso, los datos no se leen siquiera.
+    await validatePatientAccess(patientId);
+
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: {
@@ -102,10 +109,17 @@ export async function generateClinicalSummary(patientId: string) {
     return { success: true, summary };
 
   } catch (error: any) {
+    // Un fallo de autorización no es un fallo de la IA: decir «inténtelo más
+    // tarde» mandaría a reintentar algo que nunca va a funcionar.
+    const errorDeAcceso = mensajeDeErrorDeAcceso(error);
+    if (errorDeAcceso) {
+      return { success: false, error: errorDeAcceso };
+    }
+
     console.error(`[AI_ACTION] Error catastrófico en generateClinicalSummary para paciente ID: ${patientId}`, error);
-    return { 
-      success: false, 
-      error: 'El agente de IA no pudo generar el análisis. Por favor, inténtelo de nuevo más tarde.' 
+    return {
+      success: false,
+      error: 'El agente de IA no pudo generar el análisis. Por favor, inténtelo de nuevo más tarde.'
     };
   }
 }
