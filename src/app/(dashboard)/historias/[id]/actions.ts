@@ -1,9 +1,14 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { validatePatientAccess } from '@/lib/auth-guards';
+
+// `if (!session) throw` comprobaba que quien llamaba estuviese autenticado, no
+// que el paciente fuese suyo: cualquier usuario con sesion —incluido un coach de
+// otra clinica— podia escribir el plan alimentario de cualquier paciente, y
+// marcarlo como enviado a su aplicacion movil. `validatePatientAccess` hace las
+// dos comprobaciones.
 
 export async function saveAlimentacion(data: {
     patientId: string;
@@ -22,8 +27,7 @@ export async function saveAlimentacion(data: {
     alimentosEvitar?: string;
     sustitutos?: string;
 }) {
-    const session = await getServerSession(authOptions);
-    if (!session) throw new Error('No autorizado');
+    await validatePatientAccess(data.patientId);
 
     await db.alimentacionNutrigenomica.upsert({
         where: { patientId: data.patientId },
@@ -67,8 +71,7 @@ export async function saveAlimentacion(data: {
 }
 
 export async function sendAlimentacionToPWA(data: { patientId: string }) {
-    const session = await getServerSession(authOptions);
-    if (!session) throw new Error('No autorizado');
+    await validatePatientAccess(data.patientId);
 
     await db.alimentacionNutrigenomica.update({
         where: { patientId: data.patientId },

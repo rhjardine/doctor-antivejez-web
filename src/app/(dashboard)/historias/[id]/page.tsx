@@ -32,7 +32,7 @@ import GeneticTestForm from '@/components/genetics/GeneticTestForm';
 import GenomicHub from '@/components/genetics/GenomicHub';
 import OrthomolecularTestView from '@/components/orthomolecular/OrthomolecularTestView';
 import NutrigenomicGuide from '@/components/nutrition/NutrigenomicGuide';
-import { telotestReportData } from '@/lib/mock-data';
+import { informeDesdeRegistros } from '@/lib/genetics/telotest-report';
 import type { PatientWithDetails } from '@/types';
 import { Button } from '@/components/ui/button';
 import PatientForm from '@/components/patients/PatientForm';
@@ -186,7 +186,11 @@ export default function PatientDetailPage() {
       case 'genetica':
         return (
           <GeneticTestView
-            report={telotestReportData}
+            // El informe sale del último test genético REAL del paciente, y es
+            // null si no tiene ninguno. Antes se pasaba un informe inventado con
+            // el nombre, la fecha de nacimiento y los tratamientos de una
+            // persona concreta dentro, idéntico en la ficha de todos.
+            report={informeDesdeRegistros(patient, patient.geneticTests)}
             onBack={() => setActiveTestView('main')}
             onNewTest={() => setActiveTestView('genetica_form')}
             onUploadPdf={() => setActiveTestView('genomic_hub')}

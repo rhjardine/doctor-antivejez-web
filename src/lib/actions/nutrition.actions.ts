@@ -3,12 +3,18 @@
 import { prisma } from '@/lib/db';
 import { FoodPlanTemplate, MealType, GeneralGuideType, FullNutritionData, DietType } from '@/types/nutrition';
 import { revalidatePath } from 'next/cache';
+import { requireSession, validatePatientAccess } from '@/lib/auth-guards';
+import { mensajeDeErrorDeAcceso } from '@/lib/scope/access-errors';
 
 /**
  * Obtiene todos los datos necesarios para la plantilla de la guía de alimentación.
  */
 export async function getFullNutritionData(): Promise<{ success: boolean; data?: FullNutritionData; error?: string }> {
   try {
+    // Es el catalogo, no datos de un paciente, asi que basta con exigir sesion:
+    // no hay nada que acotar por profesional. Aun asi no es publico.
+    await requireSession();
+
     const [foodItems, generalGuideItems, wellnessKeys] = await Promise.all([
       prisma.foodItem.findMany({ where: { isDefault: true }, orderBy: { name: 'asc' } }),
       prisma.generalGuideItem.findMany({ where: { isDefault: true } }),
@@ -30,6 +36,9 @@ export async function getFullNutritionData(): Promise<{ success: boolean; data?:
       data: { foodTemplate, generalGuide, wellnessKeys } 
     };
   } catch (error) {
+    const errorDeAcceso = mensajeDeErrorDeAcceso(error);
+    if (errorDeAcceso) return { success: false, error: errorDeAcceso };
+
     console.error('Error fetching full nutrition data:', error);
     return { success: false, error: 'No se pudo cargar la plantilla de alimentación.' };
   }
@@ -44,6 +53,10 @@ export async function savePatientNutritionPlan(
   selectedDiets: DietType[]
 ) {
     try {
+        // `tx.patient.update` escribia directamente sobre la fila de cualquier
+        // paciente, sin sesion. El guard va antes de abrir la transaccion.
+        await validatePatientAccess(patientId);
+
         const result = await prisma.$transaction(async (tx) => {
             // 1. Actualizar los tipos de dieta seleccionados para el paciente
             await tx.patient.update({
@@ -90,6 +103,9 @@ export async function savePatientNutritionPlan(
         return { success: true, data: result };
 
     } catch (error) {
+        const errorDeAcceso = mensajeDeErrorDeAcceso(error);
+        if (errorDeAcceso) return { success: false, error: errorDeAcceso };
+
         console.error('Error saving patient nutrition plan:', error);
         return { success: false, error: 'No se pudo guardar el plan de alimentación.' };
     }

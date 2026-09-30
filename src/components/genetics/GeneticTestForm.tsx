@@ -9,7 +9,6 @@ import { FaArrowLeft, FaSave, FaFlask, FaDna } from 'react-icons/fa';
 import { toast } from 'sonner';
 import { Patient } from '@/types';
 import { createGeneticTest } from '@/lib/actions/genetics.actions';
-import { telotestReportData } from '@/lib/mock-data';
 
 const schema = z.object({
     averageTelomereLength: z.string().min(1, 'La longitud es requerida'),
@@ -47,11 +46,18 @@ export default function GeneticTestForm({ patient, onBack, onSuccess }: GeneticT
                 biologicalAge: data.estimatedBiologicalAge,
                 differentialAge: differentialAge,
                 testDate: new Date(data.testDate),
-                // Por ahora usamos los datos mockeados para interpretación y recomendaciones 
-                // ya que requieren lógica médica compleja de baremos
-                interpretation: telotestReportData.interpretation,
-                therapeuticResults: telotestReportData.therapeuticResults,
-                recommendations: telotestReportData.generalRecommendations,
+                // No se envían interpretación, resultados terapéuticos ni
+                // recomendaciones: son opcionales y quedan vacíos.
+                //
+                // Antes se copiaba aquí el informe de ejemplo —interpretación,
+                // Metformina, Coenzima Q10 y el resto— y se GUARDABA en la base
+                // como si fuera de este paciente. El comentario anterior lo
+                // reconocía: «por ahora usamos los datos mockeados». Quedaban
+                // escritos en su historia clínica.
+                //
+                // La interpretación real llega por el otro camino: subir el PDF
+                // del laboratorio y validarlo. Lo que este formulario recoge son
+                // las cifras que el médico lee del informe.
             });
 
             if (result.success) {

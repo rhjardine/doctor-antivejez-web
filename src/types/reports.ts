@@ -1,5 +1,9 @@
 // src/types/reports.ts
-import { Patient, User } from '@prisma/client';
+import type { Patient, User } from '@prisma/client';
+import type {
+  CAMPOS_PACIENTE_SEGUROS,
+  CAMPOS_PROFESIONAL_SEGUROS,
+} from '@/lib/scope/patient-scope';
 
 export type ReportType =
   | 'patient_attendance'
@@ -29,13 +33,28 @@ export type TimeRange =
   | 'annual'
   | 'all';
 
-export interface PatientReport extends Patient {
-  user?: { name: string };
+/**
+ * Un paciente tal y como sale en un reporte.
+ *
+ * NO extiende `Patient`. Extenderlo era la causa de fondo de la fuga: el tipo
+ * *exigia* el registro completo, asi que la consulta usaba `include` suelto y
+ * Prisma devolvia todos los escalares —identificacion, email, telefono,
+ * direccion, observaciones y `passwordHash`— a quien invocara la accion.
+ *
+ * Ahora la forma se deriva de la lista blanca. La consecuencia es la que se
+ * busca: para ensanchar lo que viaja al navegador hay que ensanchar la lista
+ * blanca a mano, y eso se ve en la revision.
+ */
+export interface PatientReport
+  extends Pick<Patient, keyof typeof CAMPOS_PACIENTE_SEGUROS> {
+  user?: { name: string | null } | null;
   testsCount?: number;
   evolution?: number;
 }
 
-export interface ProfessionalReport extends User {
+/** Igual que arriba: extender `User` arrastraba `password`, `email` y `permissions`. */
+export interface ProfessionalReport
+  extends Pick<User, keyof typeof CAMPOS_PROFESIONAL_SEGUROS> {
   formsUsed?: number;
 }
 
