@@ -287,6 +287,11 @@ model Patient {
   // Historial de versiones de guías clínicas (snapshots inmutables)
   guideVersions PatientGuideVersion[]
 
+  // Indices de alcance. Toda consulta de pacientes filtra por el profesional
+  // (o su clinica) y por `deletedAt`, y ordena por `createdAt`; sin esto cada
+  // una recorria la tabla entera.
+  @@index([userId, deletedAt, createdAt])
+  @@index([tenantId, deletedAt, createdAt])
   @@map("patients")
 }
 
@@ -378,6 +383,9 @@ model BiophysicsTest {
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctor  User?   @relation("DoctorBiophysics", fields: [doctorId], references: [id])
 
+  // Por paciente y fecha: el historico y la evolucion. Por medico: el panel.
+  @@index([patientId, testDate])
+  @@index([doctorId, testDate])
   @@map("biophysics_tests")
 }
 
@@ -415,6 +423,7 @@ model BiochemistryTest {
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctor  User?   @relation("DoctorBiochemistry", fields: [doctorId], references: [id])
 
+  @@index([patientId, testDate])
   @@map("biochemistry_tests")
 }
 
@@ -524,6 +533,7 @@ model OrthomolecularTest {
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctor  User?   @relation("DoctorOrthomolecular", fields: [doctorId], references: [id])
 
+  @@index([patientId, testDate])
   @@map("orthomolecular_tests")
 }
 
@@ -592,6 +602,7 @@ model PatientGuide {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([patientId, createdAt])
   @@map("patient_guides")
 }
 

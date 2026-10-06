@@ -6,6 +6,9 @@ import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { validatePatientAccess } from '@/lib/auth-guards';
+// El cobro vive en `@/lib/credits`: aislamiento Serializable, débito al
+// profesional que actúa y reintento real ante un choque entre transacciones.
+import { cobrarCredito, enTransaccionDeCredito } from '@/lib/credits/consume';
 
 export async function createGeneticTest(data: {
     patientId: string;
@@ -34,34 +37,15 @@ export async function createGeneticTest(data: {
             return { success: false, error: 'Error de integridad: Paciente o Médico no encontrados.' };
         }
 
-        const doctorId = patient.user.id;
-        const isNonAdmin = patient.user.role !== 'ADMIN';
-
         // ================================================================
         // TRANSACCIÓN ATÓMICA: Crédito + Test en un único bloque.
         // Si el INSERT falla → el débito hace ROLLBACK automático.
         // ================================================================
-        const test = await prisma.$transaction(async (tx) => {
-            if (isNonAdmin) {
-                const aggregation = await tx.creditTransaction.aggregate({
-                    where: { userId: doctorId, testType: 'GENETICA' },
-                    _sum: { amount: true },
-                });
-                const currentBalance = aggregation._sum.amount ?? 0;
+        // Cobra a quien ACTÚA, no al dueño del paciente.
+        const actor = { id: session.user.id, role: session.user.role };
 
-                if (currentBalance <= 0) {
-                    throw new Error(`Créditos insuficientes para Test Genético. Saldo: ${currentBalance}. Contacte al administrador.`);
-                }
-
-                await tx.creditTransaction.create({
-                    data: {
-                        userId: doctorId,
-                        testType: 'GENETICA',
-                        amount: -1,
-                        description: `Test Genético consumido — Paciente ${data.patientId}`,
-                    },
-                });
-            }
+        const test = await enTransaccionDeCredito(async (tx) => {
+            await cobrarCredito(tx, actor, 'GENETICA', `Test Genético consumido — Paciente ${data.patientId}`);
 
             return await tx.geneticTest.create({
                 data: {

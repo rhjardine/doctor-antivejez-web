@@ -3,7 +3,9 @@
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { NlrRiskLevel } from '@prisma/client';
-import { consumeTestCredit } from './professionals.actions';
+// El cobro vive en `@/lib/credits`: aislamiento Serializable, débito al
+// profesional que actúa y reintento real ante un choque entre transacciones.
+import { cobrarCredito, enTransaccionDeCredito } from '@/lib/credits/consume';
 
 // Función para determinar el nivel de riesgo basado en el valor de NLR
 function determineNlrRiskLevel(nlr: number): NlrRiskLevel {
@@ -55,27 +57,31 @@ export async function saveNlrTest(params: SaveNlrTestParams) {
       return { success: false, error: "Error de integridad: Paciente o Médico no encontrados." };
     }
 
-    const doctor = patient.user;
-    const isNonAdmin = doctor.role !== 'ADMIN';
+    // Cobro y creación en la MISMA transacción.
+    //
+    // Antes el crédito se consumía en una transacción aparte, antes de crear el
+    // test. Si el `create` fallaba después, el crédito quedaba gastado sin que
+    // existiera el test: el profesional pagaba por nada y no había forma de
+    // notarlo. Los otros cuatro tipos de test ya lo hacían junto; éste no.
+    //
+    // Y cobra a quien ACTÚA, no al dueño del paciente.
+    const actor = { id: session.user.id, role: session.user.role };
 
-    // Ledger: NLR es un marcador biofísico
-    if (isNonAdmin) {
-      const creditResult = await consumeTestCredit(doctor.id, 'BIOFISICA', 'Test NLR consumido');
-      if (!creditResult.success) {
-        return { success: false, error: creditResult.error || 'Créditos insuficientes.' };
-      }
-    }
+    const newTest = await enTransaccionDeCredito(async (tx) => {
+      // NLR es un marcador biofísico y consume del mismo cupo.
+      await cobrarCredito(tx, actor, 'BIOFISICA', 'Test NLR consumido');
 
-    const newTest = await prisma.nlrTest.create({
-      data: {
-        patientId,
-        neutrophils,
-        lymphocytes,
-        nlrValue,
-        riskLevel,
-        testDate,
-        recordedBy: session.user.id, // Audit Trail
-      },
+      return await tx.nlrTest.create({
+        data: {
+          patientId,
+          neutrophils,
+          lymphocytes,
+          nlrValue,
+          riskLevel,
+          testDate,
+          recordedBy: session.user.id, // Audit Trail
+        },
+      });
     });
 
     revalidatePath(`/historias/${patientId}`);

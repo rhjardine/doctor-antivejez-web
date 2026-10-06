@@ -8,7 +8,9 @@ import { revalidatePath } from 'next/cache';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { validatePatientAccess, requireSession } from '@/lib/auth-guards';
-// consumeTestCredit NO se importa aquí — la transacción atómica se hace internamente
+// El cobro vive en `@/lib/credits`: aislamiento Serializable, débito al
+// profesional que actúa y reintento real ante un choque entre transacciones.
+import { cobrarCredito, enTransaccionDeCredito } from '@/lib/credits/consume';
 
 interface SaveTestParams {
   patientId: string;
@@ -51,9 +53,6 @@ export async function calculateAndSaveOrthomolecularTest(params: SaveTestParams)
       return { success: false, error: "Error de integridad: Paciente o Médico no encontrados." };
     }
 
-    const doctorId = patient.user.id;
-    const isNonAdmin = patient.user.role !== 'ADMIN';
-
     const dbData = {
       patientId,
       chronologicalAge,
@@ -64,27 +63,11 @@ export async function calculateAndSaveOrthomolecularTest(params: SaveTestParams)
       ...results.partialAges,
     };
 
-    await prisma.$transaction(async (tx) => {
-      if (isNonAdmin) {
-        const aggregation = await tx.creditTransaction.aggregate({
-          where: { userId: doctorId, testType: 'ORTOMOLECULAR' },
-          _sum: { amount: true },
-        });
-        const currentBalance = aggregation._sum.amount ?? 0;
+    // Cobra a quien ACTÚA, no al dueño del paciente.
+    const actor = { id: session.user.id, role: session.user.role };
 
-        if (currentBalance <= 0) {
-          throw new Error(`Créditos insuficientes para Ortomolecular. Saldo: ${currentBalance}. Contacte al administrador.`);
-        }
-
-        await tx.creditTransaction.create({
-          data: {
-            userId: doctorId,
-            testType: 'ORTOMOLECULAR',
-            amount: -1,
-            description: `Test Ortomolecular consumido — Paciente ${patientId}`,
-          },
-        });
-      }
+    await enTransaccionDeCredito(async (tx) => {
+      await cobrarCredito(tx, actor, 'ORTOMOLECULAR', `Test Ortomolecular consumido — Paciente ${patientId}`);
 
       await tx.orthomolecularTest.create({ data: dbData });
     });

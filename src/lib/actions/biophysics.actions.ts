@@ -6,7 +6,9 @@ import { BoardWithRanges, FormValues, CalculationResult, PartialAges } from '@/t
 import { calculateBiofisicaResults } from '@/utils/biofisica-calculations';
 import { revalidatePath } from 'next/cache';
 import { Gender } from '@prisma/client';
-// consumeTestCredit NO se importa aquí — la transacción atómica se hace internamente
+// El cobro vive en `@/lib/credits`: aislamiento Serializable, débito al
+// profesional que actúa y reintento real ante un choque entre transacciones.
+import { cobrarCredito, enTransaccionDeCredito } from '@/lib/credits/consume';
 
 // --- ENFOQUE UNIFICADO: CALCULAR Y GUARDAR EN UN SOLO PASO ---
 interface CalculateAndSaveParams {
@@ -56,37 +58,23 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
       return { success: false, error: "Error de integridad: Paciente o Médico no encontrados." };
     }
 
-    const doctorId = patient.user.id;
-    const isNonAdmin = patient.user.role !== 'ADMIN';
-
     // ================================================================
-    // 3. TRANSACCIÓN ATÓMICA: Verificar crédito + Crear test en un solo bloque.
-    //    Si el INSERT del test falla, el débito de crédito hace ROLLBACK automático.
+    // 3. TRANSACCIÓN ATÓMICA Y SERIALIZABLE: crédito + test en un solo bloque.
+    //
+    //    Serializable, no el Read Committed de antes: un `SUM` no bloquea filas
+    //    que todavía no existen, así que dos guardados simultáneos leían el
+    //    mismo saldo, ambos pasaban la comprobación y ambos insertaban. Doble
+    //    gasto reproducible con dos clics rápidos.
+    //
+    //    Y cobra a `session.user` —quien actúa—, no a `patient.user` —el dueño
+    //    del paciente—. Antes el test se guardaba con `doctorId:
+    //    session.user.id` mientras el crédito salía del saldo de otro.
     // ================================================================
-    const newTest = await prisma.$transaction(async (tx) => {
-      // 3a. Verificar y consumir crédito (solo para no-admin)
-      if (isNonAdmin) {
-        const aggregation = await tx.creditTransaction.aggregate({
-          where: { userId: doctorId, testType: 'BIOFISICA' },
-          _sum: { amount: true },
-        });
-        const currentBalance = aggregation._sum.amount ?? 0;
+    const actor = { id: session.user.id, role: session.user.role };
 
-        if (currentBalance <= 0) {
-          throw new Error(`Créditos insuficientes para Biofísica. Saldo: ${currentBalance}. Contacte al administrador.`);
-        }
+    const newTest = await enTransaccionDeCredito(async (tx) => {
+      await cobrarCredito(tx, actor, 'BIOFISICA', `Test Biofísico consumido — Paciente ${patientId}`);
 
-        await tx.creditTransaction.create({
-          data: {
-            userId: doctorId,
-            testType: 'BIOFISICA',
-            amount: -1,
-            description: `Test Biofísico consumido — Paciente ${patientId}`,
-          },
-        });
-      }
-
-      // 3b. Crear el test (dentro del mismo bloque atómico)
       return await tx.biophysicsTest.create({
         data: {
           patientId,
@@ -144,7 +132,6 @@ export async function calculateAndSaveBiophysicsTest(params: CalculateAndSavePar
     return { success: false, error: errorMessage };
   }
 }
-
 
 // --- FUNCIONES EXISTENTES (SE MANTIENEN SIN CAMBIOS) ---
 

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { TestType, Prisma } from '@prisma/client';
+import { conReintentoAnteChoque } from '@/lib/credits/with-retry';
 
 // =============================================================================
 // TYPES
@@ -93,7 +94,7 @@ export async function consumeTestCredit(
     testType: TestType,
     description: string
 ): Promise<{ success: boolean; error?: string }> {
-    return await db.$transaction(async (tx) => {
+    return await conReintentoAnteChoque(() => db.$transaction(async (tx) => {
         // 1. Calcular saldo actual DENTRO de la transacción (lectura bloqueante)
         const aggregation = await tx.creditTransaction.aggregate({
             where: { userId: doctorId, testType },
@@ -116,11 +117,17 @@ export async function consumeTestCredit(
         return { success: true };
     }, {
         // SERIALIZABLE: máximo nivel de aislamiento.
-        // Previene Race Conditions: si dos transacciones concurrentes leen
-        // el mismo saldo, la segunda fallará con un error de serialización
-        // y Prisma hará retry automático en lugar de permitir un débito doble.
+        // Previene la condición de carrera: si dos transacciones concurrentes
+        // leen el mismo saldo, la segunda falla con un error de serialización
+        // en lugar de permitir un débito doble.
+        //
+        // El comentario anterior añadía que el reintento lo haría Prisma sola.
+        // No es cierto: Prisma NO reintenta transacciones interactivas. Sin
+        // reintento, el aislamiento convierte un doble gasto silencioso en un
+        // error visible —mejor, pero todavía malo—. Por eso la llamada va
+        // envuelta en `conReintentoAnteChoque`, que sí lo hace.
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-    }).catch((error) => {
+    })).catch((error: unknown) => {
         console.error('Error consuming test credit:', error);
         return {
             success: false,
